@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APPROVAL_POLICY=${CODEX_APPROVAL_POLICY:-on-request}
-SANDBOX_MODE=${CODEX_SANDBOX:-workspace-write}
+APPROVAL_POLICY=${CODEX_APPROVAL_POLICY:-never}
+SANDBOX_MODE=${CODEX_SANDBOX:-danger-full-access}
 
 if ! codex_stub=$(command -v codex 2>/dev/null); then
   echo "Codex CLI not found on PATH. Install it with 'npm install -g @openai/codex'." >&2

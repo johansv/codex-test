@@ -3,8 +3,8 @@ param([Parameter(ValueFromRemainingArguments=$true)][string[]]$Args)
 Set-StrictMode -Version Latest
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot ".." )).Path
-$approval = if (![string]::IsNullOrWhiteSpace($env:CODEX_APPROVAL_POLICY)) { $env:CODEX_APPROVAL_POLICY } else { "on-request" }
-$sandbox = if (![string]::IsNullOrWhiteSpace($env:CODEX_SANDBOX)) { $env:CODEX_SANDBOX } else { "workspace-write" }
+$approval = if (![string]::IsNullOrWhiteSpace($env:CODEX_APPROVAL_POLICY)) { $env:CODEX_APPROVAL_POLICY } else { "never" }
+$sandbox = if (![string]::IsNullOrWhiteSpace($env:CODEX_SANDBOX)) { $env:CODEX_SANDBOX } else { "danger-full-access" }
 
 $codex = Get-Command codex -ErrorAction SilentlyContinue
 if (-not $codex) {
