@@ -1,0 +1,56 @@
+[project]
+name = "agentlab"
+version = "0.1.0"
+description = "AgentLab experimentation workspace."
+authors = [{ name = "AgentLab Contributors" }]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "coverage[toml]>=7.4",
+    "ruff>=0.3.0",
+]
+
+[project.scripts]
+agentlab-dev = "agentlab.cli.dev:main"
+agentlab-worker = "agentlab.cli.worker:main"
+
+[tool.uv]
+package = true
+
+[tool.uv.sources]
+agentlab = { path = "src" }
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["agentlab"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
