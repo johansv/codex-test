@@ -31,3 +31,10 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 ## Agent-Specific Instructions
 - Check in sanitized secrets via <code>.env.example</code> and load them with <code>python-dotenv</code> locally only.
 - Document environment variables in <code>docs/environment.md</code> and publish smoke probes under <code>scripts/smoke/&lt;integration&gt;.py</code> with matching mocks in <code>tests/mocks/</code>.
+
+## Requirements Workflow
+- Before coding, run `uv run agentlab-capture` with the task prompt so a requirement entry exists.
+- If the command reports an existing requirement, update that entry instead of writing code until it is reconciled.
+- New requirements are recorded with placeholder traces; fill in tests/commits when implementation lands.
+- Do not implement implicit capabilities
+- Middleware should call `agentlab.core.middleware.auto_capture_prompt()` at task start to capture requirements and draft ADRs automatically.; ensure every change references a requirement ID and, when architecture shifts, add or update ADRs.
