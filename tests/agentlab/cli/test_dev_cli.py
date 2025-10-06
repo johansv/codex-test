@@ -79,7 +79,7 @@ def test_dev_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalog_di
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: high" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
+    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
 
 
 def test_dev_cli_blocks_when_requirement_exists(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:

@@ -1,7 +1,7 @@
 ﻿# Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 1 (proposed=1); Satisfied: 0
+Active: 1 (proposed=1); Satisfied: 0; Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -10,7 +10,8 @@ Connect each entry to monitoring hooks, docs, or tests that validate the constra
 ## How to capture a new requirement
 
 Use the template below whenever Codex introduces reliability, performance,
-security, or other system constraints.
+security, or other system constraints. Move rejected ideas to **Retired Requirements**
+so the catalog retains history.
 
 ```
 - ID: REQ-NF-###
@@ -42,3 +43,8 @@ security, or other system constraints.
 
 List retired or satisfied non-functional requirements here to preserve history.
 Keep entries sorted by ID and update measurement notes with the proof of compliance.
+
+## Retired Requirements
+
+Document constraints that were rejected or superseded. Note why they were
+retired and link to any successor requirements.

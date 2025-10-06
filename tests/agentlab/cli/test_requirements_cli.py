@@ -96,7 +96,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
     assert f"- ID: {req_id}" in catalog
     assert "- Priority: high" in catalog
-    assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
+    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert req_id in log
@@ -140,7 +140,7 @@ def test_cli_adds_non_functional_requirement_and_logs(
     catalog = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
     assert f"- ID: {req_id}" in catalog
     assert "- Priority: low" in catalog
-    assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
+    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert req_id in log

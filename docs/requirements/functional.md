@@ -1,7 +1,7 @@
 ﻿# Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 1 (proposed=1); Satisfied: 0
+Active: 1 (proposed=1); Satisfied: 0; Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -11,6 +11,7 @@ Every entry should link back to its originating task or prompt and to verifying 
 
 Copy the template below, fill in each field, and place it under **Active Requirements**.
 Move fulfilled items to **Satisfied Requirements** once implementation and tests merge.
+Move rejected or replaced requirements to **Retired Requirements** so history is preserved.
 
 ```
 - ID: REQ-F-###
@@ -43,3 +44,8 @@ Move fulfilled items to **Satisfied Requirements** once implementation and tests
 
 Document completed functional requirements here with the same structure
 and keep entries sorted by ID.
+
+## Retired Requirements
+
+List requirements that were rejected, superseded, or otherwise retired.
+Keep entries sorted by ID and note the reason in the Notes field.

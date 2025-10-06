@@ -79,7 +79,7 @@ def test_capture_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalo
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: high" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
+    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
     assert req_id in log_doc

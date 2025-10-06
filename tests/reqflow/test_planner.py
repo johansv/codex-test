@@ -106,7 +106,7 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: medium" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
+    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
     assert req_id in log_doc

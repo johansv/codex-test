@@ -21,6 +21,7 @@ __all__ = [
 
 _ACTIVE_MARKER = "## Active Requirements"
 _SATISFIED_MARKER = "## Satisfied Requirements"
+_RETIRED_MARKER = "## Retired Requirements"
 _FUNCTIONAL_PREFIX = "REQ-F"
 _NON_FUNCTIONAL_PREFIX = "REQ-NF"
 _ID_PATTERN = re.compile(r"REQ-[A-Z]+-(?P<number>\d{3})")
@@ -174,16 +175,19 @@ def _update_status_summary(contents: str) -> str:
         return contents
 
     active_section = _extract_section(contents, _ACTIVE_MARKER, _SATISFIED_MARKER)
-    satisfied_section = _extract_section(contents, _SATISFIED_MARKER, None)
+    satisfied_section = _extract_section(contents, _SATISFIED_MARKER, _RETIRED_MARKER)
+    retired_section = _extract_section(contents, _RETIRED_MARKER, None)
     active_count, active_statuses = _summarise_entries(active_section)
     satisfied_count, satisfied_statuses = _summarise_entries(satisfied_section)
+    retired_count, retired_statuses = _summarise_entries(retired_section)
 
-    if active_count == 0 and satisfied_count == 0:
+    if active_count == 0 and satisfied_count == 0 and retired_count == 0:
         summary_text = "_No requirements recorded yet._"
     else:
         summary_text = '; '.join([
             _format_summary("Active", active_count, active_statuses),
             _format_summary("Satisfied", satisfied_count, satisfied_statuses),
+            _format_summary("Retired", retired_count, retired_statuses),
         ])
 
     return _replace_summary(contents, summary_text)
