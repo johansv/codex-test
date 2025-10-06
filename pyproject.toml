@@ -17,6 +17,7 @@ dev = [
 ]
 
 [project.scripts]
+agentlab-req = "agentlab.cli.requirements:main"
 agentlab-dev = "agentlab.cli.dev:main"
 agentlab-worker = "agentlab.cli.worker:main"
 
