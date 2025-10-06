@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import pytest
+import re
 
 from reqflow.middleware import action_to_dict, auto_capture_prompt, should_block_for_manual_update
 
@@ -66,7 +67,8 @@ def test_auto_capture_prompt_creates_requirement(catalog_dir: Path) -> None:
     )
 
     assert action.outcome == "created"
-    assert action.requirement_id == "REQ-F-001"
+    assert action.requirement_id.startswith("REQ-F-")
+    assert re.fullmatch(r"REQ-F-\d{8}T\d{6}-[0-9A-Z]{2}", action.requirement_id)
     assert action.priority == "medium"
     assert not should_block_for_manual_update(action)
 

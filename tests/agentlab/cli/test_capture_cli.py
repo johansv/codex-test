@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import pytest
+import re
 
 from agentlab.cli import capture
 
@@ -74,12 +75,14 @@ def test_capture_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalo
     assert exit_code == 0
 
     functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-F-001" in functional_doc
+    match = re.search(r"- ID: (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", functional_doc)
+    assert match is not None
+    req_id = match.group(1)
     assert "- Priority: high" in functional_doc
     assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
-    assert "REQ-F-001" in log_doc
+    assert req_id in log_doc
     assert "prompt-201" in log_doc
 
 

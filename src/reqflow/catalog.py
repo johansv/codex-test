@@ -4,6 +4,8 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
+import random
+import string
 from pathlib import Path
 import re
 
@@ -74,15 +76,29 @@ def catalog_root(start: Path | None = None) -> Path:
 
 
 def generate_next_id(contents: str, prefix: str) -> str:
-    """Return the next incremental requirement ID for *prefix*."""
+    """Return a unique requirement ID for *prefix* using timestamp+suffix."""
 
-    numbers = [
-        int(match.group("number"))
-        for match in _ID_PATTERN.finditer(contents)
-        if match.group(0).startswith(prefix)
-    ]
-    next_number = max(numbers) + 1 if numbers else 1
-    return f"{prefix}-{next_number:03d}"
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S")
+    base = f"{prefix}-{timestamp}"
+
+    existing = {
+        match.group(0)
+        for match in re.finditer(rf"{re.escape(base)}-[0-9A-Z]{{2}}", contents)
+    }
+
+    for _ in range(5):
+        suffix = _random_suffix()
+        candidate = f"{base}-{suffix}"
+        if candidate not in existing:
+            return candidate
+    raise RuntimeError("Could not generate unique requirement ID after retries")
+
+
+def _random_suffix() -> str:
+    alphabet = string.digits + string.ascii_uppercase
+    value = random.randint(0, 1295)  # 36**2 combinations
+    return alphabet[value // 36] + alphabet[value % 36]
+
 
 
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:

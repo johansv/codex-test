@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import pytest
+import re
 
 from reqflow.planner import RequirementPlanner, build_requirement_draft
 
@@ -95,17 +96,20 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
     )
 
     assert action.outcome == "created"
-    assert action.requirement_id == "REQ-F-001"
+    assert action.requirement_id is not None
+    assert action.requirement_id.startswith("REQ-F-")
     assert action.priority == "medium"
     assert action.adr_path is None
 
     functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-F-001" in functional_doc
+    match = re.search(r"- ID: (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", functional_doc)
+    assert match is not None
+    req_id = match.group(1)
     assert "- Priority: medium" in functional_doc
     assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
-    assert "REQ-F-001" in log_doc
+    assert req_id in log_doc
     assert "prompt-101" in log_doc
 
 
@@ -122,7 +126,8 @@ def test_requirement_planner_generates_adr_for_architectural_prompt(
     )
 
     assert action.outcome == "created"
-    assert action.requirement_id == "REQ-F-001"
+    assert action.requirement_id is not None
+    assert action.requirement_id.startswith("REQ-F-")
     assert action.priority == "medium"
     assert action.adr_path is not None
     assert action.adr_path.exists()

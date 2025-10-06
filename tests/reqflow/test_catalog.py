@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import pytest
+import re
 
 from reqflow.catalog import (
     FunctionalRequirement,
@@ -75,9 +76,9 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
     req_id = append_functional_requirement(functional_catalog, requirement)
 
     text = functional_catalog.read_text(encoding="utf-8")
-    assert req_id == "REQ-F-001"
-    assert "- ID: REQ-F-001" in text
-    assert text.index("- ID: REQ-F-001") < text.index("## Satisfied Requirements")
+    assert req_id.startswith("REQ-F-")
+    assert "- ID: " + req_id in text
+    assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
     assert "  * Given a prompt" in text
     assert "Active: 2 (proposed=2); Satisfied: 0" in text
@@ -98,13 +99,14 @@ def test_append_non_functional_requirement_appends_entry(
     req_id = append_non_functional_requirement(non_functional_catalog, requirement)
 
     text = non_functional_catalog.read_text(encoding="utf-8")
-    assert req_id == "REQ-NF-001"
-    assert "- ID: REQ-NF-001" in text
-    assert text.index("- ID: REQ-NF-001") < text.index("## Satisfied Requirements")
+    assert req_id.startswith("REQ-NF-")
+    assert "- ID: " + req_id in text
+    assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
     assert "Active: 2 (proposed=2); Satisfied: 0" in text
 
 
 def test_generate_next_id_advances_highest_number() -> None:
-    contents = "REQ-F-002 and REQ-F-010 present"
-    assert generate_next_id(contents, "REQ-F") == "REQ-F-011"
+    contents = ""
+    new_id = generate_next_id(contents, "REQ-F")
+    assert re.fullmatch(r"REQ-F-\d{8}T\d{6}-[0-9A-Z]{2}", new_id)

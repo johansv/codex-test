@@ -1,6 +1,7 @@
 ﻿from pathlib import Path
 
 import pytest
+import re
 
 from agentlab.cli import requirements as cli
 
@@ -88,15 +89,17 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     )
 
     captured = capsys.readouterr()
-    assert "Recorded REQ-F-001" in captured.out
+    match = re.search(r"Recorded (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", captured.out)
+    assert match is not None
+    req_id = match.group(1)
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-F-001" in catalog
+    assert f"- ID: {req_id}" in catalog
     assert "- Priority: high" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
-    assert "REQ-F-001" in log
+    assert req_id in log
     assert "prompt-42" in log
 
 
@@ -130,13 +133,15 @@ def test_cli_adds_non_functional_requirement_and_logs(
     )
 
     captured = capsys.readouterr()
-    assert "Recorded REQ-NF-001" in captured.out
+    match = re.search(r"Recorded (REQ-NF-\d{8}T\d{6}-[0-9A-Z]{2})", captured.out)
+    assert match is not None
+    req_id = match.group(1)
 
     catalog = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-NF-001" in catalog
+    assert f"- ID: {req_id}" in catalog
     assert "- Priority: low" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
-    assert "REQ-NF-001" in log
+    assert req_id in log
     assert "prompt-43" in log

@@ -1,5 +1,6 @@
 ﻿from pathlib import Path
 
+import re
 import pytest
 
 from reqflow.codex_hooks import before_task
@@ -68,13 +69,13 @@ def test_before_task_creates_requirement_and_returns_metadata(catalog_dir: Path)
 
     result = before_task(task)
 
-    assert result["requirement_id"] == "REQ-F-001"
+    assert result["requirement_id"].startswith("REQ-F-")
     assert result["priority"] == "high"
-    assert any("Recorded REQ-F-001" in message for message in result["messages"])
+    assert any("Recorded" in message and result["requirement_id"] in message for message in result["messages"])
     assert result.get("blocked") is None
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-F-001" in catalog
+    assert f"- ID: {result['requirement_id']}" in catalog
     assert "- Priority: high" in catalog
 
 
