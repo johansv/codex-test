@@ -25,6 +25,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "  * Placeholder\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n"
     )
@@ -44,6 +45,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n"
     )
@@ -85,6 +87,8 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
             "tests/reqflow/test_catalog.py",
             "--priority",
             "high",
+            "--reason",
+            "initial capture",
         ]
     )
 
@@ -96,6 +100,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
     assert f"- ID: {req_id}" in catalog
     assert "- Priority: high" in catalog
+    assert "- Reason: initial capture" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
@@ -129,6 +134,8 @@ def test_cli_adds_non_functional_requirement_and_logs(
             "prompt-43",
             "--priority",
             "low",
+            "--reason",
+            "latency target",
         ]
     )
 
@@ -140,6 +147,7 @@ def test_cli_adds_non_functional_requirement_and_logs(
     catalog = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
     assert f"- ID: {req_id}" in catalog
     assert "- Priority: low" in catalog
+    assert "- Reason: latency target" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")

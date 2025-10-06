@@ -99,6 +99,7 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
     assert action.requirement_id is not None
     assert action.requirement_id.startswith("REQ-F-")
     assert action.priority == "medium"
+    assert action.reason == "pending"
     assert action.adr_path is None
 
     functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
@@ -106,6 +107,7 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: medium" in functional_doc
+    assert "- Reason: pending" in functional_doc
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
@@ -129,6 +131,7 @@ def test_requirement_planner_generates_adr_for_architectural_prompt(
     assert action.requirement_id is not None
     assert action.requirement_id.startswith("REQ-F-")
     assert action.priority == "medium"
+    assert action.reason == "pending"
     assert action.adr_path is not None
     assert action.adr_path.exists()
     assert action.adr_path.read_text(encoding="utf-8").startswith("# Refactor the ingestion")
@@ -146,6 +149,7 @@ def test_requirement_planner_detects_existing_requirement(catalog_dir: Path) -> 
         + "  * Existing\n"
         + "- Priority: medium\n"
         + "- Status: active\n"
+        + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
     )
@@ -162,6 +166,7 @@ def test_requirement_planner_detects_existing_requirement(catalog_dir: Path) -> 
     assert action.outcome == "needs-update"
     assert action.requirement_id == "REQ-F-123"
     assert action.priority == "medium"
+    assert action.reason == "pending"
     assert action.adr_path is None
 
 
@@ -178,6 +183,7 @@ def test_requirement_planner_dry_run_returns_without_changes(catalog_dir: Path) 
 
     assert action.outcome == "dry-run"
     assert action.priority == "high"
+    assert action.reason == "pending"
     assert action.adr_path is None
     assert (
         catalog_dir.joinpath("non-functional.md").read_text(encoding="utf-8").count("REQ-NF-000")

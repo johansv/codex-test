@@ -50,6 +50,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override inferred priority for the requirement.",
     )
     parser.add_argument(
+        "--reason",
+        default="pending",
+        help="Reason associated with the current status (default: pending)",
+    )
+    parser.add_argument(
         "--force-new",
         action="store_true",
         help="Create a new requirement even if a similar one exists.",
@@ -85,6 +90,7 @@ def main(argv: list[str] | None = None) -> int:
         owner=args.owner,
         category=args.category,
         priority=args.priority,
+        reason=args.reason,
         force_new=args.force_new,
         summary=args.summary,
         dry_run=args.dry_run,

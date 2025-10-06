@@ -45,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
     functional.add_argument("--owner", required=True)
     functional.add_argument("--narrative", required=True)
     functional.add_argument(
+        "--reason",
+        default="pending",
+        help="Reason associated with the current status (default: pending)",
+    )
+    functional.add_argument(
         "--priority",
         choices=["low", "medium", "high"],
         default="medium",
@@ -86,6 +91,11 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["low", "medium", "high"],
         default="medium",
         help="Priority recorded with the requirement (default: medium)",
+    )
+    non_functional.add_argument(
+        "--reason",
+        default="pending",
+        help="Reason associated with the current status (default: pending)",
     )
     non_functional.add_argument(
         "--category",
@@ -165,6 +175,7 @@ def _handle_functional(args: argparse.Namespace, catalog_dir: Path, log_path: Pa
         trace_prompts=args.trace_prompts,
         trace_tests=args.trace_tests,
         trace_commits=args.trace_commits,
+        reason=args.reason,
         notes=args.notes,
     )
     req_id = append_functional_requirement(catalog_path, requirement)
@@ -192,6 +203,7 @@ def _handle_non_functional(
         trace_tests=args.trace_tests,
         trace_scripts=args.trace_scripts,
         trace_monitors=args.trace_monitors,
+        reason=args.reason,
         notes=args.notes,
     )
     req_id = append_non_functional_requirement(catalog_path, requirement)

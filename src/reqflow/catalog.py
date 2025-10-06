@@ -42,6 +42,7 @@ class FunctionalRequirement:
     trace_prompts: str = "none"
     trace_tests: str = "none"
     trace_commits: str = "none"
+    reason: str = "pending"
     notes: str | None = None
     req_id: str | None = None
 
@@ -61,6 +62,7 @@ class NonFunctionalRequirement:
     trace_tests: str = "none"
     trace_scripts: str = "none"
     trace_monitors: str = "none"
+    reason: str = "pending"
     notes: str | None = None
     req_id: str | None = None
 
@@ -121,6 +123,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     entry_lines.extend(
         [
             f"- Status: {requirement.status}",
+            f"- Reason: {requirement.reason}",
             f"- Trace: prompts {requirement.trace_prompts}, tests {requirement.trace_tests}, commits {requirement.trace_commits}",
         ]
     )
@@ -150,6 +153,7 @@ def append_non_functional_requirement(
         f"- Measurement: {requirement.measurement}",
         f"- Priority: {requirement.priority}",
         f"- Status: {requirement.status}",
+        f"- Reason: {requirement.reason}",
         f"- Trace: prompts {requirement.trace_prompts}, tests {requirement.trace_tests}, scripts {requirement.trace_scripts}, monitors {requirement.trace_monitors}",
     ]
     if requirement.notes:

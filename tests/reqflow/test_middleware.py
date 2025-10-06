@@ -25,6 +25,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "  * Placeholder\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n\n",
         encoding="utf-8",
@@ -44,6 +45,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n\n",
         encoding="utf-8",
@@ -70,12 +72,14 @@ def test_auto_capture_prompt_creates_requirement(catalog_dir: Path) -> None:
     assert action.requirement_id.startswith("REQ-F-")
     assert re.fullmatch(r"REQ-F-\d{8}T\d{6}-[0-9A-Z]{2}", action.requirement_id)
     assert action.priority == "medium"
+    assert action.reason == "pending"
     assert not should_block_for_manual_update(action)
 
     payload = action_to_dict(action)
     assert payload["outcome"] == "created"
     assert payload["kind"] == "functional"
     assert payload["priority"] == "medium"
+    assert payload["reason"] == "pending"
     assert payload["adr_path"] is None
 
 
@@ -91,6 +95,7 @@ def test_auto_capture_prompt_detects_existing_requirement(catalog_dir: Path) -> 
         + "  * Placeholder\n"
         + "- Priority: medium\n"
         + "- Status: active\n"
+        + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
     )

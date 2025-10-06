@@ -36,6 +36,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - Before coding, run `uv run agentlab-capture` with the task prompt so a requirement entry exists.
 - If the command reports an existing requirement, update that entry instead of writing code until it is reconciled.
 - New requirements are recorded with placeholder traces; fill in tests/commits when implementation lands.
+- Update each entry’s status to `proposed`, `active`, `satisfied`, `rejected`, or `superseded` and record a short reason for that state.
 - Do not implement implicit capabilities; ensure every change references a requirement ID and, when architecture shifts, add or update ADRs.
 - Middleware should call `reqflow.middleware.auto_capture_prompt()` at task start to capture requirements and draft ADRs automatically (preferred via `python:reqflow.codex_hooks:before_task`).
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.

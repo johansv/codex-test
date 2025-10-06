@@ -21,7 +21,8 @@ so the catalog retains history.
 - Description: Concise statement of the constraint or objective.
 - Measurement: How the team validates compliance (metric target, probe, checklist).
 - Priority: low | medium | high
-- Status: proposed | active | satisfied | retired
+- Status: proposed | active | satisfied | rejected | superseded
+- Reason: why the current status applies (e.g., superseded by REQ-NF-…)
 - Trace: prompts <link>, tests <path>, scripts <path>, monitors <link>
 - Notes: Implementation guidance, owners, or follow-ups.
 ```
@@ -36,6 +37,7 @@ so the catalog retains history.
 - Measurement: Manual review of this catalog during project setup.
 - Priority: medium
 - Status: proposed
+- Reason: pending
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.
 

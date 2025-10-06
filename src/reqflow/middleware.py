@@ -16,6 +16,7 @@ def auto_capture_prompt(
     owner: str | None = None,
     category: str | None = None,
     priority: str | None = None,
+    reason: str | None = None,
     force_new: bool = False,
     summary: str | None = None,
     dry_run: bool = False,
@@ -36,6 +37,7 @@ def auto_capture_prompt(
         owner=owner,
         category=category,
         priority=priority,
+        reason=reason,
         force_new=force_new,
         summary=summary,
         dry_run=dry_run,
@@ -58,5 +60,6 @@ def action_to_dict(action: RequirementAction) -> dict[str, Any]:
         "title": action.title,
         "message": action.message,
         "priority": action.priority,
+        "reason": action.reason,
         "adr_path": str(action.adr_path) if action.adr_path else None,
     }

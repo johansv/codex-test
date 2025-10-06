@@ -22,7 +22,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Given <context> when <action> then <result>.
   * Include as many bullet checks as needed.
 - Priority: low | medium | high
-- Status: proposed | active | satisfied | retired
+- Status: proposed | active | satisfied | rejected | superseded
+- Reason: why the current status applies (e.g., superseded by REQ-F-…)
 - Trace: prompts <link>, tests <path>, commits <hash>
 - Notes: optional clarifications or open questions.
 ```
@@ -37,6 +38,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Given this repo when I open the catalog then I see an example entry.
 - Priority: medium
 - Status: proposed
+- Reason: pending
 - Trace: prompts none, tests none, commits none
 - Notes: replace this sample once real requirements exist.
 

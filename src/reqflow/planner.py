@@ -73,6 +73,7 @@ class RequirementDraft:
     trace_prompts: str
     notes: str | None
     priority: str
+    reason: str
     category: str | None = None
     measurement: str | None = None
     architectural: bool = False
@@ -97,6 +98,7 @@ class RequirementAction:
     title: str
     message: str
     priority: str | None = None
+    reason: str | None = None
     adr_path: Path | None = None
 
 
@@ -115,11 +117,12 @@ class RequirementPlanner:
         owner: str | None = None,
         category: str | None = None,
         priority: str | None = None,
+        reason: str | None = None,
         force_new: bool = False,
         summary: str | None = None,
         dry_run: bool = False,
     ) -> RequirementAction:
-        draft = build_requirement_draft(prompt, owner=owner, category=category, priority=priority)
+        draft = build_requirement_draft(prompt, owner=owner, category=category, priority=priority, reason=reason)
 
         existing = self._find_existing(draft)
 
@@ -139,6 +142,7 @@ class RequirementPlanner:
                 title=existing.title,
                 message=advisory,
                 priority=draft.priority,
+                reason=draft.reason,
             )
 
         if dry_run:
@@ -156,6 +160,7 @@ class RequirementPlanner:
                 title=title,
                 message=notice,
                 priority=draft.priority,
+                reason=draft.reason,
             )
 
         if draft.kind == "functional":
@@ -170,6 +175,7 @@ class RequirementPlanner:
                 trace_prompts=draft.trace_prompts,
                 trace_tests="pending",
                 trace_commits="pending",
+                reason=draft.reason,
                 notes=draft.notes,
             )
             requirement_id = append_functional_requirement(catalog_path, req)
@@ -187,6 +193,7 @@ class RequirementPlanner:
                 trace_tests="pending",
                 trace_scripts="pending",
                 trace_monitors="pending",
+                reason=draft.reason,
                 notes=draft.notes,
             )
             requirement_id = append_non_functional_requirement(catalog_path, req)
@@ -213,6 +220,7 @@ class RequirementPlanner:
             title=draft.title,
             message=message,
             priority=draft.priority,
+            reason=draft.reason,
             adr_path=adr_path,
         )
 
@@ -276,6 +284,7 @@ def build_requirement_draft(
     owner: str | None = None,
     category: str | None = None,
     priority: str | None = None,
+    reason: str | None = None,
 ) -> RequirementDraft:
     """Infer a structured requirement draft from *prompt*."""
 
@@ -288,6 +297,7 @@ def build_requirement_draft(
     notes = "Auto-generated from prompt; refine narrative and acceptance criteria."
     architectural = is_architectural_prompt(prompt)
     resolved_priority = priority or infer_priority(prompt)
+    resolved_reason = reason or "pending"
 
     if kind == "functional":
         inferred_owner = owner or infer_owner(prompt) or _FUNCTIONAL_DEFAULT_OWNER
@@ -302,6 +312,7 @@ def build_requirement_draft(
             trace_prompts=trace_prompts,
             notes=notes,
             priority=resolved_priority,
+            reason=resolved_reason,
             category=None,
             measurement=None,
             architectural=architectural,
@@ -321,6 +332,7 @@ def build_requirement_draft(
         trace_prompts=trace_prompts,
         notes=notes,
         priority=resolved_priority,
+        reason=resolved_reason,
         category=inferred_category,
         measurement=measurement,
         architectural=architectural,

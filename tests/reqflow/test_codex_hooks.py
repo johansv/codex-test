@@ -71,12 +71,14 @@ def test_before_task_creates_requirement_and_returns_metadata(catalog_dir: Path)
 
     assert result["requirement_id"].startswith("REQ-F-")
     assert result["priority"] == "high"
+    assert result["reason"] == "pending"
     assert any("Recorded" in message and result["requirement_id"] in message for message in result["messages"])
     assert result.get("blocked") is None
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
     assert f"- ID: {result['requirement_id']}" in catalog
     assert "- Priority: high" in catalog
+    assert "- Reason: pending" in catalog
 
 
 def test_before_task_marks_task_as_blocked_when_requirement_exists(catalog_dir: Path) -> None:
@@ -91,6 +93,7 @@ def test_before_task_marks_task_as_blocked_when_requirement_exists(catalog_dir: 
         + "  * existing\n"
         + "- Priority: medium\n"
         + "- Status: active\n"
+        + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
     )

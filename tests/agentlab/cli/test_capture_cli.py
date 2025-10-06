@@ -25,6 +25,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "  * Placeholder\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n\n",
         encoding="utf-8",
@@ -44,6 +45,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
         "- Status: proposed\n"
+        "- Reason: pending\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n\n",
         encoding="utf-8",
@@ -79,6 +81,7 @@ def test_capture_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalo
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: high" in functional_doc
+    assert "- Reason: pending" in functional_doc
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
@@ -119,6 +122,7 @@ def test_capture_cli_detects_existing_requirement(monkeypatch: pytest.MonkeyPatc
         + "  * Placeholder\n"
         + "- Priority: medium\n"
         + "- Status: active\n"
+        + "- Reason: pending\n"
         + "- Trace: prompts p, tests t, commits c\n\n",
         encoding="utf-8",
     )

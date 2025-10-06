@@ -80,6 +80,7 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
     assert "- ID: " + req_id in text
     assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
+    assert "- Reason: pending" in text
     assert "  * Given a prompt" in text
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in text
 
@@ -103,6 +104,7 @@ def test_append_non_functional_requirement_appends_entry(
     assert "- ID: " + req_id in text
     assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
+    assert "- Reason: pending" in text
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in text
 
 

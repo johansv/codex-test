@@ -47,6 +47,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override the inferred priority before coding begins.",
     )
     parser.add_argument(
+        "--reason",
+        default="pending",
+        help="Reason associated with the current status (default: pending).",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Analyse the prompt without modifying catalogs or logs.",
@@ -66,6 +71,7 @@ def main(argv: list[str] | None = None) -> int:
         catalog_root=args.catalog_root,
         author=args.author,
         priority=args.priority,
+        reason=args.reason,
         force_new=args.force_new,
         dry_run=args.dry_run,
     )

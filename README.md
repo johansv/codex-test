@@ -28,6 +28,7 @@ updated.
   - Assigns priorities and appends a change log entry.
 - If the hook finds an overlapping requirement, the task is marked as blocked so
   you can reconcile the existing entry before coding.
+- Requirements move through statuses `proposed`, `active`, `satisfied`, `rejected`, and `superseded`; capture a short reason whenever the status changes.
 - When commits are created, include the trailer `Refs <requirement-id>` so the
   change can be traced back to its requirement.
 
