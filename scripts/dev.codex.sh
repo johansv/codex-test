@@ -50,4 +50,6 @@ fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-exec "$codex_bin" --ask-for-approval "$APPROVAL_POLICY" --sandbox "$SANDBOX_MODE" --before-task-hook "$BEFORE_HOOK" --cd "$repo_root" "$@"
+export CODEX_BEFORE_TASK_HOOK="$BEFORE_HOOK"
+
+exec "$codex_bin" --ask-for-approval "$APPROVAL_POLICY" --sandbox "$SANDBOX_MODE" --cd "$repo_root" "$@"

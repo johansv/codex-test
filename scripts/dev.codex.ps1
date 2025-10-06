@@ -12,5 +12,7 @@ if (-not $codex) {
     throw 'Codex CLI not found on PATH. Install it with "npm install -g @openai/codex".'
 }
 
-& $codex.Path --ask-for-approval $approval --sandbox $sandbox --before-task-hook $beforeHook --cd $repoRoot @Args
+$env:CODEX_BEFORE_TASK_HOOK = $beforeHook
+
+& $codex.Path --ask-for-approval $approval --sandbox $sandbox --cd $repoRoot @Args
 exit $LASTEXITCODE
