@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Iterable, Literal
 import re
 
-from agentlab.utils.requirements import (
+from reqflow.catalog import (
     FunctionalRequirement,
     NonFunctionalRequirement,
     append_functional_requirement,

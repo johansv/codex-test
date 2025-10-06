@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentlab.utils.requirements import (
+from reqflow.catalog import (
     FunctionalRequirement,
     NonFunctionalRequirement,
     append_functional_requirement,

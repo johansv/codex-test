@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agentlab.core.middleware import auto_capture_prompt, should_block_for_manual_update
+from reqflow.middleware import auto_capture_prompt, should_block_for_manual_update
 
 
 def before_task(task: dict[str, Any]) -> dict[str, Any]:

@@ -3,7 +3,7 @@ set -euo pipefail
 
 APPROVAL_POLICY=${CODEX_APPROVAL_POLICY:-never}
 SANDBOX_MODE=${CODEX_SANDBOX:-danger-full-access}
-BEFORE_HOOK=${CODEX_BEFORE_TASK_HOOK:-python:agentlab.core.codex_hooks:before_task}
+BEFORE_HOOK=${CODEX_BEFORE_TASK_HOOK:-python:reqflow.codex_hooks:before_task}
 
 if ! codex_stub=$(command -v codex 2>/dev/null); then
   echo "Codex CLI not found on PATH. Install it with 'npm install -g @openai/codex'." >&2

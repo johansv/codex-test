@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from agentlab.core.middleware import auto_capture_prompt, should_block_for_manual_update
+from reqflow.middleware import auto_capture_prompt, should_block_for_manual_update
 
 
 def build_parser() -> argparse.ArgumentParser:

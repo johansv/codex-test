@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from agentlab.core.requirements_planner import RequirementPlanner
+from reqflow.planner import RequirementPlanner
 
 
 def build_parser() -> argparse.ArgumentParser:

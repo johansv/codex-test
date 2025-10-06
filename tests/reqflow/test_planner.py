@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentlab.core.requirements_planner import RequirementPlanner, build_requirement_draft
+from reqflow.planner import RequirementPlanner, build_requirement_draft
 
 
 @pytest.fixture()

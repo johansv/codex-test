@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentlab.core.codex_hooks import before_task
+from reqflow.middleware import action_to_dict, auto_capture_prompt, should_block_for_manual_update
 
 
 @pytest.fixture()
@@ -58,54 +58,47 @@ def catalog_dir(tmp_path: Path) -> Path:
     return requirements_dir
 
 
-def test_before_task_creates_requirement_and_returns_metadata(catalog_dir: Path) -> None:
-    task = {
-        "prompt": "Handle incremental prompt updates",
-        "reference": "prompt-501",
-        "catalog_root": str(catalog_dir),
-        "priority": "high",
-    }
+def test_auto_capture_prompt_creates_requirement(catalog_dir: Path) -> None:
+    action = auto_capture_prompt(
+        "handle incremental prompt updates",
+        reference="prompt-301",
+        catalog_root=catalog_dir,
+    )
 
-    result = before_task(task)
+    assert action.outcome == "created"
+    assert action.requirement_id == "REQ-F-001"
+    assert action.priority == "medium"
+    assert not should_block_for_manual_update(action)
 
-    assert result["requirement_id"] == "REQ-F-001"
-    assert result["priority"] == "high"
-    assert any("Recorded REQ-F-001" in message for message in result["messages"])
-    assert result.get("blocked") is None
-
-    catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert "- ID: REQ-F-001" in catalog
-    assert "- Priority: high" in catalog
+    payload = action_to_dict(action)
+    assert payload["outcome"] == "created"
+    assert payload["kind"] == "functional"
+    assert payload["priority"] == "medium"
+    assert payload["adr_path"] is None
 
 
-def test_before_task_marks_task_as_blocked_when_requirement_exists(catalog_dir: Path) -> None:
+def test_auto_capture_prompt_detects_existing_requirement(catalog_dir: Path) -> None:
     functional = catalog_dir / "functional.md"
     functional.write_text(
         functional.read_text(encoding="utf-8")
-        + "- ID: REQ-F-404\n"
+        + "- ID: REQ-F-900\n"
         + "- Title: Handle incremental prompt updates\n"
         + "- Owner: product\n"
-        + "- Narrative: existing\n"
+        + "- Narrative: placeholder\n"
         + "- Acceptance Criteria:\n"
-        + "  * existing\n"
+        + "  * Placeholder\n"
         + "- Priority: medium\n"
         + "- Status: active\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
     )
 
-    task = {
-        "prompt": "handle incremental prompt updates",
-        "reference": "prompt-502",
-        "catalog_root": str(catalog_dir),
-    }
+    action = auto_capture_prompt(
+        "handle incremental prompt updates",
+        reference="prompt-302",
+        catalog_root=catalog_dir,
+    )
 
-    result = before_task(task)
-
-    assert result["blocked"] is True
-    assert result["requirement_id"] == "REQ-F-404"
-
-
-def test_before_task_requires_prompt() -> None:
-    with pytest.raises(ValueError):
-        before_task({})
+    assert action.outcome == "needs-update"
+    assert action.priority == "medium"
+    assert should_block_for_manual_update(action)

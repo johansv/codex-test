@@ -12,14 +12,14 @@ back to an explicit contract before any code is written.
    - On Windows PowerShell: `./scripts/dev.codex.ps1`
 
 The scripts set the repository root as the working directory and export
-`CODEX_BEFORE_TASK_HOOK=python:agentlab.core.codex_hooks:before_task`. This hook
+`CODEX_BEFORE_TASK_HOOK=python:reqflow.codex_hooks:before_task`. This hook
 runs *before* Codex plans or edits, ensuring the current prompt is captured in
 `docs/requirements/` and blocking execution when an existing requirement must be
 updated.
 
 ## Requirements Workflow
 
-- Every task prompt is recorded via `agentlab.core.codex_hooks.before_task`,
+- Every task prompt is recorded via `reqflow.codex_hooks.before_task`,
   which automatically:
   - Creates or updates entries in `docs/requirements/functional.md` or
     `docs/requirements/non-functional.md`.
@@ -39,11 +39,11 @@ but the hook guarantees there are no gaps.
 When running Codex outside the local scripts (e.g., hosted CLI, web console,
 CI), make sure the hook is enabled:
 
-- **CLI flag**: `--before-task-hook python:agentlab.core.codex_hooks:before_task`
-- **Environment variable**: `CODEX_BEFORE_TASK_HOOK=python:agentlab.core.codex_hooks:before_task`
+- **CLI flag**: `--before-task-hook python:reqflow.codex_hooks:before_task`
+- **Environment variable**: `CODEX_BEFORE_TASK_HOOK=python:reqflow.codex_hooks:before_task`
 
 The hosted runner must mount this repository and have dependencies installed so
-`agentlab.core.codex_hooks` can be imported.
+`reqflow.codex_hooks` can be imported.
 
 ## Additional Commands
 

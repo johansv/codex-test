@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from agentlab.core.requirements_planner import RequirementPlanner, RequirementAction
+from reqflow.planner import RequirementPlanner, RequirementAction
 
 
 def auto_capture_prompt(

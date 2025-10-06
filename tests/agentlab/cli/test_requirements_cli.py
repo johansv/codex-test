@@ -81,7 +81,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
             "--trace-prompts",
             "prompt-42",
             "--trace-tests",
-            "tests/agentlab/utils/test_requirements.py",
+            "tests/reqflow/test_catalog.py",
             "--priority",
             "high",
         ]
