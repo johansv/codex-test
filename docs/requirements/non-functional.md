@@ -1,5 +1,9 @@
 ﻿# Non-Functional Requirements
 
+<!-- STATUS-SUMMARY:START -->
+Active: 1 (proposed=1); Satisfied: 0
+<!-- STATUS-SUMMARY:END -->
+
 Track quality attributes, constraints, and operational expectations here.
 Connect each entry to monitoring hooks, docs, or tests that validate the constraint.
 
@@ -15,6 +19,7 @@ security, or other system constraints.
 - Category: performance | reliability | security | usability | other
 - Description: Concise statement of the constraint or objective.
 - Measurement: How the team validates compliance (metric target, probe, checklist).
+- Priority: low | medium | high
 - Status: proposed | active | satisfied | retired
 - Trace: prompts <link>, tests <path>, scripts <path>, monitors <link>
 - Notes: Implementation guidance, owners, or follow-ups.
@@ -28,6 +33,7 @@ security, or other system constraints.
 - Category: reliability
 - Description: Maintain an example entry until the first real requirement replaces it.
 - Measurement: Manual review of this catalog during project setup.
+- Priority: medium
 - Status: proposed
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.

@@ -2,7 +2,7 @@
 
 import pytest
 
-from agentlab.cli import dev
+from agentlab.core.codex_hooks import before_task
 
 
 @pytest.fixture()
@@ -19,7 +19,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
         "- Owner: product\n"
-        "- Narrative: Placeholder narrative\n"
+        "- Narrative: Placeholder\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
@@ -58,32 +58,31 @@ def catalog_dir(tmp_path: Path) -> Path:
     return requirements_dir
 
 
-def test_dev_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:
-    argv = [
-        "--prompt",
-        "handle incremental prompt updates",
-        "--catalog-root",
-        str(catalog_dir),
-        "--reference",
-        "prompt-401",
-        "--priority",
-        "high",
-    ]
+def test_before_task_creates_requirement_and_returns_metadata(catalog_dir: Path) -> None:
+    task = {
+        "prompt": "Handle incremental prompt updates",
+        "reference": "prompt-501",
+        "catalog_root": str(catalog_dir),
+        "priority": "high",
+    }
 
-    exit_code = dev.main(argv)
-    assert exit_code == 0
+    result = before_task(task)
 
-    functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-    assert "REQ-F-001" in functional_doc
-    assert "- Priority: high" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
+    assert result["requirement_id"] == "REQ-F-001"
+    assert result["priority"] == "high"
+    assert any("Recorded REQ-F-001" in message for message in result["messages"])
+    assert result.get("blocked") is None
+
+    catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
+    assert "- ID: REQ-F-001" in catalog
+    assert "- Priority: high" in catalog
 
 
-def test_dev_cli_blocks_when_requirement_exists(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:
+def test_before_task_marks_task_as_blocked_when_requirement_exists(catalog_dir: Path) -> None:
     functional = catalog_dir / "functional.md"
     functional.write_text(
         functional.read_text(encoding="utf-8")
-        + "- ID: REQ-F-300\n"
+        + "- ID: REQ-F-404\n"
         + "- Title: Handle incremental prompt updates\n"
         + "- Owner: product\n"
         + "- Narrative: existing\n"
@@ -95,19 +94,18 @@ def test_dev_cli_blocks_when_requirement_exists(monkeypatch: pytest.MonkeyPatch,
         encoding="utf-8",
     )
 
-    argv = [
-        "--prompt",
-        "handle incremental prompt updates",
-        "--catalog-root",
-        str(catalog_dir),
-        "--reference",
-        "prompt-402",
-    ]
+    task = {
+        "prompt": "handle incremental prompt updates",
+        "reference": "prompt-502",
+        "catalog_root": str(catalog_dir),
+    }
 
-    exit_code = dev.main(argv)
-    assert exit_code == 1
+    result = before_task(task)
+
+    assert result["blocked"] is True
+    assert result["requirement_id"] == "REQ-F-404"
 
 
-def test_dev_cli_requires_prompt(monkeypatch: pytest.MonkeyPatch) -> None:
-    with pytest.raises(SystemExit):
-        dev.main([])
+def test_before_task_requires_prompt() -> None:
+    with pytest.raises(ValueError):
+        before_task({})

@@ -45,6 +45,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Override inferred category for non-functional requirements.",
     )
     parser.add_argument(
+        "--priority",
+        choices=["low", "medium", "high"],
+        help="Override inferred priority for the requirement.",
+    )
+    parser.add_argument(
         "--force-new",
         action="store_true",
         help="Create a new requirement even if a similar one exists.",
@@ -79,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         owner=args.owner,
         category=args.category,
+        priority=args.priority,
         force_new=args.force_new,
         summary=args.summary,
         dry_run=args.dry_run,

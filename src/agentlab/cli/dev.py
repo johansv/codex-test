@@ -42,6 +42,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Force creation of a new requirement even if similar ones exist.",
     )
     parser.add_argument(
+        "--priority",
+        choices=["low", "medium", "high"],
+        help="Override the inferred priority before coding begins.",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Analyse the prompt without modifying catalogs or logs.",
@@ -60,6 +65,7 @@ def main(argv: list[str] | None = None) -> int:
         reference=args.reference,
         catalog_root=args.catalog_root,
         author=args.author,
+        priority=args.priority,
         force_new=args.force_new,
         dry_run=args.dry_run,
     )

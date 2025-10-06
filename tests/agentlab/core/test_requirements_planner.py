@@ -12,6 +12,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     req_dir.joinpath("functional.md").write_text(
         "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
@@ -19,6 +22,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n\n",
@@ -27,6 +31,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     req_dir.joinpath("non-functional.md").write_text(
         "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
@@ -34,6 +41,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n\n",
@@ -56,6 +64,7 @@ def test_build_requirement_draft_classifies_functional() -> None:
     assert draft.kind == "functional"
     assert draft.owner == "operator"
     assert draft.acceptance
+    assert draft.priority == "medium"
     assert not draft.architectural
 
 
@@ -65,6 +74,7 @@ def test_build_requirement_draft_classifies_non_functional() -> None:
     assert draft.kind == "non-functional"
     assert draft.category == "performance"
     assert draft.measurement is not None
+    assert draft.priority == "high"
     assert not draft.architectural
 
 
@@ -86,10 +96,13 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
 
     assert action.outcome == "created"
     assert action.requirement_id == "REQ-F-001"
+    assert action.priority == "medium"
     assert action.adr_path is None
 
     functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
     assert "- ID: REQ-F-001" in functional_doc
+    assert "- Priority: medium" in functional_doc
+    assert "Active: 2 (proposed=2); Satisfied: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
     assert "REQ-F-001" in log_doc
@@ -110,6 +123,7 @@ def test_requirement_planner_generates_adr_for_architectural_prompt(
 
     assert action.outcome == "created"
     assert action.requirement_id == "REQ-F-001"
+    assert action.priority == "medium"
     assert action.adr_path is not None
     assert action.adr_path.exists()
     assert action.adr_path.read_text(encoding="utf-8").startswith("# Refactor the ingestion")
@@ -125,6 +139,7 @@ def test_requirement_planner_detects_existing_requirement(catalog_dir: Path) -> 
         + "- Narrative: Existing narrative\n"
         + "- Acceptance Criteria:\n"
         + "  * Existing\n"
+        + "- Priority: medium\n"
         + "- Status: active\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
@@ -141,12 +156,13 @@ def test_requirement_planner_detects_existing_requirement(catalog_dir: Path) -> 
 
     assert action.outcome == "needs-update"
     assert action.requirement_id == "REQ-F-123"
+    assert action.priority == "medium"
     assert action.adr_path is None
 
 
 def test_requirement_planner_dry_run_returns_without_changes(catalog_dir: Path) -> None:
     planner = RequirementPlanner(catalog_dir)
-    prompt = "monitor prompt ingestion latency"
+    prompt = "must monitor prompt ingestion latency"
 
     action = planner.ensure_requirement(
         prompt,
@@ -156,6 +172,7 @@ def test_requirement_planner_dry_run_returns_without_changes(catalog_dir: Path) 
     )
 
     assert action.outcome == "dry-run"
+    assert action.priority == "high"
     assert action.adr_path is None
     assert (
         catalog_dir.joinpath("non-functional.md").read_text(encoding="utf-8").count("REQ-NF-000")

@@ -45,6 +45,12 @@ def build_parser() -> argparse.ArgumentParser:
     functional.add_argument("--owner", required=True)
     functional.add_argument("--narrative", required=True)
     functional.add_argument(
+        "--priority",
+        choices=["low", "medium", "high"],
+        default="medium",
+        help="Priority recorded with the requirement (default: medium)",
+    )
+    functional.add_argument(
         "--acceptance",
         action="append",
         dest="acceptance",
@@ -75,6 +81,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     non_functional.add_argument("--title", required=True)
     non_functional.add_argument("--owner", required=True)
+    non_functional.add_argument(
+        "--priority",
+        choices=["low", "medium", "high"],
+        default="medium",
+        help="Priority recorded with the requirement (default: medium)",
+    )
     non_functional.add_argument(
         "--category",
         required=True,
@@ -148,6 +160,7 @@ def _handle_functional(args: argparse.Namespace, catalog_dir: Path, log_path: Pa
         owner=args.owner,
         narrative=args.narrative,
         acceptance_criteria=args.acceptance,
+        priority=args.priority,
         status=args.status,
         trace_prompts=args.trace_prompts,
         trace_tests=args.trace_tests,
@@ -173,6 +186,7 @@ def _handle_non_functional(
         category=args.category,
         description=args.description,
         measurement=args.measurement,
+        priority=args.priority,
         status=args.status,
         trace_prompts=args.trace_prompts,
         trace_tests=args.trace_tests,

@@ -12,6 +12,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     functional = (
         "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
@@ -19,6 +22,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n"
@@ -27,6 +31,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     non_functional = (
         "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
@@ -34,6 +41,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n"
@@ -74,6 +82,8 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
             "prompt-42",
             "--trace-tests",
             "tests/agentlab/utils/test_requirements.py",
+            "--priority",
+            "high",
         ]
     )
 
@@ -82,6 +92,8 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
     assert "- ID: REQ-F-001" in catalog
+    assert "- Priority: high" in catalog
+    assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert "REQ-F-001" in log
@@ -112,6 +124,8 @@ def test_cli_adds_non_functional_requirement_and_logs(
             "Measured via scripts/smoke/requirements.py",
             "--trace-prompts",
             "prompt-43",
+            "--priority",
+            "low",
         ]
     )
 
@@ -120,6 +134,8 @@ def test_cli_adds_non_functional_requirement_and_logs(
 
     catalog = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
     assert "- ID: REQ-NF-001" in catalog
+    assert "- Priority: low" in catalog
+    assert "Active: 2 (proposed=2); Satisfied: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert "REQ-NF-001" in log

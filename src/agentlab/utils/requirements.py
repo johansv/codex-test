@@ -1,6 +1,7 @@
-﻿"""Utilities for managing requirement catalogs."""
+"""Utilities for managing requirement catalogs."""
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,6 +22,8 @@ _SATISFIED_MARKER = "## Satisfied Requirements"
 _FUNCTIONAL_PREFIX = "REQ-F"
 _NON_FUNCTIONAL_PREFIX = "REQ-NF"
 _ID_PATTERN = re.compile(r"REQ-[A-Z]+-(?P<number>\d{3})")
+_SUMMARY_START = "<!-- STATUS-SUMMARY:START -->"
+_SUMMARY_END = "<!-- STATUS-SUMMARY:END -->"
 
 
 @dataclass(slots=True)
@@ -31,6 +34,7 @@ class FunctionalRequirement:
     owner: str
     narrative: str
     acceptance_criteria: list[str]
+    priority: str = "medium"
     status: str = "proposed"
     trace_prompts: str = "none"
     trace_tests: str = "none"
@@ -48,6 +52,7 @@ class NonFunctionalRequirement:
     category: str
     description: str
     measurement: str
+    priority: str = "medium"
     status: str = "proposed"
     trace_prompts: str = "none"
     trace_tests: str = "none"
@@ -58,12 +63,7 @@ class NonFunctionalRequirement:
 
 
 def catalog_root(start: Path | None = None) -> Path:
-    """Return the expected root for requirement catalogs.
-
-    Walks up from *start* (defaults to the current file) until the repository
-    docs directory is located. Raises FileNotFoundError if the structure is not
-    discovered.
-    """
+    """Return the expected root for requirement catalogs."""
 
     candidate = start or Path(__file__).resolve()
     for parent in candidate.parents:
@@ -74,11 +74,7 @@ def catalog_root(start: Path | None = None) -> Path:
 
 
 def generate_next_id(contents: str, prefix: str) -> str:
-    """Return the next incremental requirement ID for *prefix*.
-
-    Existing IDs are detected regardless of section so regenerated files remain
-    consistent.
-    """
+    """Return the next incremental requirement ID for *prefix*."""
 
     numbers = [
         int(match.group("number"))
@@ -90,10 +86,7 @@ def generate_next_id(contents: str, prefix: str) -> str:
 
 
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:
-    """Append *requirement* to the functional catalog located at *path*.
-
-    Returns the ID assigned to the requirement.
-    """
+    """Append *requirement* to the functional catalog located at *path*."""
 
     text = path.read_text(encoding="utf-8")
     req_id = requirement.req_id or generate_next_id(text, _FUNCTIONAL_PREFIX)
@@ -107,6 +100,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     ]
     for criterion in requirement.acceptance_criteria:
         entry_lines.append(f"  * {criterion}")
+    entry_lines.append(f"- Priority: {requirement.priority}")
     entry_lines.extend(
         [
             f"- Status: {requirement.status}",
@@ -117,6 +111,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
         entry_lines.append(f"- Notes: {requirement.notes}")
 
     updated = _insert_entry(text, "\n".join(entry_lines))
+    updated = _update_status_summary(updated)
     path.write_text(updated, encoding="utf-8")
     return req_id
 
@@ -124,10 +119,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
 def append_non_functional_requirement(
     path: Path, requirement: NonFunctionalRequirement
 ) -> str:
-    """Append *requirement* to the non-functional catalog at *path*.
-
-    Returns the ID assigned to the requirement.
-    """
+    """Append *requirement* to the non-functional catalog at *path*."""
 
     text = path.read_text(encoding="utf-8")
     req_id = requirement.req_id or generate_next_id(text, _NON_FUNCTIONAL_PREFIX)
@@ -139,6 +131,7 @@ def append_non_functional_requirement(
         f"- Category: {requirement.category}",
         f"- Description: {requirement.description}",
         f"- Measurement: {requirement.measurement}",
+        f"- Priority: {requirement.priority}",
         f"- Status: {requirement.status}",
         f"- Trace: prompts {requirement.trace_prompts}, tests {requirement.trace_tests}, scripts {requirement.trace_scripts}, monitors {requirement.trace_monitors}",
     ]
@@ -146,6 +139,7 @@ def append_non_functional_requirement(
         entry_lines.append(f"- Notes: {requirement.notes}")
 
     updated = _insert_entry(text, "\n".join(entry_lines))
+    updated = _update_status_summary(updated)
     path.write_text(updated, encoding="utf-8")
     return req_id
 
@@ -157,6 +151,75 @@ def _insert_entry(contents: str, entry: str) -> str:
     prefix = contents[:insertion_point].rstrip()
     suffix = contents[insertion_point:]
     return f"{prefix}\n\n{entry}\n\n{suffix}"
+
+
+def _update_status_summary(contents: str) -> str:
+    if _SUMMARY_START not in contents or _SUMMARY_END not in contents:
+        return contents
+
+    active_section = _extract_section(contents, _ACTIVE_MARKER, _SATISFIED_MARKER)
+    satisfied_section = _extract_section(contents, _SATISFIED_MARKER, None)
+    active_count, active_statuses = _summarise_entries(active_section)
+    satisfied_count, satisfied_statuses = _summarise_entries(satisfied_section)
+
+    if active_count == 0 and satisfied_count == 0:
+        summary_text = "_No requirements recorded yet._"
+    else:
+        summary_text = '; '.join([
+            _format_summary("Active", active_count, active_statuses),
+            _format_summary("Satisfied", satisfied_count, satisfied_statuses),
+        ])
+
+    return _replace_summary(contents, summary_text)
+
+
+def _extract_section(contents: str, start_marker: str, end_marker: str | None) -> str:
+    try:
+        start_index = contents.index(start_marker) + len(start_marker)
+    except ValueError:
+        return ""
+    if end_marker:
+        try:
+            end_index = contents.index(end_marker, start_index)
+        except ValueError:
+            end_index = len(contents)
+    else:
+        end_index = len(contents)
+    return contents[start_index:end_index]
+
+
+def _summarise_entries(section: str) -> tuple[int, Counter[str]]:
+    if not section:
+        return 0, Counter()
+    count = 0
+    statuses: Counter[str] = Counter()
+    for line in section.splitlines():
+        stripped = line.strip()
+        if stripped.startswith('- ID:'):
+            count += 1
+        elif stripped.startswith('- Status:'):
+            status_value = stripped.split(':', 1)[1].strip()
+            if status_value:
+                statuses[status_value] += 1
+    return count, statuses
+
+
+def _format_summary(label: str, count: int, statuses: Counter[str]) -> str:
+    if count == 0:
+        return f"{label}: 0"
+    if statuses:
+        breakdown = ', '.join(f"{status}={statuses[status]}" for status in sorted(statuses))
+    else:
+        breakdown = 'status unspecified'
+    return f"{label}: {count} ({breakdown})"
+
+
+def _replace_summary(contents: str, summary_text: str) -> str:
+    start_index = contents.index(_SUMMARY_START) + len(_SUMMARY_START)
+    end_index = contents.index(_SUMMARY_END)
+    before = contents[:start_index]
+    after = contents[end_index:]
+    return f"{before}\n{summary_text}\n{after}"
 
 
 def append_log_entry(

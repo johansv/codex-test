@@ -12,6 +12,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     requirements_dir.joinpath("functional.md").write_text(
         "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
@@ -19,6 +22,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Narrative: Placeholder\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n\n",
@@ -27,6 +31,9 @@ def catalog_dir(tmp_path: Path) -> Path:
 
     requirements_dir.joinpath("non-functional.md").write_text(
         "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
@@ -34,6 +41,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n\n",
@@ -59,11 +67,13 @@ def test_auto_capture_prompt_creates_requirement(catalog_dir: Path) -> None:
 
     assert action.outcome == "created"
     assert action.requirement_id == "REQ-F-001"
+    assert action.priority == "medium"
     assert not should_block_for_manual_update(action)
 
     payload = action_to_dict(action)
     assert payload["outcome"] == "created"
     assert payload["kind"] == "functional"
+    assert payload["priority"] == "medium"
     assert payload["adr_path"] is None
 
 
@@ -77,6 +87,7 @@ def test_auto_capture_prompt_detects_existing_requirement(catalog_dir: Path) -> 
         + "- Narrative: placeholder\n"
         + "- Acceptance Criteria:\n"
         + "  * Placeholder\n"
+        + "- Priority: medium\n"
         + "- Status: active\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",
@@ -89,4 +100,5 @@ def test_auto_capture_prompt_detects_existing_requirement(catalog_dir: Path) -> 
     )
 
     assert action.outcome == "needs-update"
+    assert action.priority == "medium"
     assert should_block_for_manual_update(action)

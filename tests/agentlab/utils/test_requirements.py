@@ -15,6 +15,9 @@ from agentlab.utils.requirements import (
 def functional_catalog(tmp_path: Path) -> Path:
     content = (
         "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
@@ -22,6 +25,7 @@ def functional_catalog(tmp_path: Path) -> Path:
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder criterion\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, commits none\n\n"
         "## Satisfied Requirements\n"
@@ -35,6 +39,9 @@ def functional_catalog(tmp_path: Path) -> Path:
 def non_functional_catalog(tmp_path: Path) -> Path:
     content = (
         "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "_No requirements recorded yet._\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
@@ -42,6 +49,7 @@ def non_functional_catalog(tmp_path: Path) -> Path:
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
+        "- Priority: medium\n"
         "- Status: proposed\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
         "## Satisfied Requirements\n"
@@ -70,7 +78,9 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
     assert req_id == "REQ-F-001"
     assert "- ID: REQ-F-001" in text
     assert text.index("- ID: REQ-F-001") < text.index("## Satisfied Requirements")
+    assert "- Priority: medium" in text
     assert "  * Given a prompt" in text
+    assert "Active: 2 (proposed=2); Satisfied: 0" in text
 
 
 def test_append_non_functional_requirement_appends_entry(
@@ -91,6 +101,8 @@ def test_append_non_functional_requirement_appends_entry(
     assert req_id == "REQ-NF-001"
     assert "- ID: REQ-NF-001" in text
     assert text.index("- ID: REQ-NF-001") < text.index("## Satisfied Requirements")
+    assert "- Priority: medium" in text
+    assert "Active: 2 (proposed=2); Satisfied: 0" in text
 
 
 def test_generate_next_id_advances_highest_number() -> None:

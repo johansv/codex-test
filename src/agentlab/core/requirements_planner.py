@@ -38,6 +38,9 @@ _NON_FUNCTIONAL_SIGNALS: dict[str, tuple[str, ...]] = {
 
 _NON_FUNCTIONAL_MODIFIERS = {"ensure", "must", "should", "guarantee", "maintain", "enforce"}
 
+_PRIORITY_HIGH_KEYWORDS = {"must", "critical", "urgent", "immediately", "blocker", "p0"}
+_PRIORITY_LOW_KEYWORDS = {"optional", "nice to have", "eventually", "future", "later"}
+
 _ARCHITECTURAL_KEYWORDS = {
     "architecture",
     "architectural",
@@ -69,6 +72,7 @@ class RequirementDraft:
     status: str
     trace_prompts: str
     notes: str | None
+    priority: str
     category: str | None = None
     measurement: str | None = None
     architectural: bool = False
@@ -92,6 +96,7 @@ class RequirementAction:
     requirement_id: str | None
     title: str
     message: str
+    priority: str | None = None
     adr_path: Path | None = None
 
 
@@ -109,18 +114,21 @@ class RequirementPlanner:
         author: str,
         owner: str | None = None,
         category: str | None = None,
+        priority: str | None = None,
         force_new: bool = False,
         summary: str | None = None,
         dry_run: bool = False,
     ) -> RequirementAction:
-        draft = build_requirement_draft(prompt, owner=owner, category=category)
+        draft = build_requirement_draft(prompt, owner=owner, category=category, priority=priority)
+
         existing = self._find_existing(draft)
 
         if existing and not force_new:
             advisory = (
                 "Existing requirement appears to cover this prompt: "
                 f"{existing.requirement_id} - {existing.title}. "
-                "Update it manually or re-run with --force-new if a successor is required."
+                "Update it manually or re-run with --force-new if a successor is required. "
+                f"When committing, use the trailer 'Refs {existing.requirement_id}'."
             )
             if draft.architectural:
                 advisory += " Consider drafting or updating an ADR for the architectural change."
@@ -130,11 +138,15 @@ class RequirementPlanner:
                 requirement_id=existing.requirement_id,
                 title=existing.title,
                 message=advisory,
+                priority=draft.priority,
             )
 
         if dry_run:
             title = draft.title if not existing else existing.title
-            notice = "Dry run only; no catalog changes were made."
+            notice = (
+                "Dry run only; no catalog changes were made. "
+                f"Planned priority: {draft.priority}."
+            )
             if draft.architectural:
                 notice += " Architectural prompt detected; ADR recommended."
             return RequirementAction(
@@ -143,6 +155,7 @@ class RequirementPlanner:
                 requirement_id=existing.requirement_id if existing else None,
                 title=title,
                 message=notice,
+                priority=draft.priority,
             )
 
         if draft.kind == "functional":
@@ -152,6 +165,7 @@ class RequirementPlanner:
                 owner=draft.owner,
                 narrative=draft.narrative,
                 acceptance_criteria=draft.acceptance,
+                priority=draft.priority,
                 status=draft.status,
                 trace_prompts=draft.trace_prompts,
                 trace_tests="pending",
@@ -167,6 +181,7 @@ class RequirementPlanner:
                 category=draft.category or "other",
                 description=draft.narrative,
                 measurement=draft.measurement or "Define measurement",
+                priority=draft.priority,
                 status=draft.status,
                 trace_prompts=draft.trace_prompts,
                 trace_tests="pending",
@@ -185,11 +200,11 @@ class RequirementPlanner:
             adr_path = self._maybe_generate_adr(requirement_id, draft, reference)
 
         message = (
-            f"Recorded {requirement_id} in {catalog_path}."
+            f"Recorded {requirement_id} in {catalog_path} (priority {draft.priority})."
         )
         if adr_path:
             message += f" Drafted ADR at {adr_path}."
-        message += " Update trace fields and status once implementation lands."
+        message += " Update trace fields and status once implementation lands, and include the commit trailer 'Refs {requirement_id}'."
 
         return RequirementAction(
             outcome="created",
@@ -197,6 +212,7 @@ class RequirementPlanner:
             requirement_id=requirement_id,
             title=draft.title,
             message=message,
+            priority=draft.priority,
             adr_path=adr_path,
         )
 
@@ -259,6 +275,7 @@ def build_requirement_draft(
     *,
     owner: str | None = None,
     category: str | None = None,
+    priority: str | None = None,
 ) -> RequirementDraft:
     """Infer a structured requirement draft from *prompt*."""
 
@@ -270,6 +287,7 @@ def build_requirement_draft(
     trace_prompts = prompt[:80] + ("..." if len(prompt) > 80 else "")
     notes = "Auto-generated from prompt; refine narrative and acceptance criteria."
     architectural = is_architectural_prompt(prompt)
+    resolved_priority = priority or infer_priority(prompt)
 
     if kind == "functional":
         inferred_owner = owner or infer_owner(prompt) or _FUNCTIONAL_DEFAULT_OWNER
@@ -283,6 +301,9 @@ def build_requirement_draft(
             status=status,
             trace_prompts=trace_prompts,
             notes=notes,
+            priority=resolved_priority,
+            category=None,
+            measurement=None,
             architectural=architectural,
         )
 
@@ -299,6 +320,7 @@ def build_requirement_draft(
         status=status,
         trace_prompts=trace_prompts,
         notes=notes,
+        priority=resolved_priority,
         category=inferred_category,
         measurement=measurement,
         architectural=architectural,
@@ -338,6 +360,20 @@ def infer_category(prompt: str) -> str:
             best_category = category
             best_score = score
     return best_category
+
+
+
+def infer_priority(prompt: str, default: str = "medium") -> str:
+    lowered = prompt.lower()
+    if any(keyword in lowered for keyword in _PRIORITY_HIGH_KEYWORDS):
+        return "high"
+    if any(keyword in lowered for keyword in _PRIORITY_LOW_KEYWORDS):
+        return "low"
+    if any(modifier in lowered for modifier in _NON_FUNCTIONAL_MODIFIERS if modifier != "should"):
+        return "high"
+    return default
+
+
 
 
 def is_architectural_prompt(prompt: str) -> bool:

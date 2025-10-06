@@ -1,8 +1,9 @@
-#!/usr/bin/env bash
+﻿#!/usr/bin/env bash
 set -euo pipefail
 
 APPROVAL_POLICY=${CODEX_APPROVAL_POLICY:-never}
 SANDBOX_MODE=${CODEX_SANDBOX:-danger-full-access}
+BEFORE_HOOK=${CODEX_BEFORE_TASK_HOOK:-python:agentlab.core.codex_hooks:before_task}
 
 if ! codex_stub=$(command -v codex 2>/dev/null); then
   echo "Codex CLI not found on PATH. Install it with 'npm install -g @openai/codex'." >&2
@@ -49,4 +50,4 @@ fi
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 
-exec "$codex_bin" --ask-for-approval "$APPROVAL_POLICY" --sandbox "$SANDBOX_MODE" --cd "$repo_root" "$@"
+exec "$codex_bin" --ask-for-approval "$APPROVAL_POLICY" --sandbox "$SANDBOX_MODE" --before-task-hook "$BEFORE_HOOK" --cd "$repo_root" "$@"

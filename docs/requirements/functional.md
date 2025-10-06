@@ -1,5 +1,9 @@
 ﻿# Functional Requirements
 
+<!-- STATUS-SUMMARY:START -->
+Active: 1 (proposed=1); Satisfied: 0
+<!-- STATUS-SUMMARY:END -->
+
 Maintain Codex-sourced functional requirements in this catalog.
 Every entry should link back to its originating task or prompt and to verifying tests.
 
@@ -16,6 +20,7 @@ Move fulfilled items to **Satisfied Requirements** once implementation and tests
 - Acceptance Criteria:
   * Given <context> when <action> then <result>.
   * Include as many bullet checks as needed.
+- Priority: low | medium | high
 - Status: proposed | active | satisfied | retired
 - Trace: prompts <link>, tests <path>, commits <hash>
 - Notes: optional clarifications or open questions.
@@ -29,6 +34,7 @@ Move fulfilled items to **Satisfied Requirements** once implementation and tests
 - Narrative: As a template user, I want a sample entry so that formatting stays visible.
 - Acceptance Criteria:
   * Given this repo when I open the catalog then I see an example entry.
+- Priority: medium
 - Status: proposed
 - Trace: prompts none, tests none, commits none
 - Notes: replace this sample once real requirements exist.
