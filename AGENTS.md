@@ -9,10 +9,10 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - Store prompts, configs, and datasets in <code>assets/</code> with provenance tracked in <code>assets/METADATA.md</code>.
 
 ## Build, Test, and Development Commands
-- <code>uv sync</code> – install dependencies into the managed environment.
-- <code>uv run python -m agentlab.cli.dev</code> – start the interactive agent loop for manual testing.
-- <code>uv run python -m agentlab.cli.worker</code> – run the background worker for CI or hosted runs.
-- <code>uv run pytest</code> – execute the automated suite; add <code>uv run coverage run -m pytest</code> before releases.
+- <code>uv sync</code> - install dependencies into the managed environment.
+- <code>uv run python -m agentlab.cli.dev</code> - start the interactive agent loop for manual testing.
+- <code>uv run python -m agentlab.cli.worker</code> - run the background worker for CI or hosted runs.
+- <code>uv run pytest</code> - execute the automated suite; add <code>uv run coverage run -m pytest</code> before releases.
 - Expose wrappers in <code>scripts/dev.*</code>, <code>scripts/test.*</code>, and <code>scripts/setup.*</code>.
 
 ## Coding Style & Naming Conventions
@@ -25,12 +25,12 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - Mark long scenarios with <code>pytest.mark.slow</code> and toggle via <code>PYTEST_ADDOPTS</code>.
 
 ## Commit & Pull Request Guidelines
-- Use Conventional Commits (<code>feat:</code>, <code>fix:</code>, <code>docs:</code>) with optional scopes (<code>feat(parser): …</code>) and reference issues (<code>Refs #12</code>).
+- Use Conventional Commits (<code>feat:</code>, <code>fix:</code>, <code>docs:</code>) with optional scopes (<code>feat(parser): ...</code>) and reference issues (<code>Refs #12</code>).
 - PRs supply summary, tests run, coverage notes, and supporting screenshots/logs; promote from draft after <code>uv run pytest</code> and <code>uv run ruff check</code> succeed locally.
 
 ## Agent-Specific Instructions
 - Check in sanitized secrets via <code>.env.example</code> and load them with <code>python-dotenv</code> locally only.
-- Document environment variables in <code>docs/environment.md</code> and publish smoke probes under <code>scripts/smoke/&lt;integration&gt;.py</code> with matching mocks in <code>tests/mocks/</code>.
+- Document environment variables in <code>docs/environment.md</code> and publish smoke probes under <code>scripts/smoke/<integration>.py</code> with matching mocks in <code>tests/mocks/</code>.
 
 ## Requirements Workflow
 1. **Requirements Phase (default)**
@@ -45,9 +45,13 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 ### Workflow Controls
 - **Default behavior:** Run the Requirements phase only and pause.
-- **Advance to planning:** User explicitly requests “Plan implementation” (or similar wording).
-- **Skip planning:** User says “Implement now” after requirements approval.
-- **Run all phases automatically:** User states upfront “Run full workflow” (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
+- **Advance to planning:** User explicitly requests "Plan implementation" (or similar wording).
+- **Skip planning:** User says "Implement now" after requirements approval.
+- **Run all phases automatically:** User states upfront "Run full workflow" (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
 - Requirements must carry one of the statuses `proposed`, `active`, `satisfied`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
 - Codex should flag requirements that look too large or too small, suggesting splits or merges before recording them when scope warrants it.
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
+
+### Catalog Updates
+- Codex may persist approved requirements to the catalogs on request, even when planning or implementation is deferred; treat this as completing the requirements phase while leaving later phases pending.
+- Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
