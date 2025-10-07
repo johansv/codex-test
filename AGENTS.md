@@ -1,4 +1,4 @@
-# Repository Guidelines
+﻿# Repository Guidelines
 
 Adopt Python 3.11, uv, and pytest for consistent workflows.
 
@@ -33,10 +33,20 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - Document environment variables in <code>docs/environment.md</code> and publish smoke probes under <code>scripts/smoke/&lt;integration&gt;.py</code> with matching mocks in <code>tests/mocks/</code>.
 
 ## Requirements Workflow
-- Before coding, run `uv run agentlab-capture` with the task prompt so a requirement entry exists.
-- If the command reports an existing requirement, update that entry instead of writing code until it is reconciled.
-- New requirements are recorded with placeholder traces; fill in tests/commits when implementation lands.
-- Update each entry�s status to `proposed`, `active`, `satisfied`, `rejected`, or `superseded` and record a short reason for that state.
-- Do not implement implicit capabilities; ensure every change references a requirement ID and, when architecture shifts, add or update ADRs.
-- Middleware should call `reqflow.middleware.auto_capture_prompt()` at task start to capture requirements and draft ADRs automatically (preferred via `python:reqflow.codex_hooks:before_task`).
+1. **Requirements Phase (default)**
+   - Codex captures the user prompt in dry-run mode first and proposes one or more requirements (IDs, narrative, acceptance criteria, priority, reason) without writing to disk.
+   - If the prompt is vague or conflicts with existing requirements, Codex asks clarifying questions or suggests splitting into multiple requirements.
+   - Once the user approves the wording, Codex records the requirement(s) with `Status: active` (or the chosen status) and the agreed `Reason`, then stops unless instructed to continue.
+2. **Planning Phase (optional)**
+   - After requirements are accepted, Codex can draft an implementation plan. Codex waits for user approval before moving on.
+   - Users may skip this step entirely by requesting implementation immediately.
+3. **Implementation Phase**
+   - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
+
+### Workflow Controls
+- **Default behavior:** Run the Requirements phase only and pause.
+- **Advance to planning:** User explicitly requests “Plan implementation” (or similar wording).
+- **Skip planning:** User says “Implement now” after requirements approval.
+- **Run all phases automatically:** User states upfront “Run full workflow” (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
+- Requirements must carry one of the statuses `proposed`, `active`, `satisfied`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
