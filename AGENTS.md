@@ -57,3 +57,10 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - Codex can persist catalog entries as `proposed` when the user wants more review; they stay in the catalog but must not advance to planning or implementation until promoted to `active`.
 - When a user requests planning or implementation for a requirement still marked `proposed`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
 - Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
+
+#### Status Definitions
+- `proposed`: Catalog entry under review; keep it visible for refinement but block planning or implementation until promoted to `active`.
+- `active`: Approved requirement ready for planning and implementation; keep the reason current and maintain trace fields as work progresses.
+- `satisfied`: Requirement fulfilled by merged code/tests; move the entry to the satisfied section and refresh trace links to the verifying commits/tests.
+- `rejected`: Decision not to pursue the requirement; document why it will not move forward.
+- `superseded`: Requirement replaced by a newer one; cross-reference the successor ID in both entries.
