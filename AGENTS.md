@@ -54,4 +54,6 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 ### Catalog Updates
 - Codex may persist approved requirements to the catalogs on request, even when planning or implementation is deferred; treat this as completing the requirements phase while leaving later phases pending.
+- Codex can persist catalog entries as `proposed` when the user wants more review; they stay in the catalog but must not advance to planning or implementation until promoted to `active`.
+- When a user requests planning or implementation for a requirement still marked `proposed`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
 - Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
