@@ -1,7 +1,7 @@
 ï»¿# Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 1 (proposed=1); Satisfied: 0; Retired: 0
+Active: 0; Satisfied: 1 (satisfied=1); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -23,31 +23,27 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Include as many bullet checks as needed.
 - Priority: low | medium | high
 - Status: proposed | active | satisfied | rejected | superseded
-- Reason: why the current status applies (e.g., superseded by REQ-F-…)
+- Reason: why the current status applies (e.g., superseded by REQ-F-?)
 - Trace: prompts <link>, tests <path>, commits <hash>
 - Notes: optional clarifications or open questions.
 ```
 
 ## Active Requirements
 
-- ID: REQ-F-000
-- Title: Placeholder example
-- Owner: product
-- Narrative: As a template user, I want a sample entry so that formatting stays visible.
-- Acceptance Criteria:
-  * Given this repo when I open the catalog then I see an example entry.
-- Priority: medium
-- Status: proposed
-- Reason: pending
-- Trace: prompts none, tests none, commits none
-- Notes: replace this sample once real requirements exist.
-
 ## Satisfied Requirements
 
-Document completed functional requirements here with the same structure
-and keep entries sorted by ID.
+- ID: REQ-F-20251007T083937-FA
+- Title: CLI satisfied transition helper
+- Owner: codex
+- Narrative: As a developer, I want a CLI command that marks requirements satisfied so that catalog updates and trace data stay consistent without manual edits.
+- Acceptance Criteria:
+  * Command accepts a requirement ID plus reason, verifying test paths, and optional commits.
+  * Functional catalog entry moves to satisfied with status updated and trace fields refreshed.
+  * Requirements change log records the transition details.
+  * Mirrored CLI tests cover the command behavior.
+- Priority: medium
+- Status: satisfied
+- Reason: Satisfaction CLI implemented and tested
+- Trace: prompts R2, tests tests/agentlab/cli/test_satisfy_cli.py; tests/reqflow/test_catalog.py, commits none
 
 ## Retired Requirements
-
-List requirements that were rejected, superseded, or otherwise retired.
-Keep entries sorted by ID and note the reason in the Notes field.

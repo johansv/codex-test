@@ -5,9 +5,10 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime
 import random
+import re
 import string
 from pathlib import Path
-import re
+from typing import Sequence
 
 __all__ = [
     "FunctionalRequirement",
@@ -17,6 +18,7 @@ __all__ = [
     "append_log_entry",
     "catalog_root",
     "generate_next_id",
+    "satisfy_functional_requirement",
 ]
 
 _ACTIVE_MARKER = "## Active Requirements"
@@ -135,6 +137,128 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     path.write_text(updated, encoding="utf-8")
     return req_id
 
+
+
+
+def satisfy_functional_requirement(
+    path: Path,
+    req_id: str,
+    reason: str,
+    tests: Sequence[str],
+    commits: Sequence[str] | None = None,
+) -> None:
+    """Mark *req_id* satisfied in the functional catalog located at *path*."""
+
+    if not tests:
+        raise ValueError("Provide at least one verifying test path.")
+
+    commits = [value for value in (commits or []) if value]
+    contents = path.read_text(encoding="utf-8")
+
+    if f"- ID: {req_id}" not in contents:
+        raise ValueError(f"Requirement {req_id} not found in {path}")
+
+    before_active, active_header, remainder = contents.partition(_ACTIVE_MARKER)
+    if not active_header:
+        raise ValueError("Functional catalog missing active section")
+
+    active_section, satisfied_header, remainder = remainder.partition(_SATISFIED_MARKER)
+    if not satisfied_header:
+        raise ValueError("Functional catalog missing satisfied section")
+
+    satisfied_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Functional catalog missing retired section")
+
+    def split_entries(section: str) -> list[list[str]]:
+        lines = section.strip("\n").splitlines()
+        entries: list[list[str]] = []
+        current: list[str] = []
+        for line in lines:
+            if line.strip():
+                current.append(line)
+            elif current:
+                entries.append(current)
+                current = []
+        if current:
+            entries.append(current)
+        return entries
+
+    def format_section(entries: list[list[str]]) -> str:
+        if not entries:
+            return "\n\n"
+        body = "\n\n".join("\n".join(entry) for entry in entries)
+        return f"\n\n{body}\n\n"
+
+    active_entries = split_entries(active_section)
+    satisfied_entries = split_entries(satisfied_section)
+
+    entry_index = next(
+        (
+            idx
+            for idx, entry in enumerate(active_entries)
+            if entry and entry[0].strip() == f"- ID: {req_id}"
+        ),
+        None,
+    )
+
+    if entry_index is None:
+        if f"- ID: {req_id}" in satisfied_section:
+            raise ValueError(f"Requirement {req_id} is already satisfied")
+        if f"- ID: {req_id}" in suffix:
+            raise ValueError(f"Requirement {req_id} is retired")
+        raise ValueError(f"Requirement {req_id} not found in active section")
+
+    entry_lines = active_entries.pop(entry_index)
+    tests_value = "; ".join(tests)
+    commits_value = "; ".join(commits) if commits else "none"
+
+    updated_entry: list[str] = []
+    trace_updated = False
+    for line in entry_lines:
+        stripped = line.strip()
+        if stripped.startswith("- Status:"):
+            updated_entry.append("- Status: satisfied")
+        elif stripped.startswith("- Reason:"):
+            updated_entry.append(f"- Reason: {reason}")
+        elif stripped.startswith("- Trace:"):
+            remainder_line = stripped[len("- Trace: ") :]
+            trace_parts: dict[str, str] = {}
+            for part in remainder_line.split(","):
+                item = part.strip()
+                if not item:
+                    continue
+                key, _, value = item.partition(" ")
+                if value:
+                    trace_parts[key] = value
+            prompts_value = trace_parts.get("prompts", "none")
+            trace_line = (
+                f"- Trace: prompts {prompts_value}, tests {tests_value}, commits {commits_value}"
+            )
+            updated_entry.append(trace_line)
+            trace_updated = True
+        else:
+            updated_entry.append(line)
+
+    if not trace_updated:
+        trace_line = (
+            f"- Trace: prompts none, tests {tests_value}, commits {commits_value}"
+        )
+        updated_entry.append(trace_line)
+
+    satisfied_entries.insert(0, updated_entry)
+
+    updated_contents = (
+        before_active
+        + active_header
+        + format_section(active_entries)
+        + satisfied_header
+        + format_section(satisfied_entries)
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
 
 def append_non_functional_requirement(
     path: Path, requirement: NonFunctionalRequirement

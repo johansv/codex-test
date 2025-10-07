@@ -21,6 +21,7 @@ agentlab-capture = "agentlab.cli.capture:main"
 agentlab-req = "agentlab.cli.requirements:main"
 agentlab-dev = "agentlab.cli.dev:main"
 agentlab-worker = "agentlab.cli.worker:main"
+agentlab-satisfy = "agentlab.cli.satisfy:main"
 
 [tool.uv]
 package = true
