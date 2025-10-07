@@ -49,4 +49,5 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - **Skip planning:** User says “Implement now” after requirements approval.
 - **Run all phases automatically:** User states upfront “Run full workflow” (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
 - Requirements must carry one of the statuses `proposed`, `active`, `satisfied`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
+- Codex should flag requirements that look too large or too small, suggesting splits or merges before recording them when scope warrants it.
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
