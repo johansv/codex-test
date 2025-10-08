@@ -153,14 +153,37 @@ def main(argv: list[str] | None = None) -> None:
         parser.error("log.md not found in catalog directory")
 
     if args.command == "functional":
-        _handle_functional(args, catalog_dir, log_path)
+        _handle_functional(args, catalog_dir, log_path, parser)
     elif args.command == "non-functional":
-        _handle_non_functional(args, catalog_dir, log_path)
+        _handle_non_functional(args, catalog_dir, log_path, parser)
     else:  # pragma: no cover - safety switch
         parser.error(f"Unsupported command: {args.command}")
 
 
-def _handle_functional(args: argparse.Namespace, catalog_dir: Path, log_path: Path) -> None:
+def _validate_functional_args(args: argparse.Namespace, parser: argparse.ArgumentParser) -> None:
+    narrative = args.narrative.strip()
+    lowered = narrative.lower()
+    if not ("as " in lowered and " i want " in lowered and (" so that " in lowered or " so i can " in lowered)):
+        parser.error("Narrative must include a role, capability, and outcome (e.g., 'As a ..., I want ..., so that ...').")
+
+    acceptance = [item.strip() for item in args.acceptance if item.strip()]
+    if not acceptance:
+        parser.error("Provide at least one non-empty --acceptance value.")
+    args.acceptance = acceptance
+
+    args.trace_prompts = args.trace_prompts.strip()
+    args.trace_tests = args.trace_tests.strip()
+    args.trace_commits = args.trace_commits.strip()
+    traces = [args.trace_prompts, args.trace_tests, args.trace_commits]
+    if all(value.lower() == "none" for value in traces):
+        parser.error("Provide at least one trace field (--trace-prompts/--trace-tests/--trace-commits) with a non-'none' value.")
+
+
+
+def _handle_functional(
+    args: argparse.Namespace, catalog_dir: Path, log_path: Path, parser: argparse.ArgumentParser
+) -> None:
+    _validate_functional_args(args, parser)
     catalog_path = catalog_dir / "functional.md"
     if not catalog_path.exists():
         raise SystemExit("functional catalog not found; run setup first")
@@ -185,7 +208,7 @@ def _handle_functional(args: argparse.Namespace, catalog_dir: Path, log_path: Pa
 
 
 def _handle_non_functional(
-    args: argparse.Namespace, catalog_dir: Path, log_path: Path
+    args: argparse.Namespace, catalog_dir: Path, log_path: Path, _parser: argparse.ArgumentParser
 ) -> None:
     catalog_path = catalog_dir / "non-functional.md"
     if not catalog_path.exists():

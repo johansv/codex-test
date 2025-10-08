@@ -76,7 +76,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
             "--owner",
             "product",
             "--narrative",
-            "As an operator, I want partial prompts merged to avoid duplicates.",
+            "As an operator, I want partial prompts merged so that duplicates are avoided.",
             "--acceptance",
             "Given a partial prompt when it completes then the requirement is updated",
             "--acceptance",
@@ -107,6 +107,92 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     assert req_id in log
     assert "prompt-42" in log
 
+
+
+
+def test_cli_rejects_functional_without_structured_narrative(
+    catalog_dir: Path,
+) -> None:
+    catalog_path = catalog_dir / "functional.md"
+    before = catalog_path.read_text(encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main(
+            [
+                "--catalog-root",
+                str(catalog_dir),
+                "functional",
+                "--title",
+                "Missing narrative structure",
+                "--owner",
+                "product",
+                "--narrative",
+                "This requirement has no template",
+                "--acceptance",
+                "Given data when processed then it is stored",
+                "--trace-tests",
+                "tests/agentlab/cli/test_requirements_cli.py",
+            ]
+        )
+    assert exc.value.code == 2
+    after = catalog_path.read_text(encoding="utf-8")
+    assert after == before
+
+
+def test_cli_rejects_functional_without_acceptance(
+    catalog_dir: Path,
+) -> None:
+    catalog_path = catalog_dir / "functional.md"
+    before = catalog_path.read_text(encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main(
+            [
+                "--catalog-root",
+                str(catalog_dir),
+                "functional",
+                "--title",
+                "Missing acceptance",
+                "--owner",
+                "product",
+                "--narrative",
+                "As a user, I want linting so that quality stays high.",
+                "--acceptance",
+                "   ",
+                "--trace-tests",
+                "tests/agentlab/cli/test_requirements_cli.py",
+            ]
+        )
+    assert exc.value.code == 2
+    after = catalog_path.read_text(encoding="utf-8")
+    assert after == before
+
+
+def test_cli_rejects_functional_without_trace_details(
+    catalog_dir: Path,
+) -> None:
+    catalog_path = catalog_dir / "functional.md"
+    before = catalog_path.read_text(encoding="utf-8")
+
+    with pytest.raises(SystemExit) as exc:
+        cli.main(
+            [
+                "--catalog-root",
+                str(catalog_dir),
+                "functional",
+                "--title",
+                "Missing trace",
+                "--owner",
+                "product",
+                "--narrative",
+                "As a reviewer, I want traceability so that I can audit changes.",
+                "--acceptance",
+                "Given inputs when validated then results are stored",
+            ]
+        )
+    assert exc.value.code == 2
+    after = catalog_path.read_text(encoding="utf-8")
+    assert after == before
 
 def test_cli_adds_non_functional_requirement_and_logs(
     catalog_dir: Path, capsys: pytest.CaptureFixture[str]

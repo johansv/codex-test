@@ -1,7 +1,7 @@
 ﻿# Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 0; Satisfied: 1 (satisfied=1); Retired: 0
+Active: 0; Satisfied: 2 (satisfied=2); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -31,6 +31,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ## Active Requirements
 
 ## Satisfied Requirements
+
+- ID: REQ-F-20251008T130931-G0
+- Title: Validate requirement capture inputs
+- Owner: codex
+- Narrative: As a workflow owner, I want requirement capture to enforce minimum structure so that catalog quality stays high.
+- Acceptance Criteria:
+  * CLI rejects functional requirements missing narrative role/capability/outcome cues.
+  * CLI rejects functional requirements without at least one acceptance criterion.
+  * CLI rejects functional requirements when all trace fields remain set to none.
+  * Successful captures continue to write catalog entries and log updates.
+  * Tests cover acceptance and failure scenarios for the validations.
+- Priority: medium
+- Status: satisfied
+- Reason: Capture validation guardrails implemented and tested
+- Trace: prompts R3, tests tests/agentlab/cli/test_requirements_cli.py, commits none
 
 - ID: REQ-F-20251007T083937-FA
 - Title: CLI satisfied transition helper
