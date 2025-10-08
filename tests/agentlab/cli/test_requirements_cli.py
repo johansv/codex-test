@@ -14,11 +14,10 @@ def catalog_dir(tmp_path: Path) -> Path:
     functional = (
         "# Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
-        "_No requirements recorded yet._\n"
+        "Active: 1 (proposed=1); Satisfied: 0; Retired: 0\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
-        "- ID: REQ-F-000\n"
-        "- Title: Placeholder example\n"
+        "### REQ-F-000: Placeholder example\n"
         "- Owner: product\n"
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
@@ -26,8 +25,9 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Priority: medium\n"
         "- Status: proposed\n"
         "- Reason: pending\n"
-        "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "## Satisfied Requirements\n\n"
     )
     (requirements_dir / "functional.md").write_text(functional, encoding="utf-8")
 
@@ -98,7 +98,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     req_id = match.group(1)
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert f"- ID: {req_id}" in catalog
+    assert f"### {req_id}: Handle partial prompts" in catalog
     assert "- Priority: high" in catalog
     assert "- Reason: initial capture" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog

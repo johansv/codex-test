@@ -113,8 +113,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     req_id = requirement.req_id or generate_next_id(text, _FUNCTIONAL_PREFIX)
 
     entry_lines = [
-        f"- ID: {req_id}",
-        f"- Title: {requirement.title}",
+        f"### {req_id}: {requirement.title}",
         f"- Owner: {requirement.owner}",
         f"- Narrative: {requirement.narrative}",
         "- Acceptance Criteria:",
@@ -131,6 +130,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     )
     if requirement.notes:
         entry_lines.append(f"- Notes: {requirement.notes}")
+    entry_lines.append("---")
 
     updated = _insert_entry(text, "\n".join(entry_lines))
     updated = _update_status_summary(updated)
@@ -343,7 +343,9 @@ def _summarise_entries(section: str) -> tuple[int, Counter[str]]:
     statuses: Counter[str] = Counter()
     for line in section.splitlines():
         stripped = line.strip()
-        if stripped.startswith('- ID:'):
+        if stripped.startswith('### '):
+            count += 1
+        elif stripped.startswith('- ID:'):
             count += 1
         elif stripped.startswith('- Status:'):
             status_value = stripped.split(':', 1)[1].strip()
