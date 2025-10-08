@@ -1,7 +1,7 @@
 ﻿# Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 0; Satisfied: 3 (satisfied=3); Retired: 0
+Active: 0; Satisfied: 4 (satisfied=4); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -76,6 +76,22 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: satisfied
 - Reason: Catalog headings applied and helpers updated
 - Trace: prompts R4, tests tests/agentlab/cli/test_requirements_cli.py; tests/agentlab/cli/test_satisfy_cli.py, commits none
+---
+
+### REQ-F-20251008T141440-87: Format non-functional requirement entries with headings
+- Owner: codex
+- Narrative: As a reviewer, I want non-functional requirements to use headings and separators so that both catalogs read consistently.
+- Acceptance Criteria:
+  * append_non_functional_requirement emits Markdown headings with id and title.
+  * Non-functional entries end with a consistent separator.
+  * Template snippet in docs/requirements/non-functional.md reflects the layout.
+  * Existing catalog entries are migrated to the new format.
+  * Tests covering non-functional captures assert the new headings.
+  * Status summary counting still works for non-functional catalogs.
+- Priority: medium
+- Status: satisfied
+- Reason: Non-functional catalog headings implemented and tested
+- Trace: prompts R5, tests tests/agentlab/cli/test_requirements_cli.py, commits none
 ---
 
 ## Retired Requirements

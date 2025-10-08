@@ -1,4 +1,4 @@
-ï»¿# Non-Functional Requirements
+# Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
 Active: 1 (proposed=1); Satisfied: 0; Retired: 0
@@ -14,23 +14,22 @@ security, or other system constraints. Move rejected ideas to **Retired Requirem
 so the catalog retains history.
 
 ```
-- ID: REQ-NF-###
-- Title: <short name>
+### REQ-NF-###: <short name>
 - Owner: <person or team responsible>
 - Category: performance | reliability | security | usability | other
 - Description: Concise statement of the constraint or objective.
 - Measurement: How the team validates compliance (metric target, probe, checklist).
 - Priority: low | medium | high
 - Status: proposed | active | satisfied | rejected | superseded
-- Reason: why the current status applies (e.g., superseded by REQ-NF-…)
+- Reason: why the current status applies (e.g., superseded by REQ-NF-?)
 - Trace: prompts <link>, tests <path>, scripts <path>, monitors <link>
 - Notes: Implementation guidance, owners, or follow-ups.
+---
 ```
 
 ## Active Requirements
 
-- ID: REQ-NF-000
-- Title: Placeholder example
+### REQ-NF-000: Placeholder example
 - Owner: platform
 - Category: reliability
 - Description: Maintain an example entry until the first real requirement replaces it.
@@ -40,6 +39,7 @@ so the catalog retains history.
 - Reason: pending
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.
+---
 
 ## Satisfied Requirements
 
@@ -50,3 +50,4 @@ Keep entries sorted by ID and update measurement notes with the proof of complia
 
 Document constraints that were rejected or superseded. Note why they were
 retired and link to any successor requirements.
+

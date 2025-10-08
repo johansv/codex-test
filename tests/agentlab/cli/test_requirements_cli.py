@@ -34,11 +34,10 @@ def catalog_dir(tmp_path: Path) -> Path:
     non_functional = (
         "# Non-Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
-        "_No requirements recorded yet._\n"
+        "Active: 1 (proposed=1); Satisfied: 0; Retired: 0\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
         "## Active Requirements\n\n"
-        "- ID: REQ-NF-000\n"
-        "- Title: Placeholder example\n"
+        "### REQ-NF-000: Placeholder example\n"
         "- Owner: platform\n"
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
@@ -46,8 +45,9 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Priority: medium\n"
         "- Status: proposed\n"
         "- Reason: pending\n"
-        "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n"
+        "- Trace: prompts none, tests none, scripts none, monitors none\n"
+        "---\n\n"
+        "## Satisfied Requirements\n\n"
     )
     (requirements_dir / "non-functional.md").write_text(non_functional, encoding="utf-8")
 
@@ -231,7 +231,7 @@ def test_cli_adds_non_functional_requirement_and_logs(
     req_id = match.group(1)
 
     catalog = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
-    assert f"- ID: {req_id}" in catalog
+    assert f"### {req_id}: Capture requirements under two seconds" in catalog
     assert "- Priority: low" in catalog
     assert "- Reason: latency target" in catalog
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog

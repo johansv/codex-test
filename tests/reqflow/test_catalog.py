@@ -77,8 +77,9 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
 
     text = functional_catalog.read_text(encoding="utf-8")
     assert req_id.startswith("REQ-F-")
-    assert "- ID: " + req_id in text
-    assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
+    heading = f"### {req_id}: Parse structured prompts"
+    assert heading in text
+    assert text.index(heading) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
     assert "- Reason: pending" in text
     assert "  * Given a prompt" in text
@@ -101,8 +102,9 @@ def test_append_non_functional_requirement_appends_entry(
 
     text = non_functional_catalog.read_text(encoding="utf-8")
     assert req_id.startswith("REQ-NF-")
-    assert "- ID: " + req_id in text
-    assert text.index("- ID: " + req_id) < text.index("## Satisfied Requirements")
+    heading = f"### {req_id}: Sync catalog in under 2s"
+    assert heading in text
+    assert text.index(heading) < text.index("## Satisfied Requirements")
     assert "- Priority: medium" in text
     assert "- Reason: pending" in text
     assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in text

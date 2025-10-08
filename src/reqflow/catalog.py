@@ -155,7 +155,8 @@ def satisfy_functional_requirement(
     commits = [value for value in (commits or []) if value]
     contents = path.read_text(encoding="utf-8")
 
-    if f"- ID: {req_id}" not in contents:
+    heading = f"### {req_id}"
+    if heading not in contents:
         raise ValueError(f"Requirement {req_id} not found in {path}")
 
     before_active, active_header, remainder = contents.partition(_ACTIVE_MARKER)
@@ -197,15 +198,15 @@ def satisfy_functional_requirement(
         (
             idx
             for idx, entry in enumerate(active_entries)
-            if entry and entry[0].strip() == f"- ID: {req_id}"
+            if entry and entry[0].strip().startswith(f"### {req_id}")
         ),
         None,
     )
 
     if entry_index is None:
-        if f"- ID: {req_id}" in satisfied_section:
+        if heading in satisfied_section:
             raise ValueError(f"Requirement {req_id} is already satisfied")
-        if f"- ID: {req_id}" in suffix:
+        if heading in suffix:
             raise ValueError(f"Requirement {req_id} is retired")
         raise ValueError(f"Requirement {req_id} not found in active section")
 
@@ -269,8 +270,7 @@ def append_non_functional_requirement(
     req_id = requirement.req_id or generate_next_id(text, _NON_FUNCTIONAL_PREFIX)
 
     entry_lines = [
-        f"- ID: {req_id}",
-        f"- Title: {requirement.title}",
+        f"### {req_id}: {requirement.title}",
         f"- Owner: {requirement.owner}",
         f"- Category: {requirement.category}",
         f"- Description: {requirement.description}",
@@ -282,6 +282,7 @@ def append_non_functional_requirement(
     ]
     if requirement.notes:
         entry_lines.append(f"- Notes: {requirement.notes}")
+    entry_lines.append("---")
 
     updated = _insert_entry(text, "\n".join(entry_lines))
     updated = _update_status_summary(updated)
