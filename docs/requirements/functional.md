@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (todo=1); Done: 7 (done=7); Retired: 0
+Todo: 0; Done: 8 (done=8); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -30,6 +30,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
+## Done Requirements
+
 ### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
 - Owner: codex
 - Narrative: As a maintainer, I want done requirements amended automatically during implementation so that the catalog matches code in a single atomic update.
@@ -39,12 +41,10 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Mark-done workflow updates the primary requirement plus all linked amendments together, including removing Amends and refreshing narratives, acceptance, and traces.
   * Tests simulate the full collision/amendment cycle and verify catalog/log updates including the Amends field.
 - Priority: high
-- Status: todo
-- Reason: Awaiting implementation
-- Trace: prompts R8, tests none, commits none
+- Status: done
+- Reason: Amendment automation implemented
+- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
-
-## Done Requirements
 
 ### REQ-F-20251009T113432-AM: Control doing status with WIP guard
 - Owner: codex

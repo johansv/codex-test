@@ -212,6 +212,35 @@ def _set_reason(entry: list[str], value: str) -> list[str]:
     return updated
 
 
+def _update_trace(entry: list[str], tests_value: str, commits_value: str, *, default_prompts: str = "none") -> list[str]:
+    updated: list[str] = []
+    replaced = False
+    for line in entry:
+        stripped = line.strip()
+        if stripped.startswith("- Trace:"):
+            remainder = stripped[len("- Trace: "):]
+            trace_parts: dict[str, str] = {}
+            for part in remainder.split(','):
+                item = part.strip()
+                if not item:
+                    continue
+                key, _, value = item.partition(' ')
+                if value:
+                    trace_parts[key] = value
+            prompts_value = trace_parts.get('prompts', default_prompts)
+            updated.append(
+                f"- Trace: prompts {prompts_value}, tests {tests_value}, commits {commits_value}"
+            )
+            replaced = True
+        else:
+            updated.append(line)
+    if not replaced:
+        updated.append(
+            f"- Trace: prompts {default_prompts}, tests {tests_value}, commits {commits_value}"
+        )
+    return updated
+
+
 
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:
     """Append *requirement* to the functional catalog located at *path*."""
@@ -306,40 +335,27 @@ def mark_functional_requirement_done(
     commits_value = "; ".join(commits) if commits else "none"
 
     updated_entry: list[str] = []
-    trace_updated = False
+    status_set = False
+    reason_set = False
     for line in entry_lines:
         stripped = line.strip()
         if stripped.startswith("- Status:"):
             updated_entry.append("- Status: done")
+            status_set = True
         elif stripped.startswith("- Reason:"):
             updated_entry.append(f"- Reason: {reason}")
-        elif stripped.startswith("- Trace:"):
-            remainder_line = stripped[len("- Trace: ") :]
-            trace_parts: dict[str, str] = {}
-            for part in remainder_line.split(","):
-                item = part.strip()
-                if not item:
-                    continue
-                key, _, value = item.partition(" ")
-                if value:
-                    trace_parts[key] = value
-            prompts_value = trace_parts.get("prompts", "none")
-            trace_line = (
-                f"- Trace: prompts {prompts_value}, tests {tests_value}, commits {commits_value}"
-            )
-            updated_entry.append(trace_line)
-            trace_updated = True
+            reason_set = True
         elif stripped.startswith("- Amends:"):
             continue
         else:
             updated_entry.append(line)
 
-    if not trace_updated:
-        trace_line = (
-            f"- Trace: prompts none, tests {tests_value}, commits {commits_value}"
-        )
-        updated_entry.append(trace_line)
+    if not status_set:
+        updated_entry.append("- Status: done")
+    if not reason_set:
+        updated_entry.append(f"- Reason: {reason}")
 
+    updated_entry = _update_trace(updated_entry, tests_value, commits_value, default_prompts="none")
     updated_entry = _set_amends(updated_entry, None)
     done_entries.insert(0, updated_entry)
 
@@ -355,6 +371,7 @@ def mark_functional_requirement_done(
                 entry,
                 f"Amendment completed under {req_id}",
             )
+            entry = _update_trace(entry, tests_value, commits_value, default_prompts="none")
             done_entries.insert(0, entry)
             closed_amendments.append(amendment_id)
         else:

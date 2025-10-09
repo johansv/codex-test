@@ -159,6 +159,7 @@ def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
     assert "### REQ-F-200: Dependent cleanup" in catalog
     assert "- Amends:" not in catalog
     assert "Amendment completed under REQ-F-123" in catalog
+    assert "- Trace: prompts none, tests tests/agentlab/cli/test_mark_done_cli.py, commits none" in catalog
     assert "Todo: 0" in catalog
     assert "Done: 2" in catalog
 
