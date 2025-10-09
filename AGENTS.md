@@ -45,6 +45,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
    - Users may skip this step entirely by requesting implementation immediately.
 3. **Implementation Phase**
 
+   - For bug fixes or scope adjustments, Codex searches the requirements catalog and proposes the relevant requirement(s) to reopen, confirming with the user before proceeding.
    - Before coding, Codex promotes the approved requirement to doing (or otherwise records the in-progress start) and confirms the user is ready to proceed.
    - Confirm the user explicitly wants to proceed, then promote the chosen requirement to `doing` before making any code or catalog edits.
    - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
