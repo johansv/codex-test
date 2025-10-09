@@ -1,4 +1,4 @@
-﻿# Repository Guidelines
+# Repository Guidelines
 
 Adopt Python 3.11, uv, and pytest for consistent workflows.
 
@@ -43,6 +43,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
    - After requirements are accepted, Codex can draft an implementation plan. Codex waits for user approval before moving on.
    - Users may skip this step entirely by requesting implementation immediately.
 3. **Implementation Phase**
+   - Before coding, Codex promotes the approved requirement to doing (or otherwise records the in-progress start) and confirms the user is ready to proceed.
    - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
 
 ### Workflow Controls
@@ -56,6 +57,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 ### Catalog Updates
 - Codex may persist approved requirements to the catalogs on request, even when planning or implementation is deferred; treat this as completing the requirements phase while leaving later phases pending.
+- Codex must not mark a requirement done until the user explicitly confirms the implementation outcome.
 - Codex can persist catalog entries as `backlog` when the user wants more review; they stay in the catalog but must not advance until promoted to `todo`.
 - When a user requests planning or implementation for a requirement still marked `backlog`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
 - Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
