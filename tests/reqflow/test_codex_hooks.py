@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import re
 import pytest
@@ -16,7 +16,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
         "- Owner: product\n"
@@ -24,9 +24,9 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -35,7 +35,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
         "- Owner: platform\n"
@@ -43,9 +43,9 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -76,7 +76,8 @@ def test_before_task_creates_requirement_and_returns_metadata(catalog_dir: Path)
     assert result.get("blocked") is None
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert f"- ID: {result['requirement_id']}" in catalog
+    heading = f"### {result['requirement_id']}:"
+    assert any(line.startswith(heading) for line in catalog.splitlines())
     assert "- Priority: high" in catalog
     assert "- Reason: pending" in catalog
 
@@ -92,7 +93,7 @@ def test_before_task_marks_task_as_blocked_when_requirement_exists(catalog_dir: 
         + "- Acceptance Criteria:\n"
         + "  * existing\n"
         + "- Priority: medium\n"
-        + "- Status: active\n"
+        + "- Status: todo\n"
         + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",

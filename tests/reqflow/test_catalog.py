@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 import re
@@ -19,7 +19,7 @@ def functional_catalog(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
         "- Owner: product\n"
@@ -27,9 +27,9 @@ def functional_catalog(tmp_path: Path) -> Path:
         "- Acceptance Criteria:\n"
         "  * Placeholder criterion\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n"
+        "## Done Requirements\n"
     )
     path = tmp_path / "functional.md"
     path.write_text(content, encoding="utf-8")
@@ -43,7 +43,7 @@ def non_functional_catalog(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
         "- Owner: platform\n"
@@ -51,9 +51,9 @@ def non_functional_catalog(tmp_path: Path) -> Path:
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n"
+        "## Done Requirements\n"
     )
     path = tmp_path / "non-functional.md"
     path.write_text(content, encoding="utf-8")
@@ -79,11 +79,11 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
     assert req_id.startswith("REQ-F-")
     heading = f"### {req_id}: Parse structured prompts"
     assert heading in text
-    assert text.index(heading) < text.index("## Satisfied Requirements")
+    assert text.index(heading) < text.index("## Done Requirements")
     assert "- Priority: medium" in text
     assert "- Reason: pending" in text
     assert "  * Given a prompt" in text
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in text
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in text
 
 
 def test_append_non_functional_requirement_appends_entry(
@@ -104,10 +104,10 @@ def test_append_non_functional_requirement_appends_entry(
     assert req_id.startswith("REQ-NF-")
     heading = f"### {req_id}: Sync catalog in under 2s"
     assert heading in text
-    assert text.index(heading) < text.index("## Satisfied Requirements")
+    assert text.index(heading) < text.index("## Done Requirements")
     assert "- Priority: medium" in text
     assert "- Reason: pending" in text
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in text
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in text
 
 
 def test_generate_next_id_advances_highest_number() -> None:

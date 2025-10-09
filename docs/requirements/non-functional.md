@@ -1,7 +1,7 @@
 # Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 1 (proposed=1); Satisfied: 0; Retired: 0
+Todo: 1 (backlog=1); Done: 0; Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -20,14 +20,14 @@ so the catalog retains history.
 - Description: Concise statement of the constraint or objective.
 - Measurement: How the team validates compliance (metric target, probe, checklist).
 - Priority: low | medium | high
-- Status: proposed | active | satisfied | rejected | superseded
+- Status: backlog | todo | done | rejected | superseded
 - Reason: why the current status applies (e.g., superseded by REQ-NF-?)
 - Trace: prompts <link>, tests <path>, scripts <path>, monitors <link>
 - Notes: Implementation guidance, owners, or follow-ups.
 ---
 ```
 
-## Active Requirements
+## Todo Requirements
 
 ### REQ-NF-000: Placeholder example
 - Owner: platform
@@ -35,19 +35,20 @@ so the catalog retains history.
 - Description: Maintain an example entry until the first real requirement replaces it.
 - Measurement: Manual review of this catalog during project setup.
 - Priority: medium
-- Status: proposed
+- Status: backlog
 - Reason: pending
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.
 ---
 
-## Satisfied Requirements
+## Done Requirements
 
-List retired or satisfied non-functional requirements here to preserve history.
+List retired or done non-functional requirements here to preserve history.
 Keep entries sorted by ID and update measurement notes with the proof of compliance.
 
 ## Retired Requirements
 
 Document constraints that were rejected or superseded. Note why they were
 retired and link to any successor requirements.
+
 

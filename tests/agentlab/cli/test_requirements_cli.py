@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 import re
@@ -14,40 +14,40 @@ def catalog_dir(tmp_path: Path) -> Path:
     functional = (
         "# Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
-        "Active: 1 (proposed=1); Satisfied: 0; Retired: 0\n"
+        "Todo: 1 (backlog=1); Done: 0; Retired: 0\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "### REQ-F-000: Placeholder example\n"
         "- Owner: product\n"
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
         "- Trace: prompts none, tests none, commits none\n"
         "---\n\n"
-        "## Satisfied Requirements\n\n"
+        "## Done Requirements\n\n"
     )
     (requirements_dir / "functional.md").write_text(functional, encoding="utf-8")
 
     non_functional = (
         "# Non-Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
-        "Active: 1 (proposed=1); Satisfied: 0; Retired: 0\n"
+        "Todo: 1 (backlog=1); Done: 0; Retired: 0\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "### REQ-NF-000: Placeholder example\n"
         "- Owner: platform\n"
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n"
         "---\n\n"
-        "## Satisfied Requirements\n\n"
+        "## Done Requirements\n\n"
     )
     (requirements_dir / "non-functional.md").write_text(non_functional, encoding="utf-8")
 
@@ -101,7 +101,7 @@ def test_cli_adds_functional_requirement_and_logs(catalog_dir: Path, capsys: pyt
     assert f"### {req_id}: Handle partial prompts" in catalog
     assert "- Priority: high" in catalog
     assert "- Reason: initial capture" in catalog
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert req_id in log
@@ -234,8 +234,9 @@ def test_cli_adds_non_functional_requirement_and_logs(
     assert f"### {req_id}: Capture requirements under two seconds" in catalog
     assert "- Priority: low" in catalog
     assert "- Reason: latency target" in catalog
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in catalog
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert req_id in log
     assert "prompt-43" in log
+

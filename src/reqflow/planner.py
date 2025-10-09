@@ -292,7 +292,7 @@ def build_requirement_draft(
     kind = classify_prompt(prompt)
     title = synthesise_title(prompt)
     acceptance = list(extract_acceptance(prompt)) or [prompt]
-    status = "proposed"
+    status = "backlog"
     trace_prompts = prompt[:80] + ("..." if len(prompt) > 80 else "")
     notes = "Auto-generated from prompt; refine narrative and acceptance criteria."
     architectural = is_architectural_prompt(prompt)
@@ -429,12 +429,19 @@ def _load_titles(contents: str) -> Iterable[tuple[str, str]]:
     current_title: str | None = None
     for raw_line in contents.splitlines():
         line = raw_line.strip()
-        if line.startswith("- ID:"):
+        if line.startswith("### ") and ':' in line:
+            if current_id and current_title:
+                yield current_id, current_title
+            heading_body = line[4:]
+            requirement_id, _, title = heading_body.partition(':')
+            current_id = requirement_id.strip()
+            current_title = title.strip() or None
+        elif line.startswith("- ID:"):
             if current_id and current_title:
                 yield current_id, current_title
             current_id = line.split(":", 1)[1].strip()
             current_title = None
-        elif line.startswith("- Title:") and current_id:
+        elif line.startswith("- Title:") and current_id and not current_title:
             current_title = line.split(":", 1)[1].strip()
     if current_id and current_title:
         yield current_id, current_title

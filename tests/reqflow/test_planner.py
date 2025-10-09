@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 import re
@@ -16,17 +16,16 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
-        "- ID: REQ-F-000\n"
-        "- Title: Placeholder example\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-000: Placeholder example\n"
         "- Owner: product\n"
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -35,17 +34,16 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
-        "- ID: REQ-NF-000\n"
-        "- Title: Placeholder example\n"
+        "## Todo Requirements\n\n"
+        "### REQ-NF-000: Placeholder example\n"
         "- Owner: platform\n"
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -103,12 +101,12 @@ def test_requirement_planner_creates_new_requirement(tmp_path: Path, catalog_dir
     assert action.adr_path is None
 
     functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-    match = re.search(r"- ID: (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", functional_doc)
+    match = re.search(r"### (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", functional_doc)
     assert match is not None
     req_id = match.group(1)
     assert "- Priority: medium" in functional_doc
     assert "- Reason: pending" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in functional_doc
 
     log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
     assert req_id in log_doc
@@ -148,7 +146,7 @@ def test_requirement_planner_detects_existing_requirement(catalog_dir: Path) -> 
         + "- Acceptance Criteria:\n"
         + "  * Existing\n"
         + "- Priority: medium\n"
-        + "- Status: active\n"
+        + "- Status: todo\n"
         + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",

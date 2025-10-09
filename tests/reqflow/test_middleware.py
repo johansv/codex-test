@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 import re
@@ -16,7 +16,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-F-000\n"
         "- Title: Placeholder example\n"
         "- Owner: product\n"
@@ -24,10 +24,10 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
         "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -36,7 +36,7 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "- ID: REQ-NF-000\n"
         "- Title: Placeholder example\n"
         "- Owner: platform\n"
@@ -44,10 +44,10 @@ def catalog_dir(tmp_path: Path) -> Path:
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
         "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n\n",
+        "## Done Requirements\n\n",
         encoding="utf-8",
     )
 
@@ -94,7 +94,7 @@ def test_auto_capture_prompt_detects_existing_requirement(catalog_dir: Path) -> 
         + "- Acceptance Criteria:\n"
         + "  * Placeholder\n"
         + "- Priority: medium\n"
-        + "- Status: active\n"
+        + "- Status: todo\n"
         + "- Reason: pending\n"
         + "- Trace: prompts x, tests y, commits z\n\n",
         encoding="utf-8",

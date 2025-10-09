@@ -64,7 +64,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     functional.add_argument(
         "--status",
-        default="proposed",
+        default="backlog",
         help="Lifecycle status recorded with the requirement",
     )
     functional.add_argument("--trace-prompts", default="none")
@@ -114,7 +114,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     non_functional.add_argument(
         "--status",
-        default="proposed",
+        default="backlog",
         help="Lifecycle status recorded with the requirement",
     )
     non_functional.add_argument("--trace-prompts", default="none")

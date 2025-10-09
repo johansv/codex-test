@@ -37,7 +37,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 1. **Requirements Phase (default)**
    - Codex captures the user prompt in dry-run mode first and proposes one or more requirements (IDs, narrative, acceptance criteria, priority, reason) without writing to disk.
    - If the prompt is vague or conflicts with existing requirements, Codex asks clarifying questions or suggests splitting into multiple requirements.
-   - Once the user approves the wording, Codex records the requirement(s) with `Status: active` (or the chosen status) and the agreed `Reason`, then stops unless instructed to continue.
+   - Once the user approves the wording, Codex records the requirement(s) with `Status: todo` (or the chosen status) and the agreed `Reason`, then stops unless instructed to continue.
 2. **Planning Phase (optional)**
    - After requirements are accepted, Codex can draft an implementation plan. Codex waits for user approval before moving on.
    - Users may skip this step entirely by requesting implementation immediately.
@@ -49,19 +49,19 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - **Advance to planning:** User explicitly requests "Plan implementation" (or similar wording).
 - **Skip planning:** User says "Implement now" after requirements approval.
 - **Run all phases automatically:** User states upfront "Run full workflow" (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
-- Requirements must carry one of the statuses `proposed`, `active`, `satisfied`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
+- Requirements must carry one of the statuses `backlog`, `todo`, `done`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
 - Codex should flag requirements that look too large or too small, suggesting splits or merges before recording them when scope warrants it.
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
 
 ### Catalog Updates
 - Codex may persist approved requirements to the catalogs on request, even when planning or implementation is deferred; treat this as completing the requirements phase while leaving later phases pending.
-- Codex can persist catalog entries as `proposed` when the user wants more review; they stay in the catalog but must not advance to planning or implementation until promoted to `active`.
-- When a user requests planning or implementation for a requirement still marked `proposed`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
+- Codex can persist catalog entries as `backlog` when the user wants more review; they stay in the catalog but must not advance until promoted to `todo`.
+- When a user requests planning or implementation for a requirement still marked `backlog`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
 - Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
 
 #### Status Definitions
-- `proposed`: Catalog entry under review; keep it visible for refinement but block planning or implementation until promoted to `active`.
-- `active`: Approved requirement ready for planning and implementation; keep the reason current and maintain trace fields as work progresses.
-- `satisfied`: Requirement fulfilled by merged code/tests; move the entry to the satisfied section and refresh trace links to the verifying commits/tests.
+- `backlog`: Catalog entry under review; keep it visible for refinement but block implementation until promoted to `todo`.
+- `todo`: Approved requirement ready for planning and implementation; keep the reason current and maintain trace fields as work progresses.
+- `done`: Requirement fulfilled by merged code/tests; move the entry to the done section and refresh trace links to the verifying commits/tests.
 - `rejected`: Decision not to pursue the requirement; document why it will not move forward.
 - `superseded`: Requirement replaced by a newer one; cross-reference the successor ID in both entries.

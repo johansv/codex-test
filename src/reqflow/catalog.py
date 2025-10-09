@@ -18,11 +18,11 @@ __all__ = [
     "append_log_entry",
     "catalog_root",
     "generate_next_id",
-    "satisfy_functional_requirement",
+    "mark_functional_requirement_done",
 ]
 
-_ACTIVE_MARKER = "## Active Requirements"
-_SATISFIED_MARKER = "## Satisfied Requirements"
+_TODO_MARKER = "## Todo Requirements"
+_DONE_MARKER = "## Done Requirements"
 _RETIRED_MARKER = "## Retired Requirements"
 _FUNCTIONAL_PREFIX = "REQ-F"
 _NON_FUNCTIONAL_PREFIX = "REQ-NF"
@@ -40,7 +40,7 @@ class FunctionalRequirement:
     narrative: str
     acceptance_criteria: list[str]
     priority: str = "medium"
-    status: str = "proposed"
+    status: str = "backlog"
     trace_prompts: str = "none"
     trace_tests: str = "none"
     trace_commits: str = "none"
@@ -59,7 +59,7 @@ class NonFunctionalRequirement:
     description: str
     measurement: str
     priority: str = "medium"
-    status: str = "proposed"
+    status: str = "backlog"
     trace_prompts: str = "none"
     trace_tests: str = "none"
     trace_scripts: str = "none"
@@ -140,14 +140,14 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
 
 
 
-def satisfy_functional_requirement(
+def mark_functional_requirement_done(
     path: Path,
     req_id: str,
     reason: str,
     tests: Sequence[str],
     commits: Sequence[str] | None = None,
 ) -> None:
-    """Mark *req_id* satisfied in the functional catalog located at *path*."""
+    """Mark *req_id* done in the functional catalog located at *path*."""
 
     if not tests:
         raise ValueError("Provide at least one verifying test path.")
@@ -159,15 +159,15 @@ def satisfy_functional_requirement(
     if heading not in contents:
         raise ValueError(f"Requirement {req_id} not found in {path}")
 
-    before_active, active_header, remainder = contents.partition(_ACTIVE_MARKER)
-    if not active_header:
-        raise ValueError("Functional catalog missing active section")
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Functional catalog missing todo section")
 
-    active_section, satisfied_header, remainder = remainder.partition(_SATISFIED_MARKER)
-    if not satisfied_header:
-        raise ValueError("Functional catalog missing satisfied section")
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Functional catalog missing done section")
 
-    satisfied_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
     if not retired_header:
         raise ValueError("Functional catalog missing retired section")
 
@@ -191,26 +191,26 @@ def satisfy_functional_requirement(
         body = "\n\n".join("\n".join(entry) for entry in entries)
         return f"\n\n{body}\n\n"
 
-    active_entries = split_entries(active_section)
-    satisfied_entries = split_entries(satisfied_section)
+    todo_entries = split_entries(todo_section)
+    done_entries = split_entries(done_section)
 
     entry_index = next(
         (
             idx
-            for idx, entry in enumerate(active_entries)
+            for idx, entry in enumerate(todo_entries)
             if entry and entry[0].strip().startswith(f"### {req_id}")
         ),
         None,
     )
 
     if entry_index is None:
-        if heading in satisfied_section:
-            raise ValueError(f"Requirement {req_id} is already satisfied")
+        if heading in done_section:
+            raise ValueError(f"Requirement {req_id} is already done")
         if heading in suffix:
             raise ValueError(f"Requirement {req_id} is retired")
-        raise ValueError(f"Requirement {req_id} not found in active section")
+        raise ValueError(f"Requirement {req_id} not found in todo section")
 
-    entry_lines = active_entries.pop(entry_index)
+    entry_lines = todo_entries.pop(entry_index)
     tests_value = "; ".join(tests)
     commits_value = "; ".join(commits) if commits else "none"
 
@@ -219,7 +219,7 @@ def satisfy_functional_requirement(
     for line in entry_lines:
         stripped = line.strip()
         if stripped.startswith("- Status:"):
-            updated_entry.append("- Status: satisfied")
+            updated_entry.append("- Status: done")
         elif stripped.startswith("- Reason:"):
             updated_entry.append(f"- Reason: {reason}")
         elif stripped.startswith("- Trace:"):
@@ -247,14 +247,14 @@ def satisfy_functional_requirement(
         )
         updated_entry.append(trace_line)
 
-    satisfied_entries.insert(0, updated_entry)
+    done_entries.insert(0, updated_entry)
 
     updated_contents = (
-        before_active
-        + active_header
-        + format_section(active_entries)
-        + satisfied_header
-        + format_section(satisfied_entries)
+        before_todo
+        + todo_header
+        + format_section(todo_entries)
+        + done_header
+        + format_section(done_entries)
         + retired_header
         + suffix
     )
@@ -291,9 +291,9 @@ def append_non_functional_requirement(
 
 
 def _insert_entry(contents: str, entry: str) -> str:
-    if _ACTIVE_MARKER not in contents or _SATISFIED_MARKER not in contents:
+    if _TODO_MARKER not in contents or _DONE_MARKER not in contents:
         raise ValueError("Catalog appears malformed; missing expected sections")
-    insertion_point = contents.index(_SATISFIED_MARKER)
+    insertion_point = contents.index(_DONE_MARKER)
     prefix = contents[:insertion_point].rstrip()
     suffix = contents[insertion_point:]
     return f"{prefix}\n\n{entry}\n\n{suffix}"
@@ -303,19 +303,19 @@ def _update_status_summary(contents: str) -> str:
     if _SUMMARY_START not in contents or _SUMMARY_END not in contents:
         return contents
 
-    active_section = _extract_section(contents, _ACTIVE_MARKER, _SATISFIED_MARKER)
-    satisfied_section = _extract_section(contents, _SATISFIED_MARKER, _RETIRED_MARKER)
+    todo_section = _extract_section(contents, _TODO_MARKER, _DONE_MARKER)
+    done_section = _extract_section(contents, _DONE_MARKER, _RETIRED_MARKER)
     retired_section = _extract_section(contents, _RETIRED_MARKER, None)
-    active_count, active_statuses = _summarise_entries(active_section)
-    satisfied_count, satisfied_statuses = _summarise_entries(satisfied_section)
+    todo_count, todo_statuses = _summarise_entries(todo_section)
+    done_count, done_statuses = _summarise_entries(done_section)
     retired_count, retired_statuses = _summarise_entries(retired_section)
 
-    if active_count == 0 and satisfied_count == 0 and retired_count == 0:
+    if todo_count == 0 and done_count == 0 and retired_count == 0:
         summary_text = "_No requirements recorded yet._"
     else:
         summary_text = '; '.join([
-            _format_summary("Active", active_count, active_statuses),
-            _format_summary("Satisfied", satisfied_count, satisfied_statuses),
+            _format_summary("Todo", todo_count, todo_statuses),
+            _format_summary("Done", done_count, done_statuses),
             _format_summary("Retired", retired_count, retired_statuses),
         ])
 
@@ -382,3 +382,4 @@ def append_log_entry(
     row = f"| {timestamp} | {req_id} | {change_summary} | {author} | {reference} |"
     with log_path.open("a", encoding="utf-8") as handle:
         handle.write(f"{row}\n")
+

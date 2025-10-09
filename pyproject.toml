@@ -21,7 +21,7 @@ agentlab-capture = "agentlab.cli.capture:main"
 agentlab-req = "agentlab.cli.requirements:main"
 agentlab-dev = "agentlab.cli.dev:main"
 agentlab-worker = "agentlab.cli.worker:main"
-agentlab-satisfy = "agentlab.cli.satisfy:main"
+agentlab-mark-done = "agentlab.cli.mark_done:main"
 
 [tool.uv]
 package = true
@@ -56,4 +56,5 @@ indent-style = "space"
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
+
 

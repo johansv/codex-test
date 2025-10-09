@@ -1,7 +1,7 @@
-﻿# Functional Requirements
+# Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Active: 0; Satisfied: 4 (satisfied=4); Retired: 0
+Todo: 0; Done: 5 (done=5); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -9,8 +9,8 @@ Every entry should link back to its originating task or prompt and to verifying 
 
 ## How to capture a new requirement
 
-Copy the template below, fill in each field, and place it under **Active Requirements**.
-Move fulfilled items to **Satisfied Requirements** once implementation and tests merge.
+Copy the template below, fill in each field, and place it under **Todo Requirements**.
+Move fulfilled items to **Done Requirements** once implementation and tests merge.
 Move rejected or replaced requirements to **Retired Requirements** so history is preserved.
 
 ```
@@ -21,29 +21,43 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Given <context> when <action> then <result>.
   * Include as many bullet checks as needed.
 - Priority: low | medium | high
-- Status: proposed | active | satisfied | rejected | superseded
+- Status: backlog | todo | done | rejected | superseded
 - Reason: why the current status applies (e.g., superseded by REQ-F-?)
 - Trace: prompts <link>, tests <path>, commits <hash>
 - Notes: optional clarifications or open questions.
 ---
 ```
 
-## Active Requirements
+## Todo Requirements
 
-## Satisfied Requirements
+## Done Requirements
 
-### REQ-F-20251007T083937-FA: CLI satisfied transition helper
+### REQ-F-20251009T095326-TT: Rename requirement statuses to backlog/todo/done
 - Owner: codex
-- Narrative: As a developer, I want a CLI command that marks requirements satisfied so that catalog updates and trace data stay consistent without manual edits.
+- Narrative: As a maintainer, I want the catalog and tooling to use backlog/todo/done so that our workflow aligns with kanban-inspired terminology.
+- Acceptance Criteria:
+  * Functional and non-functional templates list Backlog, Todo, Done, Rejected, Superseded.
+  * Helpers, CLI defaults, and status validation use backlog/todo/done naming.
+  * Existing catalog entries migrate from backlog/todo/done terminology consistently.
+  * Tests and documentation referencing statuses are updated.
+- Priority: medium
+- Status: done
+- Reason: Backlog terminology finished
+- Trace: prompts R7, tests tests/reqflow/test_catalog.py, commits none
+---
+
+### REQ-F-20251007T083937-FA: CLI done transition helper
+- Owner: codex
+- Narrative: As a developer, I want a CLI command that marks requirements done so that catalog updates and trace data stay consistent without manual edits.
 - Acceptance Criteria:
   * Command accepts a requirement ID plus reason, verifying test paths, and optional commits.
-  * Functional catalog entry moves to satisfied with status updated and trace fields refreshed.
+  * Functional catalog entry moves to done with status updated and trace fields refreshed.
   * Requirements change log records the transition details.
   * Mirrored CLI tests cover the behavior.
 - Priority: medium
-- Status: satisfied
-- Reason: Satisfaction CLI implemented and tested
-- Trace: prompts R2, tests tests/agentlab/cli/test_satisfy_cli.py; tests/reqflow/test_catalog.py, commits none
+- Status: done
+- Reason: Mark-done CLI implemented and tested
+- Trace: prompts R2, tests tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251008T130931-G0: Validate requirement capture inputs
@@ -57,7 +71,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Tests cover acceptance and failure scenarios for the validations.
   * Requirements template snippet reflects headings and separators.
 - Priority: medium
-- Status: satisfied
+- Status: done
 - Reason: Capture validation guardrails implemented and tested
 - Trace: prompts R3, tests tests/agentlab/cli/test_requirements_cli.py, commits none
 ---
@@ -69,13 +83,13 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Functional requirements render with a Markdown heading containing ID and title.
   * Entries no longer list "- ID:"; the heading replaces it.
   * Entries end with a consistent separator.
-  * CLI helpers and satisfaction flows emit the new format.
+  * CLI helpers and the mark-done command emit the new format.
   * Existing catalog entries migrate to the new format.
-  * Tests cover the new layout for creation and satisfaction paths.
+  * Tests cover the new layout for creation and completion paths.
 - Priority: medium
-- Status: satisfied
+- Status: done
 - Reason: Catalog headings applied and helpers updated
-- Trace: prompts R4, tests tests/agentlab/cli/test_requirements_cli.py; tests/agentlab/cli/test_satisfy_cli.py, commits none
+- Trace: prompts R4, tests tests/agentlab/cli/test_requirements_cli.py; tests/agentlab/cli/test_mark_done_cli.py, commits none
 ---
 
 ### REQ-F-20251008T141440-87: Format non-functional requirement entries with headings
@@ -89,9 +103,11 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Tests covering non-functional captures assert the new headings.
   * Status summary counting still works for non-functional catalogs.
 - Priority: medium
-- Status: satisfied
+- Status: done
 - Reason: Non-functional catalog headings implemented and tested
 - Trace: prompts R5, tests tests/agentlab/cli/test_requirements_cli.py, commits none
 ---
 
 ## Retired Requirements
+
+

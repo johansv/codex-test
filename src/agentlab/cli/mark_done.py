@@ -1,4 +1,4 @@
-﻿"""CLI for marking functional requirements satisfied."""
+﻿"""CLI for marking functional requirements done."""
 from __future__ import annotations
 
 import argparse
@@ -8,13 +8,13 @@ from pathlib import Path
 from reqflow.catalog import (
     append_log_entry,
     catalog_root,
-    satisfy_functional_requirement,
+    mark_functional_requirement_done,
 )
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Mark a functional requirement as satisfied and update the catalog.",
+        description="Mark a functional requirement as done and update the catalog.",
     )
     parser.add_argument(
         "--catalog-root",
@@ -40,12 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--id",
         required=True,
-        help="Requirement identifier to mark satisfied.",
+        help="Requirement identifier to mark done.",
     )
     parser.add_argument(
         "--reason",
         required=True,
-        help="Updated reason describing how the requirement was satisfied.",
+        help="Updated reason describing how the requirement was completed.",
     )
     parser.add_argument(
         "--tests",
@@ -86,7 +86,7 @@ def main(argv: list[str] | None = None) -> int:
 
     commits = [value for value in args.commits if value]
     try:
-        satisfy_functional_requirement(
+        mark_functional_requirement_done(
             catalog_path,
             req_id=args.id,
             reason=args.reason,
@@ -96,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         parser.error(str(exc))
 
-    summary = args.summary or f"Marked {args.id} satisfied: {args.reason}"
+    summary = args.summary or f"Marked {args.id} done: {args.reason}"
     append_log_entry(
         log_path,
         req_id=args.id,
@@ -104,7 +104,7 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         reference=args.reference,
     )
-    print(f"Marked {args.id} satisfied in {catalog_path}")
+    print(f"Marked {args.id} done in {catalog_path}")
     return 0
 
 

@@ -1,8 +1,8 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 
-from agentlab.cli import satisfy as cli
+from agentlab.cli import mark_done as cli
 
 
 @pytest.fixture()
@@ -13,20 +13,20 @@ def catalog_dir(tmp_path: Path) -> Path:
     functional = (
         "# Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
-        "Active: 1 (active=1); Satisfied: 0; Retired: 0\n"
+        "Todo: 1 (todo=1); Done: 0; Retired: 0\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
+        "## Todo Requirements\n\n"
         "### REQ-F-123: Sample requirement\n"
         "- Owner: codex\n"
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: active\n"
+        "- Status: todo\n"
         "- Reason: awaiting implementation\n"
         "- Trace: prompts R2, tests none, commits none\n"
         "---\n\n"
-        "## Satisfied Requirements\n\n"
+        "## Done Requirements\n\n"
         "## Retired Requirements\n"
     )
     (requirements_dir / "functional.md").write_text(functional, encoding="utf-8")
@@ -41,7 +41,7 @@ def catalog_dir(tmp_path: Path) -> Path:
     return requirements_dir
 
 
-def test_satisfy_cli_moves_entry_to_satisfied(
+def test_mark_done_cli_marks_requirement_done(
     catalog_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     cli.main(
@@ -57,32 +57,32 @@ def test_satisfy_cli_moves_entry_to_satisfied(
             "--reason",
             "Implementation merged",
             "--tests",
-            "tests/agentlab/cli/test_satisfy_cli.py",
+            "tests/agentlab/cli/test_mark_done_cli.py",
             "--commits",
             "abc123",
         ]
     )
 
     captured = capsys.readouterr()
-    assert "Marked REQ-F-123 satisfied" in captured.out
+    assert "Marked REQ-F-123 done" in captured.out
 
     catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
-    assert "- Status: satisfied" in catalog
+    assert "- Status: done" in catalog
     assert "- Reason: Implementation merged" in catalog
     expected_trace = (
-        "- Trace: prompts R2, tests tests/agentlab/cli/test_satisfy_cli.py, "
+        "- Trace: prompts R2, tests tests/agentlab/cli/test_mark_done_cli.py, "
         "commits abc123"
     )
     assert expected_trace in catalog
-    assert "Active: 0" in catalog
-    assert "Satisfied: 1 (satisfied=1)" in catalog
+    assert "Todo: 0" in catalog
+    assert "Done: 1 (done=1)" in catalog
 
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert "REQ-F-123" in log
     assert "Implementation merged" in log
 
 
-def test_satisfy_cli_errors_when_requirement_missing(catalog_dir: Path) -> None:
+def test_mark_done_cli_errors_when_requirement_missing(catalog_dir: Path) -> None:
     initial_catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
     initial_log = (catalog_dir / "log.md").read_text(encoding="utf-8")
 
@@ -96,7 +96,7 @@ def test_satisfy_cli_errors_when_requirement_missing(catalog_dir: Path) -> None:
                 "--reason",
                 "Missing implementation",
                 "--tests",
-                "tests/agentlab/cli/test_satisfy_cli.py",
+                "tests/agentlab/cli/test_mark_done_cli.py",
             ]
         )
     assert exc.value.code == 2

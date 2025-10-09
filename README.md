@@ -1,4 +1,4 @@
-﻿# AgentLab
+# AgentLab
 
 AgentLab is a sandbox for experimenting with Codex agents. The workspace ships
 with tooling that enforces a requirements-first workflow so every feature ties
@@ -28,7 +28,7 @@ updated.
   - Assigns priorities and appends a change log entry.
 - If the hook finds an overlapping requirement, the task is marked as blocked so
   you can reconcile the existing entry before coding.
-- Requirements move through statuses `proposed`, `active`, `satisfied`, `rejected`, and `superseded`; capture a short reason whenever the status changes.
+- Requirements move through statuses `backlog`, `todo`, `done`, `rejected`, and `superseded`; capture a short reason whenever the status changes.
 - When commits are created, include the trailer `Refs <requirement-id>` so the
   change can be traced back to its requirement.
 
@@ -48,22 +48,23 @@ The hosted runner must mount this repository and have dependencies installed so
 
 ## Additional Commands
 
-- `uv run pytest` – execute the full test suite (requirement utilities and
+- `uv run pytest` � execute the full test suite (requirement utilities and
   hooks are fully covered).
-- `uv run ruff check src tests` – lint the project.
-- `uv run python -m agentlab.cli.requirements ...` – manually add requirement
+- `uv run ruff check src tests` � lint the project.
+- `uv run python -m agentlab.cli.requirements ...` � manually add requirement
   entries when needed.
 
 ## Project Layout
 
 ```
-├── docs/
-│   ├── requirements/        # Functional & non-functional catalogs
-│   └── adr/                 # Architecture decision drafts
-├── scripts/                 # Codex launchers, test helpers
-├── src/agentlab/            # Runtime code
-└── tests/                   # Mirrored test suite
++-- docs/
+�   +-- requirements/        # Functional & non-functional catalogs
+�   +-- adr/                 # Architecture decision drafts
++-- scripts/                 # Codex launchers, test helpers
++-- src/agentlab/            # Runtime code
++-- tests/                   # Mirrored test suite
 ```
 
 For more detailed guidance, see `AGENTS.md`, which Codex consumes directly when
 planning tasks.
+

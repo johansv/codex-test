@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import pytest
 import re
@@ -16,41 +16,41 @@ def catalog_dir(tmp_path: Path) -> Path:
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
-        "- ID: REQ-F-000\n"
-        "- Title: Placeholder example\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-000: Placeholder example\n"
         "- Owner: product\n"
         "- Narrative: Placeholder narrative\n"
         "- Acceptance Criteria:\n"
         "  * Placeholder\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
-        "- Trace: prompts none, tests none, commits none\n\n"
-        "## Satisfied Requirements\n\n",
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+    ,
         encoding="utf-8",
     )
-
     requirements_dir.joinpath("non-functional.md").write_text(
         "# Non-Functional Requirements\n\n"
         "<!-- STATUS-SUMMARY:START -->\n"
         "_No requirements recorded yet._\n"
         "<!-- STATUS-SUMMARY:END -->\n\n"
-        "## Active Requirements\n\n"
-        "- ID: REQ-NF-000\n"
-        "- Title: Placeholder example\n"
+        "## Todo Requirements\n\n"
+        "### REQ-NF-000: Placeholder example\n"
         "- Owner: platform\n"
         "- Category: reliability\n"
         "- Description: Placeholder description\n"
         "- Measurement: Manual review\n"
         "- Priority: medium\n"
-        "- Status: proposed\n"
+        "- Status: backlog\n"
         "- Reason: pending\n"
-        "- Trace: prompts none, tests none, scripts none, monitors none\n\n"
-        "## Satisfied Requirements\n\n",
+        "- Trace: prompts none, tests none, scripts none, monitors none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+    ,
         encoding="utf-8",
     )
-
     requirements_dir.joinpath("log.md").write_text(
         "# Requirements Change Log\n\n"
         "| Date (UTC) | Requirement ID | Change Summary | Author | Reference |\n"
@@ -76,16 +76,17 @@ def test_capture_cli_creates_requirement(monkeypatch: pytest.MonkeyPatch, catalo
     exit_code = capture.main(argv)
     assert exit_code == 0
 
-    functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-    match = re.search(r"- ID: (REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", functional_doc)
+    log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
+    match = re.search(r"(REQ-F-\d{8}T\d{6}-[0-9A-Z]{2})", log_doc)
     assert match is not None
     req_id = match.group(1)
+
+    functional_doc = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
+    assert f"### {req_id}:" in functional_doc
     assert "- Priority: high" in functional_doc
     assert "- Reason: pending" in functional_doc
-    assert "Active: 2 (proposed=2); Satisfied: 0; Retired: 0" in functional_doc
+    assert "Todo: 2 (backlog=2); Done: 0; Retired: 0" in functional_doc
 
-    log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
-    assert req_id in log_doc
     assert "prompt-201" in log_doc
 
 
@@ -114,16 +115,16 @@ def test_capture_cli_generates_adr_for_architectural_prompt(
 def test_capture_cli_detects_existing_requirement(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:
     catalog_dir.joinpath("functional.md").write_text(
         catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
-        + "- ID: REQ-F-050\n"
-        + "- Title: Handle incremental prompts\n"
+        + "### REQ-F-050: Handle incremental prompts\n"
         + "- Owner: product\n"
         + "- Narrative: Existing narrative\n"
         + "- Acceptance Criteria:\n"
         + "  * Placeholder\n"
         + "- Priority: medium\n"
-        + "- Status: active\n"
+        + "- Status: todo\n"
         + "- Reason: pending\n"
-        + "- Trace: prompts p, tests t, commits c\n\n",
+        + "- Trace: prompts p, tests t, commits c\n"
+        + "---\n\n",
         encoding="utf-8",
     )
 
