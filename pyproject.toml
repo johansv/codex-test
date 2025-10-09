@@ -22,6 +22,7 @@ agentlab-req = "agentlab.cli.requirements:main"
 agentlab-dev = "agentlab.cli.dev:main"
 agentlab-worker = "agentlab.cli.worker:main"
 agentlab-mark-done = "agentlab.cli.mark_done:main"
+agentlab-start = "agentlab.cli.start:main"
 
 [tool.uv]
 package = true

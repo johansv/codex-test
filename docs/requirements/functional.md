@@ -21,7 +21,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Given <context> when <action> then <result>.
   * Include as many bullet checks as needed.
 - Priority: low | medium | high
-- Status: backlog | todo | done | rejected | superseded
+- Status: backlog | todo | doing | done | rejected | superseded
 - Reason: why the current status applies (e.g., superseded by REQ-F-?)
 - Trace: prompts <link>, tests <path>, commits <hash>
 - Notes: optional clarifications or open questions.
@@ -32,26 +32,28 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
 - Owner: codex
-- Narrative: As a maintainer, I want every coding task to reference an approved todo requirement and receive collision warnings so that scope stays clear before implementation starts.
+- Narrative: As a maintainer, I want every coding task to pass through a gate that confirms requirement approval and highlights dependent done entries so that scope stays agreed before implementation starts.
 - Acceptance Criteria:
-  * Planner/CLI refuse implementation entry unless selected requirement is status todo.
-  * When promotion to doing occurs, tooling scans catalogs for overlaps with done requirements and lists each collision (ID plus synopsis).
-  * User must acknowledge the collision list before continuing; alert explains affected entries will gain an Amends line.
-  * Automated tests cover success (no collisions) and collision scenarios ensuring actionable context.
+  * Implementation entrypoints refuse to proceed unless the selected requirement is status todo.
+  * Starting implementation automatically promotes the requirement to doing and records the transition.
+  * During promotion the tooling scans done requirements, reporting potential collisions with IDs and short synopses.
+  * Collisions must be explicitly acknowledged before promotion succeeds, with alerts explaining that affected entries will gain Amends metadata.
+  * Tests cover happy-path promotion, refusal when status is not todo, and collision acknowledgement flows.
 - Priority: high
 - Status: todo
 - Reason: Awaiting implementation
 - Trace: prompts R8, tests none, commits none
 ---
 
-### REQ-F-20251009T113432-AM: Track doing status with linked amendments
+### REQ-F-20251009T113432-AM: Control doing status with WIP guard
 - Owner: codex
-- Narrative: As a maintainer, I want a doing status that allows dependent amendments under the same work item so that WIP stays disciplined without blocking dependent fixes.
+- Narrative: As a maintainer, I want a doing status with a single active slot so that only one requirement is in progress while linked amendments ride along transparently.
 - Acceptance Criteria:
-  * Exactly one primary requirement may hold status doing; amended dependencies carry an Amends line referencing the primary.
-  * Collision handling reopens each impacted done requirement, adds Amends: <primary_id>, sets status to doing, and logs the linkage automatically.
-  * When the primary requirement returns to done, tooling clears Amends fields, restores statuses, and removes linkage metadata.
-  * Automated tests cover single-WIP rule, amendment tagging/clearing, and associated log entries.
+  * Tooling ensures only one primary requirement can hold status doing at a time unless an override is explicitly requested.
+  * Reopened done requirements triggered by collisions gain an Amends: <primary_id> line while they are updated and do not consume additional WIP slots.
+  * Marking the primary requirement done restores all linked amendments to done, removes the Amends metadata, and logs the transition.
+  * Status summaries and change logs display doing counts and amendment associations.
+  * Tests cover WIP guard enforcement, amendment tagging/clearing, and log output.
 - Priority: high
 - Status: todo
 - Reason: Awaiting implementation
@@ -74,17 +76,17 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
-### REQ-F-20251009T095326-TT: Rename requirement statuses to backlog/todo/done
+### REQ-F-20251009T095326-TT: Standardize requirement lifecycle terminology
 - Owner: codex
-- Narrative: As a maintainer, I want the catalog and tooling to use backlog/todo/done so that our workflow aligns with kanban-inspired terminology.
+- Narrative: As a maintainer, I want the catalogs and tooling to use a consistent backlog/todo/doing/done lifecycle so that workflow expectations stay clear for every requirement.
 - Acceptance Criteria:
-  * Functional and non-functional templates list Backlog, Todo, Done, Rejected, Superseded.
-  * Helpers, CLI defaults, and status validation use backlog/todo/done naming.
-  * Existing catalog entries migrate from backlog/todo/done terminology consistently.
-  * Tests and documentation referencing statuses are updated.
+  * Functional and non-functional catalog templates list Backlog, Todo, Doing, Done, Rejected, Superseded.
+  * CLI helpers and validation enforce the lifecycle values (backlog/todo/doing/done/rejected/superseded) for new and existing entries.
+  * Status summaries, docs, and tests reflect the full lifecycle, including the in-progress Doing state.
+  * Migration scripts or helpers update existing catalog entries to the standardized terminology.
 - Priority: medium
 - Status: done
-- Reason: Backlog terminology finished
+- Reason: Lifecycle terminology enforced
 - Trace: prompts R7, tests tests/reqflow/test_catalog.py, commits none
 ---
 

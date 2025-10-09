@@ -19,6 +19,7 @@ __all__ = [
     "catalog_root",
     "generate_next_id",
     "mark_functional_requirement_done",
+    "start_functional_requirement",
 ]
 
 _TODO_MARKER = "## Todo Requirements"
@@ -106,6 +107,30 @@ def _random_suffix() -> str:
 
 
 
+
+
+
+def _split_requirement_entries(section: str) -> list[list[str]]:
+    lines = section.strip().splitlines()
+    entries: list[list[str]] = []
+    current: list[str] = []
+    for line in lines:
+        if line.strip():
+            current.append(line)
+        elif current:
+            entries.append(current)
+            current = []
+    if current:
+        entries.append(current)
+    return entries
+
+
+def _format_requirement_section(entries: list[list[str]]) -> str:
+    if not entries:
+        return "\n\n"
+    body = "\n\n".join("\n".join(entry) for entry in entries)
+    return f"\n\n{body}\n\n"
+
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:
     """Append *requirement* to the functional catalog located at *path*."""
 
@@ -136,6 +161,8 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     updated = _update_status_summary(updated)
     path.write_text(updated, encoding="utf-8")
     return req_id
+
+
 
 
 
@@ -171,28 +198,8 @@ def mark_functional_requirement_done(
     if not retired_header:
         raise ValueError("Functional catalog missing retired section")
 
-    def split_entries(section: str) -> list[list[str]]:
-        lines = section.strip("\n").splitlines()
-        entries: list[list[str]] = []
-        current: list[str] = []
-        for line in lines:
-            if line.strip():
-                current.append(line)
-            elif current:
-                entries.append(current)
-                current = []
-        if current:
-            entries.append(current)
-        return entries
-
-    def format_section(entries: list[list[str]]) -> str:
-        if not entries:
-            return "\n\n"
-        body = "\n\n".join("\n".join(entry) for entry in entries)
-        return f"\n\n{body}\n\n"
-
-    todo_entries = split_entries(todo_section)
-    done_entries = split_entries(done_section)
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
 
     entry_index = next(
         (
@@ -252,14 +259,96 @@ def mark_functional_requirement_done(
     updated_contents = (
         before_todo
         + todo_header
-        + format_section(todo_entries)
+        + _format_requirement_section(todo_entries)
         + done_header
-        + format_section(done_entries)
+        + _format_requirement_section(done_entries)
         + retired_header
         + suffix
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+
+
+
+
+
+
+def start_functional_requirement(
+    path: Path,
+    req_id: str,
+) -> None:
+    """Promote *req_id* from todo to doing within the functional catalog at *path*."""
+
+    contents = path.read_text(encoding="utf-8")
+    heading = f"### {req_id}"
+    if heading not in contents:
+        raise ValueError(f"Requirement {req_id} not found in {path}")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+
+    entry_index = next(
+        (
+            idx
+            for idx, entry in enumerate(todo_entries)
+            if entry and entry[0].strip().startswith(f"### {req_id}")
+        ),
+        None,
+    )
+
+    if entry_index is None:
+        if heading in done_section:
+            raise ValueError(f"Requirement {req_id} is already done")
+        if heading in suffix:
+            raise ValueError(f"Requirement {req_id} is retired")
+        raise ValueError(f"Requirement {req_id} not found in todo section")
+
+    entry_lines = todo_entries[entry_index]
+    updated_entry: list[str] = []
+    status_line = None
+    for line in entry_lines:
+        stripped = line.strip()
+        if stripped.startswith("- Status:"):
+            status_line = stripped.split(":", 1)[1].strip().lower()
+            if status_line == "doing":
+                raise ValueError(f"Requirement {req_id} is already in progress")
+            if status_line != "todo":
+                raise ValueError(
+                    f"Requirement {req_id} must be todo before starting (current status: {status_line})."
+                )
+            updated_entry.append("- Status: doing")
+        else:
+            updated_entry.append(line)
+
+    if status_line is None:
+        raise ValueError(f"Requirement {req_id} missing status line")
+
+    todo_entries[entry_index] = updated_entry
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(todo_entries)
+        + done_header
+        + done_section
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
+
+
 
 def append_non_functional_requirement(
     path: Path, requirement: NonFunctionalRequirement

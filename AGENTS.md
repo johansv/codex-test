@@ -11,6 +11,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 ## Build, Test, and Development Commands
 - <code>uv sync</code> - install dependencies into the managed environment.
 - <code>uv run python -m agentlab.cli.dev</code> - start the interactive agent loop for manual testing.
+- <code>uv run python -m agentlab.cli.start --requirement REQ-F-...</code> - promote an approved requirement to doing after acknowledging collisions.
 - <code>uv run python -m agentlab.cli.worker</code> - run the background worker for CI or hosted runs.
 - <code>uv run pytest</code> - execute the automated suite; add <code>uv run coverage run -m pytest</code> before releases.
 - Expose wrappers in <code>scripts/dev.*</code>, <code>scripts/test.*</code>, and <code>scripts/setup.*</code>.
@@ -49,7 +50,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - **Advance to planning:** User explicitly requests "Plan implementation" (or similar wording).
 - **Skip planning:** User says "Implement now" after requirements approval.
 - **Run all phases automatically:** User states upfront "Run full workflow" (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
-- Requirements must carry one of the statuses `backlog`, `todo`, `done`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
+- Requirements must carry one of the statuses `backlog`, `todo`, `doing`, `done`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
 - Codex should flag requirements that look too large or too small, suggesting splits or merges before recording them when scope warrants it.
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
 
@@ -62,6 +63,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 #### Status Definitions
 - `backlog`: Catalog entry under review; keep it visible for refinement but block implementation until promoted to `todo`.
 - `todo`: Approved requirement ready for planning and implementation; keep the reason current and maintain trace fields as work progresses.
+- `doing`: Requirement actively being implemented; reserve the lone WIP slot and link dependent amendments until completion.
 - `done`: Requirement fulfilled by merged code/tests; move the entry to the done section and refresh trace links to the verifying commits/tests.
 - `rejected`: Decision not to pursue the requirement; document why it will not move forward.
 - `superseded`: Requirement replaced by a newer one; cross-reference the successor ID in both entries.

@@ -29,3 +29,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-09 | REQ-F-20251009T113425-NU | Captured gatekeeping + collision alert requirement | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113432-AM | Captured doing status + amendment tracking requirement | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113439-GZ | Captured automatic catalog alignment requirement | codex | R8 |
+| 2025-10-09 | REQ-F-20251009T095326-TT | Revised lifecycle terminology specification | codex | R8 |
+| 2025-10-09 | REQ-F-20251009T113425-NU | Updated implementation gate requirement wording | codex | R8 |
+| 2025-10-09 | REQ-F-20251009T113432-AM | Updated doing/WIP guard requirement wording | codex | R8 |
