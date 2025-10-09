@@ -28,6 +28,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 ## Commit & Pull Request Guidelines
 - Use Conventional Commits (<code>feat:</code>, <code>fix:</code>, <code>docs:</code>) with optional scopes (<code>feat(parser): ...</code>) and reference issues (<code>Refs #12</code>).
 - When suggesting commit messages, always include the matching requirement trailer (e.g., `Refs REQ-F-...`) so traceability stays intact.
+- Always render commit message suggestions inside a fenced code block so the user can copy them directly.
 - PRs supply summary, tests run, coverage notes, and supporting screenshots/logs; promote from draft after <code>uv run pytest</code> and <code>uv run ruff check</code> succeed locally.
 
 ## Agent-Specific Instructions
