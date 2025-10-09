@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 5 (done=5); Retired: 0
+Todo: 3 (todo=3); Done: 5 (done=5); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -29,6 +29,48 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ```
 
 ## Todo Requirements
+
+### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
+- Owner: codex
+- Narrative: As a maintainer, I want every coding task to reference an approved todo requirement and receive collision warnings so that scope stays clear before implementation starts.
+- Acceptance Criteria:
+  * Planner/CLI refuse implementation entry unless selected requirement is status todo.
+  * When promotion to doing occurs, tooling scans catalogs for overlaps with done requirements and lists each collision (ID plus synopsis).
+  * User must acknowledge the collision list before continuing; alert explains affected entries will gain an Amends line.
+  * Automated tests cover success (no collisions) and collision scenarios ensuring actionable context.
+- Priority: high
+- Status: todo
+- Reason: Awaiting implementation
+- Trace: prompts R8, tests none, commits none
+---
+
+### REQ-F-20251009T113432-AM: Track doing status with linked amendments
+- Owner: codex
+- Narrative: As a maintainer, I want a doing status that allows dependent amendments under the same work item so that WIP stays disciplined without blocking dependent fixes.
+- Acceptance Criteria:
+  * Exactly one primary requirement may hold status doing; amended dependencies carry an Amends line referencing the primary.
+  * Collision handling reopens each impacted done requirement, adds Amends: <primary_id>, sets status to doing, and logs the linkage automatically.
+  * When the primary requirement returns to done, tooling clears Amends fields, restores statuses, and removes linkage metadata.
+  * Automated tests cover single-WIP rule, amendment tagging/clearing, and associated log entries.
+- Priority: high
+- Status: todo
+- Reason: Awaiting implementation
+- Trace: prompts R8, tests none, commits none
+---
+
+### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
+- Owner: codex
+- Narrative: As a maintainer, I want done requirements amended automatically during implementation so that the catalog matches code in a single atomic update.
+- Acceptance Criteria:
+  * Collision detection reopens each affected done requirement, adds Amends: <primary_id>, and records the amendment in the change log.
+  * CLI prompts display the collision list and show which entries are being amended with their Amends values.
+  * Mark-done workflow updates the primary requirement plus all linked amendments together, including removing Amends and refreshing narratives, acceptance, and traces.
+  * Tests simulate the full collision/amendment cycle and verify catalog/log updates including the Amends field.
+- Priority: high
+- Status: todo
+- Reason: Awaiting implementation
+- Trace: prompts R8, tests none, commits none
+---
 
 ## Done Requirements
 
