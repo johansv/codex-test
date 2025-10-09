@@ -44,29 +44,56 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
    - After requirements are accepted, Codex can draft an implementation plan. Codex waits for user approval before moving on.
    - Users may skip this step entirely by requesting implementation immediately.
 3. **Implementation Phase**
+
    - Before coding, Codex promotes the approved requirement to doing (or otherwise records the in-progress start) and confirms the user is ready to proceed.
+   - Confirm the user explicitly wants to proceed, then promote the chosen requirement to `doing` before making any code or catalog edits.
    - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
 
+
+
 ### Workflow Controls
+
 - **Default behavior:** Run the Requirements phase only and pause.
+
 - **Advance to planning:** User explicitly requests "Plan implementation" (or similar wording).
+
 - **Skip planning:** User says "Implement now" after requirements approval.
+
 - **Run all phases automatically:** User states upfront "Run full workflow" (or equivalent); Codex proceeds through requirements -> plan -> implementation without additional confirmation.
+
 - Requirements must carry one of the statuses `backlog`, `todo`, `doing`, `done`, `rejected`, or `superseded`, with a short `Reason:` explaining why the status applies.
+
 - Codex should flag requirements that look too large or too small, suggesting splits or merges before recording them when scope warrants it.
+
 - Use the commit trailer `Refs <requirement-id>` on every related commit to keep traceability searchable.
 
+
+
 ### Catalog Updates
+
 - Codex may persist approved requirements to the catalogs on request, even when planning or implementation is deferred; treat this as completing the requirements phase while leaving later phases pending.
-- Codex must not mark a requirement done until the user explicitly confirms the implementation outcome.
+
+- Codex must not mark a requirement done until the user explicitly confirms the implementation outcome. Codex must revert any partial catalog changes if the user rejects the result.
+
 - Codex can persist catalog entries as `backlog` when the user wants more review; they stay in the catalog but must not advance until promoted to `todo`.
+
 - When a user requests planning or implementation for a requirement still marked `backlog`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
+
 - Always write catalog and log entries through the reqflow helpers or CLI wrappers so IDs use the timestamp format and summaries stay correct; never hand-edit requirements files directly.
 
+
+
 #### Status Definitions
+
 - `backlog`: Catalog entry under review; keep it visible for refinement but block implementation until promoted to `todo`.
+
 - `todo`: Approved requirement ready for planning and implementation; keep the reason current and maintain trace fields as work progresses.
+
 - `doing`: Requirement actively being implemented; reserve the lone WIP slot and link dependent amendments until completion.
+
 - `done`: Requirement fulfilled by merged code/tests; move the entry to the done section and refresh trace links to the verifying commits/tests.
+
 - `rejected`: Decision not to pursue the requirement; document why it will not move forward.
+
 - `superseded`: Requirement replaced by a newer one; cross-reference the successor ID in both entries.
+
