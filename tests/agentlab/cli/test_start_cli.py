@@ -177,3 +177,90 @@ def test_start_cli_requires_acknowledgement_for_collisions(
     log_doc = _read(catalog_dir / "log.md")
     assert "collisions: REQ-F-200" in log_doc
     assert "Reopened REQ-F-200 under REQ-F-100" in log_doc
+
+
+def test_start_cli_requires_acknowledgement_for_related_suggestions(
+    catalog_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    functional = catalog_dir / "functional.md"
+    text = _read(functional).replace(
+        "## Todo Requirements\n\n",
+        ("## Todo Requirements\n\n"
+         "### REQ-F-150: Shared component handling\n"
+         "- Owner: product\n"
+         "- Narrative: Ensure start CLI handles shared component prompts.\n"
+         "- Acceptance Criteria:\n"
+         "  * Placeholder shared component criterion\n"
+         "- Priority: medium\n"
+         "- Status: todo\n"
+         "- Reason: pending\n"
+         "- Trace: prompts none, tests none, commits none\n"
+         "---\n\n") ,
+        1,
+    )
+    functional.write_text(text, encoding="utf-8")
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+        ]
+    )
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "REQ-F-150" in captured.err
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+            "--acknowledge-related",
+        ]
+    )
+    assert exit_code == 0
+
+
+def test_start_cli_reopens_related_amendments(catalog_dir: Path) -> None:
+    functional = catalog_dir / "functional.md"
+    text = _read(functional).replace(
+        "## Todo Requirements\n\n",
+        ("## Todo Requirements\n\n"
+         "### REQ-F-150: Shared component handling\n"
+         "- Owner: product\n"
+         "- Narrative: Ensure start CLI handles shared component prompts.\n"
+         "- Acceptance Criteria:\n"
+         "  * Placeholder shared component criterion\n"
+         "- Priority: medium\n"
+         "- Status: todo\n"
+         "- Reason: pending\n"
+         "- Trace: prompts none, tests none, commits none\n"
+         "---\n\n") ,
+        1,
+    )
+    functional.write_text(text, encoding="utf-8")
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+            "--acknowledge-related",
+            "--reopen-related",
+            "REQ-F-150",
+        ]
+    )
+    assert exit_code == 0
+
+    functional_doc = _read(functional)
+    assert "### REQ-F-150: Shared component handling" in functional_doc
+    assert "- Status: doing" in functional_doc
+    assert "- Amends: REQ-F-100" in functional_doc
+
+    log_doc = _read(catalog_dir / "log.md")
+    assert "related: REQ-F-150" in log_doc
+    assert "Reopened REQ-F-150 under REQ-F-100" in log_doc

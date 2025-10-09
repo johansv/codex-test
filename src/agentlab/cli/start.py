@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from dataclasses import dataclass
 from difflib import SequenceMatcher
@@ -33,6 +34,34 @@ class Collision:
     requirement_id: str
     title: str | None
     similarity: float
+
+
+_STOPWORDS = {
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "into",
+    "from",
+    "todo",
+    "items",
+    "placeholder",
+    "medium",
+    "status",
+    "reason",
+    "pending",
+    "trace",
+    "prompts",
+    "tests",
+    "none",
+    "commits",
+    "owner",
+    "narrative",
+    "acceptance",
+    "criteria",
+}
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -72,6 +101,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--acknowledge-collisions",
         action="store_true",
         help="Required when potential collisions are detected.",
+    )
+    parser.add_argument(
+        "--acknowledge-related",
+        action="store_true",
+        help="Required when related requirements are suggested.",
+    )
+    parser.add_argument(
+        "--reopen-related",
+        action="append",
+        default=[],
+        help="Requirement ID to reopen as an amendment; repeat the flag for multiple IDs.",
     )
     parser.add_argument(
         "--allow-parallel",
@@ -138,8 +178,25 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     collisions = _find_collisions(target, done_entries, args.collision_threshold)
+    collision_ids = {item.requirement_id for item in collisions}
     if collisions and not args.acknowledge_collisions:
         _print_collision_alert(collisions, args.requirement)
+        return 1
+
+    other_entries = [
+        entry
+        for entry in todo_entries + done_entries
+        if entry.req_id != args.requirement
+    ]
+    related_candidates = _find_related_requirements(
+        target,
+        other_entries,
+        excluded_ids=collision_ids,
+    )
+    related_ids = [item.requirement_id for item in related_candidates]
+    related_acknowledged = args.acknowledge_related or bool(args.reopen_related)
+    if related_ids and not related_acknowledged:
+        _print_related_alert(related_candidates, args.requirement)
         return 1
 
     try:
@@ -153,6 +210,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     reopened: list[str] = []
+    reopened_collisions: list[str] = []
     for collision in collisions:
         try:
             reopen_functional_requirement_for_amendment(
@@ -161,6 +219,33 @@ def main(argv: list[str] | None = None) -> int:
                 args.requirement,
             )
             reopened.append(collision.requirement_id)
+            reopened_collisions.append(collision.requirement_id)
+        except ValueError as exc:
+            parser.error(str(exc))
+            return 2
+
+    related_map = {item.requirement_id: item for item in related_candidates}
+    reopen_requested = list(dict.fromkeys(args.reopen_related))
+    reopened_related: list[str] = []
+    for req_id in reopen_requested:
+        if req_id in reopened:
+            continue
+        if req_id not in related_map and req_id not in collision_ids:
+            parser.error(
+                f"Requirement {req_id} was not among the suggested related items."
+            )
+            return 2
+        try:
+            reopen_functional_requirement_for_amendment(
+                functional_path,
+                req_id,
+                args.requirement,
+            )
+            reopened.append(req_id)
+            if req_id in related_map:
+                reopened_related.append(req_id)
+            else:
+                reopened_collisions.append(req_id)
         except ValueError as exc:
             parser.error(str(exc))
             return 2
@@ -170,9 +255,14 @@ def main(argv: list[str] | None = None) -> int:
         if collisions
         else ""
     )
+    related_note = (
+        f"; related: {', '.join(related_ids)}"
+        if related_ids
+        else ""
+    )
     summary = (
         args.summary
-        or f"Started implementation for {args.requirement}{collision_note}"
+        or f"Started implementation for {args.requirement}{collision_note}{related_note}"
     )
     append_log_entry(
         log_path,
@@ -201,13 +291,27 @@ def main(argv: list[str] | None = None) -> int:
             for item in collisions
         )
         message.append(f"Potential amendments detected: {details}.")
-        if reopened:
+        if reopened_collisions:
             message.append(
-                "Reopened amendments: "
-                f"{', '.join(reopened)} (status set to doing with Amends markers)."
+                "Reopened collision amendments: "
+                f"{', '.join(reopened_collisions)} (status set to doing with Amends markers)."
             )
     else:
         message.append("No collisions detected.")
+
+    if related_ids:
+        if reopened_related:
+            message.append(
+                "Reopened related amendments: "
+                f"{', '.join(reopened_related)} (status set to doing with Amends markers)."
+            )
+        else:
+            message.append(
+                "Related requirements suggested: "
+                f"{', '.join(related_ids)}."
+            )
+    else:
+        message.append("No related requirements suggested.")
 
     print("\n".join(message))
     return 0
@@ -315,6 +419,54 @@ def _find_collisions(
     return collisions
 
 
+def _extract_tokens(entry: RequirementEntry) -> set[str]:
+    tokens: set[str] = set()
+    for line in entry.lines:
+        for token in re.findall(r"[a-z0-9]{3,}", line.lower()):
+            if token not in _STOPWORDS:
+                tokens.add(token)
+    return tokens
+
+
+def _find_related_requirements(
+    target: RequirementEntry,
+    entries: Iterable[RequirementEntry],
+    excluded_ids: set[str] | None = None,
+    threshold: float = 0.35,
+    limit: int = 5,
+) -> list[Collision]:
+    threshold = max(0.0, min(threshold, 1.0))
+    excluded = set(excluded_ids or set())
+    target_text = "\n".join(target.lines)
+    target_tokens = _extract_tokens(target)
+    related: list[Collision] = []
+    for entry in entries:
+        if entry.req_id in excluded:
+            continue
+        status = (entry.status or "").lower()
+        if status and status != "todo":
+            continue
+        candidate_text = "\n".join(entry.lines)
+        similarity = SequenceMatcher(None, target_text, candidate_text).ratio()
+        tokens = _extract_tokens(entry)
+        overlap = target_tokens & tokens
+        union = target_tokens | tokens
+        token_score = (len(overlap) / len(union)) if union else 0.0
+        score = max(similarity, token_score)
+        if similarity >= threshold or len(overlap) >= 2 or token_score >= 0.2:
+            related.append(
+                Collision(
+                    requirement_id=entry.req_id,
+                    title=entry.title,
+                    similarity=score,
+                )
+            )
+    related.sort(key=lambda item: item.similarity, reverse=True)
+    if limit:
+        return related[:limit]
+    return related
+
+
 def _print_collision_alert(collisions: list[Collision], req_id: str) -> None:
     print(
         "Potential catalog collisions detected for "
@@ -331,6 +483,26 @@ def _print_collision_alert(collisions: list[Collision], req_id: str) -> None:
     print(
         "Re-run the command with --acknowledge-collisions once you are ready. "
         "Amends lines will be added automatically in later workflow steps.",
+        file=sys.stderr,
+    )
+
+
+def _print_related_alert(related: list[Collision], req_id: str) -> None:
+    print(
+        "Potential related requirements detected for "
+        f"{req_id}. Review the entries below:",
+        file=sys.stderr,
+    )
+    for item in related:
+        title = item.title or "untitled"
+        similarity = f"{item.similarity:.2f}"
+        print(
+            f"- {item.requirement_id} ({title}) similarity={similarity}",
+            file=sys.stderr,
+        )
+    print(
+        "Re-run the command with --acknowledge-related and optionally "
+        "--reopen-related <ID> to proceed.",
         file=sys.stderr,
     )
 

@@ -35,3 +35,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-09 | REQ-F-20251009T113425-NU | Marked REQ-F-20251009T113425-NU done: Implementation gate and collision alerts available | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113432-AM | Marked REQ-F-20251009T113432-AM done: Doing guard and amendment handling implemented | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113439-GZ | Marked REQ-F-20251009T113439-GZ done: Amendment automation implemented | codex | R8 |
+| 2025-10-09 | REQ-F-20251009T182153-NN | Captured cross-cutting requirement suggestion workflow | codex | R9 |
+| 2025-10-09 | REQ-F-20251009T182153-NN | Marked REQ-F-20251009T182153-NN done: Related requirement surfacing implemented | codex | implementation |

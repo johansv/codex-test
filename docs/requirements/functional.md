@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 8 (done=8); Retired: 0
+Todo: 0; Done: 9 (done=9); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -31,6 +31,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ## Todo Requirements
 
 ## Done Requirements
+
+### REQ-F-20251009T182153-NN: Surface cross-cutting requirement candidates
+- Owner: codex
+- Narrative: As a maintainer, I want the workflow to suggest related requirements when a change touches shared components so that cross-cutting edits don’t miss dependent specs.
+- Acceptance Criteria:
+  * During implementation prep the tooling scans the catalog for requirements sharing tags, components, or keywords with the selected requirement.
+  * CLI output lists candidate overlaps and prompts the user to acknowledge or reopen them as amendments.
+  * Users can opt out when suggestions are irrelevant, avoiding noisy prompts.
+  * Tests cover overlapping and non-overlapping scenarios to ensure relevant suggestions.
+- Priority: high
+- Status: done
+- Reason: Related requirement surfacing implemented
+- Trace: prompts R9, tests tests/agentlab/cli/test_start_cli.py, commits none
+---
 
 ### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
 - Owner: codex
