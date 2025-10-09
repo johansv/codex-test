@@ -32,3 +32,4 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-09 | REQ-F-20251009T095326-TT | Revised lifecycle terminology specification | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113425-NU | Updated implementation gate requirement wording | codex | R8 |
 | 2025-10-09 | REQ-F-20251009T113432-AM | Updated doing/WIP guard requirement wording | codex | R8 |
+| 2025-10-09 | REQ-F-20251009T113425-NU | Marked REQ-F-20251009T113425-NU done: Implementation gate and collision alerts available | codex | R8 |

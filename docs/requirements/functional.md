@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 3 (todo=3); Done: 5 (done=5); Retired: 0
+Todo: 2 (todo=2); Done: 6 (done=6); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -29,21 +29,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ```
 
 ## Todo Requirements
-
-### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
-- Owner: codex
-- Narrative: As a maintainer, I want every coding task to pass through a gate that confirms requirement approval and highlights dependent done entries so that scope stays agreed before implementation starts.
-- Acceptance Criteria:
-  * Implementation entrypoints refuse to proceed unless the selected requirement is status todo.
-  * Starting implementation automatically promotes the requirement to doing and records the transition.
-  * During promotion the tooling scans done requirements, reporting potential collisions with IDs and short synopses.
-  * Collisions must be explicitly acknowledged before promotion succeeds, with alerts explaining that affected entries will gain Amends metadata.
-  * Tests cover happy-path promotion, refusal when status is not todo, and collision acknowledgement flows.
-- Priority: high
-- Status: todo
-- Reason: Awaiting implementation
-- Trace: prompts R8, tests none, commits none
----
 
 ### REQ-F-20251009T113432-AM: Control doing status with WIP guard
 - Owner: codex
@@ -75,6 +60,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
+- Owner: codex
+- Narrative: As a maintainer, I want every coding task to pass through a gate that confirms requirement approval and highlights dependent done entries so that scope stays agreed before implementation starts.
+- Acceptance Criteria:
+  * Implementation entrypoints refuse to proceed unless the selected requirement is status todo.
+  * Starting implementation automatically promotes the requirement to doing and records the transition.
+  * During promotion the tooling scans done requirements, reporting potential collisions with IDs and short synopses.
+  * Collisions must be explicitly acknowledged before promotion succeeds, with alerts explaining that affected entries will gain Amends metadata.
+  * Tests cover happy-path promotion, refusal when status is not todo, and collision acknowledgement flows.
+- Priority: high
+- Status: done
+- Reason: Implementation gate and collision alerts available
+- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251009T095326-TT: Standardize requirement lifecycle terminology
 - Owner: codex
