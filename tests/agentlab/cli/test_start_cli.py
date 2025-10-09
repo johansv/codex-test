@@ -51,6 +51,10 @@ def catalog_dir(tmp_path: Path) -> Path:
     return req_dir
 
 
+def _read(path: Path) -> str:
+    return path.read_text(encoding="utf-8")
+
+
 def test_start_cli_promotes_requirement_without_collisions(catalog_dir: Path) -> None:
     exit_code = start.main(
         [
@@ -62,22 +66,34 @@ def test_start_cli_promotes_requirement_without_collisions(catalog_dir: Path) ->
     )
     assert exit_code == 0
 
-    functional = catalog_dir.joinpath("functional.md").read_text(encoding="utf-8")
+    functional = _read(catalog_dir / "functional.md")
     assert "- Status: doing" in functional
     assert "Todo: 1 (doing=1" in functional
 
-    log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
+    log_doc = _read(catalog_dir / "log.md")
     assert "Started implementation for REQ-F-100" in log_doc
 
 
-def test_start_cli_rejects_non_todo_requirement(catalog_dir: Path) -> None:
-    functional = catalog_dir.joinpath("functional.md")
-    functional.write_text(
-        functional.read_text(encoding="utf-8").replace("- Status: todo", "- Status: backlog"),
-        encoding="utf-8",
+def test_start_cli_blocks_when_primary_doing_exists(catalog_dir: Path) -> None:
+    functional = catalog_dir / "functional.md"
+    text = _read(functional).replace(
+        "## Todo Requirements\n\n",
+        "## Todo Requirements\n\n"
+        "### REQ-F-050: Existing work in progress\n"
+        "- Owner: product\n"
+        "- Narrative: Existing implementation work.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: actively developing\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n",
+        1,
     )
+    functional.write_text(text, encoding="utf-8")
 
-    with pytest.raises(SystemExit):
+    with pytest.raises(SystemExit) as exc:
         start.main(
             [
                 "--catalog-root",
@@ -86,13 +102,45 @@ def test_start_cli_rejects_non_todo_requirement(catalog_dir: Path) -> None:
                 "REQ-F-100",
             ]
         )
+    assert exc.value.code == 2
+
+
+def test_start_cli_allows_parallel_override(catalog_dir: Path) -> None:
+    functional = catalog_dir / "functional.md"
+    text = _read(functional).replace(
+        "## Todo Requirements\n\n",
+        "## Todo Requirements\n\n"
+        "### REQ-F-050: Existing work in progress\n"
+        "- Owner: product\n"
+        "- Narrative: Existing implementation work.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: actively developing\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n",
+        1,
+    )
+    functional.write_text(text, encoding="utf-8")
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+            "--allow-parallel",
+        ]
+    )
+    assert exit_code == 0
 
 
 def test_start_cli_requires_acknowledgement_for_collisions(
     catalog_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     functional = catalog_dir.joinpath("functional.md")
-    text = functional.read_text(encoding="utf-8").replace(
+    text = _read(functional).replace(
         "Completed processing of legacy exports.",
         "Ensure start CLI promotes todo items.",
     )
@@ -120,6 +168,12 @@ def test_start_cli_requires_acknowledgement_for_collisions(
         ]
     )
     assert exit_code == 0
-    log_doc = catalog_dir.joinpath("log.md").read_text(encoding="utf-8")
-    assert "collisions: REQ-F-200" in log_doc
 
+    functional_doc = _read(functional)
+    assert "### REQ-F-200: Completed example" in functional_doc
+    assert "- Status: doing" in functional_doc
+    assert "- Amends: REQ-F-100" in functional_doc
+
+    log_doc = _read(catalog_dir / "log.md")
+    assert "collisions: REQ-F-200" in log_doc
+    assert "Reopened REQ-F-200 under REQ-F-100" in log_doc

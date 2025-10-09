@@ -19,6 +19,7 @@ __all__ = [
     "catalog_root",
     "generate_next_id",
     "mark_functional_requirement_done",
+    "reopen_functional_requirement_for_amendment",
     "start_functional_requirement",
 ]
 
@@ -110,6 +111,12 @@ def _random_suffix() -> str:
 
 
 
+
+
+
+
+
+
 def _split_requirement_entries(section: str) -> list[list[str]]:
     lines = section.strip().splitlines()
     entries: list[list[str]] = []
@@ -130,6 +137,81 @@ def _format_requirement_section(entries: list[list[str]]) -> str:
         return "\n\n"
     body = "\n\n".join("\n".join(entry) for entry in entries)
     return f"\n\n{body}\n\n"
+
+
+def _extract_requirement_id(entry: list[str]) -> str | None:
+    for line in entry:
+        stripped = line.strip()
+        if stripped.startswith("### "):
+            heading = stripped[4:]
+            req_id, _, _title = heading.partition(":")
+            return req_id.strip()
+        if stripped.startswith("- ID:"):
+            return stripped.split(":", 1)[1].strip()
+    return None
+
+
+def _extract_status(entry: list[str]) -> str | None:
+    for line in entry:
+        stripped = line.strip()
+        if stripped.startswith("- Status:"):
+            return stripped.split(":", 1)[1].strip().lower()
+    return None
+
+
+def _set_status(entry: list[str], value: str) -> list[str]:
+    updated: list[str] = []
+    replaced = False
+    for line in entry:
+        if line.strip().startswith("- Status:"):
+            updated.append(f"- Status: {value}")
+            replaced = True
+        else:
+            updated.append(line)
+    if not replaced:
+        updated.append(f"- Status: {value}")
+    return updated
+
+
+def _extract_amends(entry: list[str]) -> str | None:
+    for line in entry:
+        stripped = line.strip()
+        if stripped.startswith("- Amends:"):
+            return stripped.split(":", 1)[1].strip()
+    return None
+
+
+def _set_amends(entry: list[str], primary_id: str | None) -> list[str]:
+    filtered = [line for line in entry if not line.strip().startswith("- Amends:")]
+    if primary_id is None:
+        return filtered
+
+    result: list[str] = []
+    inserted = False
+    for line in filtered:
+        result.append(line)
+        if not inserted and line.strip().startswith("- Status:"):
+            result.append(f"- Amends: {primary_id}")
+            inserted = True
+    if not inserted:
+        result.append(f"- Amends: {primary_id}")
+    return result
+
+
+def _set_reason(entry: list[str], value: str) -> list[str]:
+    updated: list[str] = []
+    replaced = False
+    for line in entry:
+        if line.strip().startswith("- Reason:"):
+            updated.append(f"- Reason: {value}")
+            replaced = True
+        else:
+            updated.append(line)
+    if not replaced:
+        updated.append(f"- Reason: {value}")
+    return updated
+
+
 
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:
     """Append *requirement* to the functional catalog located at *path*."""
@@ -167,13 +249,15 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
 
 
 
+
+
 def mark_functional_requirement_done(
     path: Path,
     req_id: str,
     reason: str,
     tests: Sequence[str],
     commits: Sequence[str] | None = None,
-) -> None:
+) -> list[str]:
     """Mark *req_id* done in the functional catalog located at *path*."""
 
     if not tests:
@@ -245,6 +329,8 @@ def mark_functional_requirement_done(
             )
             updated_entry.append(trace_line)
             trace_updated = True
+        elif stripped.startswith("- Amends:"):
+            continue
         else:
             updated_entry.append(line)
 
@@ -254,7 +340,92 @@ def mark_functional_requirement_done(
         )
         updated_entry.append(trace_line)
 
+    updated_entry = _set_amends(updated_entry, None)
     done_entries.insert(0, updated_entry)
+
+    closed_amendments: list[str] = []
+    remaining_todo: list[list[str]] = []
+    for entry in todo_entries:
+        amends_target = _extract_amends(entry)
+        if amends_target == req_id:
+            amendment_id = _extract_requirement_id(entry) or req_id
+            entry = _set_status(entry, "done")
+            entry = _set_amends(entry, None)
+            entry = _set_reason(
+                entry,
+                f"Amendment completed under {req_id}",
+            )
+            done_entries.insert(0, entry)
+            closed_amendments.append(amendment_id)
+        else:
+            remaining_todo.append(entry)
+
+    todo_entries = remaining_todo
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(todo_entries)
+        + done_header
+        + _format_requirement_section(done_entries)
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
+    return closed_amendments
+
+
+
+
+
+def reopen_functional_requirement_for_amendment(
+    path: Path,
+    amendment_id: str,
+    primary_id: str,
+) -> None:
+    """Reopen *amendment_id* under *primary_id* for in-progress updates."""
+
+    contents = path.read_text(encoding="utf-8")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    target_index = None
+    for idx, entry in enumerate(todo_entries):
+        if _extract_requirement_id(entry) == amendment_id:
+            target_index = idx
+            break
+
+    if target_index is not None:
+        entry = todo_entries[target_index]
+        entry = _set_status(entry, "doing")
+        entry = _set_amends(entry, primary_id)
+        entry = _set_reason(entry, f"Amendment in progress under {primary_id}")
+        todo_entries[target_index] = entry
+    else:
+        for idx, entry in enumerate(done_entries):
+            if _extract_requirement_id(entry) == amendment_id:
+                entry = _set_status(entry, "doing")
+                entry = _set_amends(entry, primary_id)
+                entry = _set_reason(entry, f"Amendment in progress under {primary_id}")
+                done_entries.pop(idx)
+                todo_entries.insert(0, entry)
+                break
+        else:
+            raise ValueError(f"Requirement {amendment_id} not found for amendment")
 
     updated_contents = (
         before_todo
@@ -269,13 +440,11 @@ def mark_functional_requirement_done(
     path.write_text(updated_contents, encoding="utf-8")
 
 
-
-
-
-
 def start_functional_requirement(
     path: Path,
     req_id: str,
+    *,
+    allow_parallel: bool = False,
 ) -> None:
     """Promote *req_id* from todo to doing within the functional catalog at *path*."""
 
@@ -298,6 +467,20 @@ def start_functional_requirement(
 
     todo_entries = _split_requirement_entries(todo_section)
 
+    existing_primaries = [
+        _extract_requirement_id(entry)
+        for entry in todo_entries
+        if _extract_status(entry) == "doing"
+        and not _extract_amends(entry)
+        and _extract_requirement_id(entry) != req_id
+    ]
+    if existing_primaries and not allow_parallel:
+        existing = ", ".join(filter(None, existing_primaries))
+        raise ValueError(
+            "Another requirement is already in progress: "
+            f"{existing}. Re-run with --allow-parallel to override."
+        )
+
     entry_index = next(
         (
             idx
@@ -315,26 +498,9 @@ def start_functional_requirement(
         raise ValueError(f"Requirement {req_id} not found in todo section")
 
     entry_lines = todo_entries[entry_index]
-    updated_entry: list[str] = []
-    status_line = None
-    for line in entry_lines:
-        stripped = line.strip()
-        if stripped.startswith("- Status:"):
-            status_line = stripped.split(":", 1)[1].strip().lower()
-            if status_line == "doing":
-                raise ValueError(f"Requirement {req_id} is already in progress")
-            if status_line != "todo":
-                raise ValueError(
-                    f"Requirement {req_id} must be todo before starting (current status: {status_line})."
-                )
-            updated_entry.append("- Status: doing")
-        else:
-            updated_entry.append(line)
-
-    if status_line is None:
-        raise ValueError(f"Requirement {req_id} missing status line")
-
-    todo_entries[entry_index] = updated_entry
+    entry_lines = _set_status(entry_lines, "doing")
+    entry_lines = _set_amends(entry_lines, None)
+    todo_entries[entry_index] = entry_lines
 
     updated_contents = (
         before_todo

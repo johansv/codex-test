@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (todo=2); Done: 6 (done=6); Retired: 0
+Todo: 1 (todo=1); Done: 7 (done=7); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -30,21 +30,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
-### REQ-F-20251009T113432-AM: Control doing status with WIP guard
-- Owner: codex
-- Narrative: As a maintainer, I want a doing status with a single active slot so that only one requirement is in progress while linked amendments ride along transparently.
-- Acceptance Criteria:
-  * Tooling ensures only one primary requirement can hold status doing at a time unless an override is explicitly requested.
-  * Reopened done requirements triggered by collisions gain an Amends: <primary_id> line while they are updated and do not consume additional WIP slots.
-  * Marking the primary requirement done restores all linked amendments to done, removes the Amends metadata, and logs the transition.
-  * Status summaries and change logs display doing counts and amendment associations.
-  * Tests cover WIP guard enforcement, amendment tagging/clearing, and log output.
-- Priority: high
-- Status: todo
-- Reason: Awaiting implementation
-- Trace: prompts R8, tests none, commits none
----
-
 ### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
 - Owner: codex
 - Narrative: As a maintainer, I want done requirements amended automatically during implementation so that the catalog matches code in a single atomic update.
@@ -60,6 +45,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251009T113432-AM: Control doing status with WIP guard
+- Owner: codex
+- Narrative: As a maintainer, I want a doing status with a single active slot so that only one requirement is in progress while linked amendments ride along transparently.
+- Acceptance Criteria:
+  * Tooling ensures only one primary requirement can hold status doing at a time unless an override is explicitly requested.
+  * Reopened done requirements triggered by collisions gain an Amends: <primary_id> line while they are updated and do not consume additional WIP slots.
+  * Marking the primary requirement done restores all linked amendments to done, removes the Amends metadata, and logs the transition.
+  * Status summaries and change logs display doing counts and amendment associations.
+  * Tests cover WIP guard enforcement, amendment tagging/clearing, and log output.
+- Priority: high
+- Status: done
+- Reason: Doing guard and amendment handling implemented
+- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
 - Owner: codex

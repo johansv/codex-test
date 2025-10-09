@@ -11,6 +11,7 @@ from typing import Iterable
 from reqflow.catalog import (
     append_log_entry,
     catalog_root,
+    reopen_functional_requirement_for_amendment,
     start_functional_requirement,
 )
 
@@ -73,12 +74,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Required when potential collisions are detected.",
     )
     parser.add_argument(
+        "--allow-parallel",
+        action="store_true",
+        help="Override the single-doing guard when multiple requirements must proceed in parallel.",
+    )
+    parser.add_argument(
         "--collision-threshold",
         type=float,
         default=0.45,
         help="Similarity threshold (0-1) for collision detection (default: 0.45).",
     )
     return parser
+
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -136,10 +143,27 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     try:
-        start_functional_requirement(functional_path, args.requirement)
+        start_functional_requirement(
+            functional_path,
+            args.requirement,
+            allow_parallel=args.allow_parallel,
+        )
     except ValueError as exc:
         parser.error(str(exc))
         return 2
+
+    reopened: list[str] = []
+    for collision in collisions:
+        try:
+            reopen_functional_requirement_for_amendment(
+                functional_path,
+                collision.requirement_id,
+                args.requirement,
+            )
+            reopened.append(collision.requirement_id)
+        except ValueError as exc:
+            parser.error(str(exc))
+            return 2
 
     collision_note = (
         f"; collisions: {', '.join(c.requirement_id for c in collisions)}"
@@ -157,6 +181,16 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         reference=args.reference,
     )
+    for amendment_id in reopened:
+        append_log_entry(
+            log_path,
+            req_id=amendment_id,
+            change_summary=(
+                f"Reopened {amendment_id} under {args.requirement} for amendment"
+            ),
+            author=args.author,
+            reference=args.reference,
+        )
 
     message = [
         f"Promoted {args.requirement} to doing in {functional_path}",
@@ -166,14 +200,19 @@ def main(argv: list[str] | None = None) -> int:
             f"{item.requirement_id} ({item.title or 'untitled'})"
             for item in collisions
         )
-        message.append(
-            "Potential amendments detected: "
-            f"{details}. Future steps will add Amends lines automatically."
-        )
+        message.append(f"Potential amendments detected: {details}.")
+        if reopened:
+            message.append(
+                "Reopened amendments: "
+                f"{', '.join(reopened)} (status set to doing with Amends markers)."
+            )
     else:
         message.append("No collisions detected.")
+
     print("\n".join(message))
     return 0
+
+
 
 
 def _load_functional_sections(path: Path) -> tuple[list[RequirementEntry], list[RequirementEntry]]:

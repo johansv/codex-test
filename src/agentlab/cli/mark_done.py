@@ -63,6 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -86,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
 
     commits = [value for value in args.commits if value]
     try:
-        mark_functional_requirement_done(
+        closed_amendments = mark_functional_requirement_done(
             catalog_path,
             req_id=args.id,
             reason=args.reason,
@@ -95,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
         )
     except ValueError as exc:
         parser.error(str(exc))
+        return 2
 
     summary = args.summary or f"Marked {args.id} done: {args.reason}"
     append_log_entry(
@@ -104,8 +107,23 @@ def main(argv: list[str] | None = None) -> int:
         author=args.author,
         reference=args.reference,
     )
-    print(f"Marked {args.id} done in {catalog_path}")
+    for amendment_id in closed_amendments:
+        append_log_entry(
+            log_path,
+            req_id=amendment_id,
+            change_summary=f"Closed amendment {amendment_id} after {args.id}",
+            author=args.author,
+            reference=args.reference,
+        )
+
+    lines = [f"Marked {args.id} done in {catalog_path}"]
+    if closed_amendments:
+        lines.append("Closed amendments: " + ", ".join(closed_amendments))
+    print("\n".join(lines))
     return 0
+
+
+
 
 
 if __name__ == "__main__":  # pragma: no cover

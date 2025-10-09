@@ -105,3 +105,63 @@ def test_mark_done_cli_errors_when_requirement_missing(catalog_dir: Path) -> Non
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert catalog == initial_catalog
     assert log == initial_log
+
+
+def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
+    functional = catalog_dir / "functional.md"
+    functional.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 2 (doing=2); Done: 0; Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-123: Primary feature\n"
+        "- Owner: codex\n"
+        "- Narrative: Primary implementation in progress.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: implementing\n"
+        "- Trace: prompts R2, tests pending, commits pending\n"
+        "---\n\n"
+        "### REQ-F-200: Dependent cleanup\n"
+        "- Owner: codex\n"
+        "- Narrative: Requires amendment alongside REQ-F-123.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: awaiting amendment\n"
+        "- Amends: REQ-F-123\n"
+        "- Trace: prompts none, tests pending, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "## Retired Requirements\n",
+        encoding="utf-8",
+    )
+
+    exit_code = cli.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--id",
+            "REQ-F-123",
+            "--reason",
+            "Primary and amendments completed",
+            "--tests",
+            "tests/agentlab/cli/test_mark_done_cli.py",
+        ]
+    )
+    assert exit_code == 0
+
+    catalog = (catalog_dir / "functional.md").read_text(encoding="utf-8")
+    assert "### REQ-F-200: Dependent cleanup" in catalog
+    assert "- Amends:" not in catalog
+    assert "Amendment completed under REQ-F-123" in catalog
+    assert "Todo: 0" in catalog
+    assert "Done: 2" in catalog
+
+    log = (catalog_dir / "log.md").read_text(encoding="utf-8")
+    assert "Closed amendment REQ-F-200" in log
+
