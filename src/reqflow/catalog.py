@@ -19,6 +19,7 @@ __all__ = [
     "catalog_root",
     "generate_next_id",
     "mark_functional_requirement_done",
+    "begin_historic_amendment",
     "reopen_functional_requirement_for_amendment",
     "start_functional_requirement",
 ]
@@ -400,6 +401,8 @@ def reopen_functional_requirement_for_amendment(
     path: Path,
     amendment_id: str,
     primary_id: str,
+    *,
+    reason: str | None = None,
 ) -> None:
     """Reopen *amendment_id* under *primary_id* for in-progress updates."""
 
@@ -430,14 +433,14 @@ def reopen_functional_requirement_for_amendment(
         entry = todo_entries[target_index]
         entry = _set_status(entry, "doing")
         entry = _set_amends(entry, primary_id)
-        entry = _set_reason(entry, f"Amendment in progress under {primary_id}")
+        entry = _set_reason(entry, reason or f"Amendment in progress under {primary_id}")
         todo_entries[target_index] = entry
     else:
         for idx, entry in enumerate(done_entries):
             if _extract_requirement_id(entry) == amendment_id:
                 entry = _set_status(entry, "doing")
                 entry = _set_amends(entry, primary_id)
-                entry = _set_reason(entry, f"Amendment in progress under {primary_id}")
+                entry = _set_reason(entry, reason or f"Amendment in progress under {primary_id}")
                 done_entries.pop(idx)
                 todo_entries.insert(0, entry)
                 break
@@ -456,6 +459,66 @@ def reopen_functional_requirement_for_amendment(
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
 
+
+def begin_historic_amendment(
+    path: Path,
+    req_id: str,
+    *,
+    amendment_reason: str,
+    allow_parallel: bool = False,
+) -> None:
+    """Reopen *req_id* for a historic amendment session."""
+
+    reason_text = amendment_reason.strip()
+    if not reason_text:
+        raise ValueError("Provide a non-empty amendment reason.")
+
+    contents = path.read_text(encoding="utf-8")
+    heading = f"### {req_id}"
+    if heading not in contents:
+        raise ValueError(f"Requirement {req_id} not found in {path}")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Functional catalog missing done section")
+
+    done_section, retired_header, _suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    if any(_extract_requirement_id(entry) == req_id for entry in todo_entries):
+        raise ValueError(
+            f"Requirement {req_id} must be done before reopening for amendment."
+        )
+
+    if not any(_extract_requirement_id(entry) == req_id for entry in done_entries):
+        raise ValueError(f"Requirement {req_id} is not marked done and cannot be amended.")
+
+    active_primaries = [
+        _extract_requirement_id(entry)
+        for entry in todo_entries
+        if _extract_status(entry) == "doing" and not _extract_amends(entry)
+    ]
+    if active_primaries and not allow_parallel:
+        names = ", ".join(filter(None, active_primaries))
+        raise ValueError(
+            "Another primary requirement is already in progress: "
+            f"{names}. Re-run with --allow-parallel to override."
+        )
+
+    reopen_functional_requirement_for_amendment(
+        path,
+        amendment_id=req_id,
+        primary_id=req_id,
+        reason=f"Historic amendment in progress: {reason_text}",
+    )
 
 def start_functional_requirement(
     path: Path,

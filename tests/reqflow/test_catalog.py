@@ -8,6 +8,7 @@ from reqflow.catalog import (
     NonFunctionalRequirement,
     append_functional_requirement,
     append_non_functional_requirement,
+    begin_historic_amendment,
     generate_next_id,
 )
 
@@ -114,3 +115,114 @@ def test_generate_next_id_advances_highest_number() -> None:
     contents = ""
     new_id = generate_next_id(contents, "REQ-F")
     assert re.fullmatch(r"REQ-F-\d{8}T\d{6}-[0-9A-Z]{2}", new_id)
+
+
+def test_begin_historic_amendment_moves_done_requirement(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 0; Done: 1 (done=1); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "## Done Requirements\n\n"
+        "### REQ-F-100: Completed flow\n"
+        "- Owner: product\n"
+        "- Narrative: Completed feature implementation.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/dummy.py, commits none\n"
+        "---\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    begin_historic_amendment(
+        catalog,
+        req_id="REQ-F-100",
+        amendment_reason="Correct acceptance criteria wording",
+    )
+
+    contents = catalog.read_text(encoding="utf-8")
+    todo_index = contents.index("## Todo Requirements")
+    done_index = contents.index("## Done Requirements")
+    todo_section = contents[todo_index:done_index]
+    assert "- Status: doing" in todo_section
+    assert "- Amends: REQ-F-100" in todo_section
+    assert "Historic amendment in progress: Correct acceptance criteria wording" in todo_section
+    assert "Todo: 1 (doing=1" in contents
+
+
+def test_begin_historic_amendment_respects_wip_guard(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (doing=1); Done: 1 (done=1); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-050: In progress\n"
+        "- Owner: product\n"
+        "- Narrative: Existing work\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: active\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "### REQ-F-100: Completed flow\n"
+        "- Owner: product\n"
+        "- Narrative: Completed feature implementation.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/dummy.py, commits none\n"
+        "---\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Another primary requirement is already in progress"):
+        begin_historic_amendment(
+            catalog,
+            req_id="REQ-F-100",
+            amendment_reason="Fix typos",
+        )
+
+
+def test_begin_historic_amendment_requires_reason(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 0; Done: 1 (done=1); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "## Done Requirements\n\n"
+        "### REQ-F-100: Completed flow\n"
+        "- Owner: product\n"
+        "- Narrative: Completed feature implementation.\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/dummy.py, commits none\n"
+        "---\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Provide a non-empty amendment reason"):
+        begin_historic_amendment(
+            catalog,
+            req_id="REQ-F-100",
+            amendment_reason="   ",
+        )

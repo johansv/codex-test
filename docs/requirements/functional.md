@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 9 (done=9); Retired: 0
+Todo: 0; Done: 10 (done=10); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -44,6 +44,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Related requirement surfacing implemented
 - Trace: prompts R9, tests tests/agentlab/cli/test_start_cli.py, commits none
+---
+
+### REQ-F-20251009T204414-NU: Historic amendment workflow
+- Owner: codex
+- Narrative: As a maintainer, I want a dedicated amendment flow that reopens already-done requirements for targeted edits so that catalog history stays accurate without losing the original trace.
+- Acceptance Criteria:
+  * CLI command reopens done requirements into an amendment state recording who reopened and why without bypassing WIP guards.
+  * Amendment mode lets editors adjust narrative, acceptance criteria, and traces while preserving prior trace details in the change log.
+  * Completing the amendment returns the requirement to done, logs a correction summary, and links verifying commits/tests.
+  * Tests cover reopening done requirements, editing in amendment mode, and resealing them with accurate catalog and log output.
+- Priority: high
+- Status: done
+- Reason: Historic amendment CLI and catalog flow implemented
+- Trace: prompts R10, tests tests/agentlab/cli/test_amend_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
