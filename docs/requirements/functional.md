@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 12 (done=12); Retired: 0
+Todo: 0; Done: 13 (done=13); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -31,6 +31,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ## Todo Requirements
 
 ## Done Requirements
+
+### REQ-F-20251010T072114-M5: Batch workflow utilities
+- Owner: codex
+- Narrative: As a maintainer, I want a single command that orchestrates collision detection, related requirement surfacing, bulk reopen, and logging so that large refactors can be prepared in one predictable workflow.
+- Acceptance Criteria:
+  * CLI accepts a functional requirement ID and runs collision detection, functional/non-functional overlap heuristics, and bulk reopen helpers in one pass.
+  * Command prints a consolidated report summarizing collisions, functional overlaps, non-functional overlaps, and reopened amendments.
+  * Users can opt into auto-reopening via flags; otherwise acknowledgements mirror the manual workflow.
+  * Logging remains consistent with existing helpers and the command refuses to proceed if catalogs are missing or malformed.
+  * Tests cover happy path, acknowledgement prompts, auto-reopen flows, and failure scenarios.
+- Priority: high
+- Status: done
+- Reason: Batch workflow CLI automates collision, overlap, and reopen flows
+- Trace: prompts R13, tests tests/agentlab/cli/test_batch_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251010T065151-MG: Non-functional overlap heuristics
 - Owner: codex

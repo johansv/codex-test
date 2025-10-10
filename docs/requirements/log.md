@@ -47,3 +47,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-F-20251010T062944-EA | Marked REQ-F-20251010T062944-EA done: Bulk amendment CLI and catalog helper implemented | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T065151-MG | Added functional requirement REQ-F-20251010T065151-MG: Non-functional overlap heuristics | codex | R12 |
 | 2025-10-10 | REQ-F-20251010T065151-MG | Marked REQ-F-20251010T065151-MG done: Start CLI surfaces non-functional overlaps with acknowledgment and amendment support | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T072114-M5 | Added functional requirement REQ-F-20251010T072114-M5: Batch workflow utilities | codex | R13 |
+| 2025-10-10 | REQ-F-20251010T072114-M5 | Started implementation for REQ-F-20251010T072114-M5; non-functional: REQ-NF-000 | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T072114-M5 | Marked REQ-F-20251010T072114-M5 done: Batch workflow CLI automates collision, overlap, and reopen flows | codex | implementation |
