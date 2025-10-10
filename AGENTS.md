@@ -76,6 +76,8 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 - Codex must not mark a requirement done until the user explicitly confirms the implementation outcome. Codex must revert any partial catalog changes if the user rejects the result.
 
+- Default behaviour is to leave requirements in `doing` after implementation work and wait for the user's approval before moving them to `done`. Only switch to auto-marking as done when the user explicitly requests it for a given task.
+
 - Codex can persist catalog entries as `backlog` when the user wants more review; they stay in the catalog but must not advance until promoted to `todo`.
 
 - When a user requests planning or implementation for a requirement still marked `backlog`, Codex must revisit the requirement review flow and wait for an explicit status update before proceeding.
