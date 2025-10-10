@@ -21,6 +21,7 @@ __all__ = [
     "mark_functional_requirement_done",
     "begin_historic_amendment",
     "bulk_reopen_functional_requirements",
+    "reopen_non_functional_requirement_for_amendment",
     "reopen_functional_requirement_for_amendment",
     "start_functional_requirement",
 ]
@@ -613,6 +614,71 @@ def bulk_reopen_functional_requirements(
         reopened.append(req)
 
     return reopened
+
+
+def reopen_non_functional_requirement_for_amendment(
+    path: Path,
+    amendment_id: str,
+    primary_id: str,
+    *,
+    reason: str | None = None,
+) -> None:
+    """Reopen non-functional *amendment_id* under *primary_id*."""
+
+    contents = path.read_text(encoding="utf-8")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Non-functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Non-functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Non-functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    target_index = None
+    for idx, entry in enumerate(todo_entries):
+        if _extract_requirement_id(entry) == amendment_id:
+            target_index = idx
+            break
+
+    amendment_reason = reason or f"Amendment in progress under {primary_id}"
+
+    if target_index is not None:
+        entry = todo_entries[target_index]
+        entry = _set_status(entry, "doing")
+        entry = _set_amends(entry, primary_id)
+        entry = _set_reason(entry, amendment_reason)
+        todo_entries[target_index] = entry
+    else:
+        for idx, entry in enumerate(done_entries):
+            if _extract_requirement_id(entry) == amendment_id:
+                entry = _set_status(entry, "doing")
+                entry = _set_amends(entry, primary_id)
+                entry = _set_reason(entry, amendment_reason)
+                done_entries.pop(idx)
+                todo_entries.insert(0, entry)
+                break
+        else:
+            raise ValueError(f"Requirement {amendment_id} not found for amendment")
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(todo_entries)
+        + done_header
+        + _format_requirement_section(done_entries)
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
 
 def start_functional_requirement(
     path: Path,

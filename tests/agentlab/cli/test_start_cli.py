@@ -48,6 +48,27 @@ def catalog_dir(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
 
+    req_dir.joinpath("non-functional.md").write_text(
+        "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (backlog=1); Done: 0; Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-NF-300: Background throughput baseline\n"
+        "- Owner: platform\n"
+        "- Category: performance\n"
+        "- Description: Maintain throughput checks for unrelated components.\n"
+        "- Measurement: Manual review\n"
+        "- Priority: medium\n"
+        "- Status: backlog\n"
+        "- Reason: pending\n"
+        "- Trace: prompts none, tests none, scripts none, monitors none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
     return req_dir
 
 
@@ -264,3 +285,66 @@ def test_start_cli_reopens_related_amendments(catalog_dir: Path) -> None:
     log_doc = _read(catalog_dir / "log.md")
     assert "related: REQ-F-150" in log_doc
     assert "Reopened REQ-F-150 under REQ-F-100" in log_doc
+
+
+def test_start_cli_requires_acknowledgement_for_non_functional_suggestions(
+    catalog_dir: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    non_functional = catalog_dir / "non-functional.md"
+    text = _read(non_functional).replace(
+        "Maintain throughput checks for unrelated components.",
+        "Ensure start CLI handles shared component traffic.",
+    )
+    non_functional.write_text(text, encoding="utf-8")
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+        ]
+    )
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "REQ-NF-300" in captured.err
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+            "--acknowledge-non-functional",
+        ]
+    )
+    assert exit_code == 0
+
+
+def test_start_cli_reopens_non_functional_amendments(catalog_dir: Path) -> None:
+    non_functional = catalog_dir / "non-functional.md"
+    text = _read(non_functional).replace(
+        "Maintain throughput checks for unrelated components.",
+        "Ensure start CLI handles shared component traffic.",
+    )
+    non_functional.write_text(text, encoding="utf-8")
+
+    exit_code = start.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--requirement",
+            "REQ-F-100",
+            "--acknowledge-non-functional",
+            "--reopen-non-functional",
+            "REQ-NF-300",
+        ]
+    )
+    assert exit_code == 0
+
+    non_functional_doc = _read(non_functional)
+    assert "- Status: doing" in non_functional_doc
+    assert "- Amends: REQ-F-100" in non_functional_doc
+
+    log_doc = _read(catalog_dir / "log.md")
+    assert "Reopened REQ-NF-300 under REQ-F-100" in log_doc

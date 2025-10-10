@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 11 (done=11); Retired: 0
+Todo: 0; Done: 12 (done=12); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -31,6 +31,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ## Todo Requirements
 
 ## Done Requirements
+
+### REQ-F-20251010T065151-MG: Non-functional overlap heuristics
+- Owner: codex
+- Narrative: As a maintainer, I want the start workflow to surface related non-functional requirements when shared components are touched so that quality constraints aren't missed during implementation.
+- Acceptance Criteria:
+  * Start CLI scans the non-functional catalog for overlaps and lists candidates alongside the functional suggestions.
+  * Users must acknowledge non-functional suggestions or explicitly reopen relevant entries before proceeding.
+  * Helper supports reopening non-functional amendments with Amends metadata tied to the primary functional requirement.
+  * Tests cover candidate detection, acknowledgement flows, and reopening behaviour for non-functional entries.
+- Priority: high
+- Status: done
+- Reason: Start CLI surfaces non-functional overlaps with acknowledgment and amendment support
+- Trace: prompts R12, tests tests/agentlab/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251010T062944-EA: Bulk amendment reopen helper
 - Owner: codex

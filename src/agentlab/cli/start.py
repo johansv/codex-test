@@ -13,6 +13,7 @@ from reqflow.catalog import (
     append_log_entry,
     catalog_root,
     reopen_functional_requirement_for_amendment,
+    reopen_non_functional_requirement_for_amendment,
     start_functional_requirement,
 )
 
@@ -114,6 +115,19 @@ def build_parser() -> argparse.ArgumentParser:
         help="Requirement ID to reopen as an amendment; repeat the flag for multiple IDs.",
     )
     parser.add_argument(
+        "--acknowledge-non-functional",
+        action="store_true",
+        help="Required when non-functional requirements are suggested.",
+    )
+    parser.add_argument(
+        "--reopen-non-functional",
+        action="append",
+        default=[],
+        help=(
+            "Non-functional requirement ID to reopen as an amendment; repeat the flag for multiple IDs."
+        ),
+    )
+    parser.add_argument(
         "--allow-parallel",
         action="store_true",
         help="Override the single-doing guard when multiple requirements must proceed in parallel.",
@@ -199,6 +213,27 @@ def main(argv: list[str] | None = None) -> int:
         _print_related_alert(related_candidates, args.requirement)
         return 1
 
+    non_functional_path = catalog_dir / "non-functional.md"
+    non_functional_candidates: list[Collision] = []
+    non_functional_ids: list[str] = []
+    if non_functional_path.exists():
+        try:
+            nf_todo, nf_done = _load_functional_sections(non_functional_path)
+        except ValueError as exc:
+            parser.error(str(exc))
+            return 2
+        non_functional_candidates = _find_non_functional_overlaps(
+            target,
+            nf_todo + nf_done,
+        )
+        non_functional_ids = [item.requirement_id for item in non_functional_candidates]
+        non_functional_acknowledged = (
+            args.acknowledge_non_functional or bool(args.reopen_non_functional)
+        )
+        if non_functional_ids and not non_functional_acknowledged:
+            _print_non_functional_alert(non_functional_candidates, args.requirement)
+            return 1
+
     try:
         start_functional_requirement(
             functional_path,
@@ -250,6 +285,34 @@ def main(argv: list[str] | None = None) -> int:
             parser.error(str(exc))
             return 2
 
+    non_functional_map = {item.requirement_id: item for item in non_functional_candidates}
+    reopen_nf_requested = list(dict.fromkeys(args.reopen_non_functional))
+    reopened_non_functional: list[str] = []
+    if reopen_nf_requested and not non_functional_path.exists():
+        parser.error(
+            "non-functional catalog not found; cannot reopen suggestions."
+        )
+        return 2
+    for req_id in reopen_nf_requested:
+        if req_id in reopened:
+            continue
+        if req_id not in non_functional_map:
+            parser.error(
+                f"Requirement {req_id} was not among the suggested non-functional items."
+            )
+            return 2
+        try:
+            reopen_non_functional_requirement_for_amendment(
+                non_functional_path,
+                req_id,
+                args.requirement,
+            )
+            reopened.append(req_id)
+            reopened_non_functional.append(req_id)
+        except ValueError as exc:
+            parser.error(str(exc))
+            return 2
+
     collision_note = (
         f"; collisions: {', '.join(c.requirement_id for c in collisions)}"
         if collisions
@@ -260,9 +323,17 @@ def main(argv: list[str] | None = None) -> int:
         if related_ids
         else ""
     )
+    non_functional_note = (
+        f"; non-functional: {', '.join(non_functional_ids)}"
+        if non_functional_ids
+        else ""
+    )
     summary = (
         args.summary
-        or f"Started implementation for {args.requirement}{collision_note}{related_note}"
+        or (
+            "Started implementation for "
+            f"{args.requirement}{collision_note}{related_note}{non_functional_note}"
+        )
     )
     append_log_entry(
         log_path,
@@ -312,6 +383,19 @@ def main(argv: list[str] | None = None) -> int:
             )
     else:
         message.append("No related requirements suggested.")
+    if non_functional_ids:
+        if reopened_non_functional:
+            message.append(
+                "Reopened non-functional amendments: "
+                f"{', '.join(reopened_non_functional)} (status set to doing with Amends markers)."
+            )
+        else:
+            message.append(
+                "Non-functional requirements suggested: "
+                f"{', '.join(non_functional_ids)}."
+            )
+    else:
+        message.append("No non-functional requirements suggested.")
 
     print("\n".join(message))
     return 0
@@ -467,6 +551,41 @@ def _find_related_requirements(
     return related
 
 
+def _find_non_functional_overlaps(
+    target: RequirementEntry,
+    entries: Iterable[RequirementEntry],
+    threshold: float = 0.35,
+    limit: int = 5,
+) -> list[Collision]:
+    threshold = max(0.0, min(threshold, 1.0))
+    target_text = "\n".join(target.lines)
+    target_tokens = _extract_tokens(target)
+    overlaps: list[Collision] = []
+    for entry in entries:
+        status = (entry.status or "").lower()
+        if status in {"rejected", "superseded"}:
+            continue
+        candidate_text = "\n".join(entry.lines)
+        similarity = SequenceMatcher(None, target_text, candidate_text).ratio()
+        tokens = _extract_tokens(entry)
+        overlap_tokens = target_tokens & tokens
+        union = target_tokens | tokens
+        token_score = (len(overlap_tokens) / len(union)) if union else 0.0
+        score = max(similarity, token_score)
+        if score >= threshold or len(overlap_tokens) >= 3 or token_score >= 0.4:
+            overlaps.append(
+                Collision(
+                    requirement_id=entry.req_id,
+                    title=entry.title,
+                    similarity=score,
+                )
+            )
+    overlaps.sort(key=lambda item: item.similarity, reverse=True)
+    if limit:
+        return overlaps[:limit]
+    return overlaps
+
+
 def _print_collision_alert(collisions: list[Collision], req_id: str) -> None:
     print(
         "Potential catalog collisions detected for "
@@ -503,6 +622,26 @@ def _print_related_alert(related: list[Collision], req_id: str) -> None:
     print(
         "Re-run the command with --acknowledge-related and optionally "
         "--reopen-related <ID> to proceed.",
+        file=sys.stderr,
+    )
+
+
+def _print_non_functional_alert(overlaps: list[Collision], req_id: str) -> None:
+    print(
+        "Potential non-functional requirement overlaps detected for "
+        f"{req_id}. Review the entries below:",
+        file=sys.stderr,
+    )
+    for item in overlaps:
+        title = item.title or "untitled"
+        similarity = f"{item.similarity:.2f}"
+        print(
+            f"- {item.requirement_id} ({title}) similarity={similarity}",
+            file=sys.stderr,
+        )
+    print(
+        "Re-run the command with --acknowledge-non-functional and optionally "
+        "--reopen-non-functional <ID> to proceed.",
         file=sys.stderr,
     )
 

@@ -7,10 +7,13 @@ from .catalog import (
     append_functional_requirement,
     append_non_functional_requirement,
     append_log_entry,
+    begin_historic_amendment,
+    bulk_reopen_functional_requirements,
     catalog_root,
     generate_next_id,
     mark_functional_requirement_done,
     reopen_functional_requirement_for_amendment,
+    reopen_non_functional_requirement_for_amendment,
     start_functional_requirement,
 )
 from .planner import (
@@ -32,11 +35,14 @@ __all__ = [
     "append_log_entry",
     "append_non_functional_requirement",
     "auto_capture_prompt",
+    "begin_historic_amendment",
+    "bulk_reopen_functional_requirements",
     "build_requirement_draft",
     "catalog_root",
     "generate_next_id",
     "mark_functional_requirement_done",
     "reopen_functional_requirement_for_amendment",
+    "reopen_non_functional_requirement_for_amendment",
     "should_block_for_manual_update",
     "start_functional_requirement",
 ]
