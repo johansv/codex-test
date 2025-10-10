@@ -71,3 +71,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-F-20251010T151527-BX | Marked REQ-F-20251010T151527-BX done: Auto-captured narrative and acceptance outputs are compact with supporting tests | codex | implementation |
 | 2025-10-10 | REQ-NF-20251010T151535-UV | Started non-functional implementation for REQ-NF-20251010T151535-UV | codex | implementation |
 | 2025-10-10 | REQ-NF-20251010T151535-UV | Marked REQ-NF-20251010T151535-UV done: Auto-captured non-functional entries now summarise narratives with placeholder acceptance | codex | implementation |
+| 2025-10-10 | REQ-NF-20251010T151543-IE | Started non-functional implementation for REQ-NF-20251010T151543-IE | codex | implementation |
+| 2025-10-10 | REQ-NF-20251010T151543-IE | Marked REQ-NF-20251010T151543-IE done: Catalog digest cache accelerates planner and review with refresh controls | codex | implementation |

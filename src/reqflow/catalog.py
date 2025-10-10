@@ -10,6 +10,8 @@ import string
 from pathlib import Path
 from typing import Sequence
 
+from reqflow.catalog_cache import catalog_cache
+
 __all__ = [
     "FunctionalRequirement",
     "NonFunctionalRequirement",
@@ -327,6 +329,7 @@ def append_functional_requirement(path: Path, requirement: FunctionalRequirement
     updated = _insert_entry(text, "\n".join(entry_lines))
     updated = _update_status_summary(updated)
     path.write_text(updated, encoding="utf-8")
+    catalog_cache.invalidate(path)
     return req_id
 
 
@@ -462,6 +465,8 @@ def mark_functional_requirement_done(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
+    catalog_cache.invalidate(path)
     return closed_amendments
 
 
@@ -761,6 +766,8 @@ def _close_non_functional_amendments(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
+    catalog_cache.invalidate(path)
     return closed
 
 def mark_non_functional_requirement_done(
@@ -867,6 +874,7 @@ def mark_non_functional_requirement_done(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
     return closed_amendments
 
 
@@ -943,6 +951,7 @@ def start_non_functional_requirement(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
 
 
 def reopen_non_functional_requirement_for_amendment(
@@ -1008,6 +1017,7 @@ def reopen_non_functional_requirement_for_amendment(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
 
 def start_functional_requirement(
     path: Path,
@@ -1082,6 +1092,7 @@ def start_functional_requirement(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
 
 
 
@@ -1111,6 +1122,7 @@ def append_non_functional_requirement(
     updated = _insert_entry(text, "\n".join(entry_lines))
     updated = _update_status_summary(updated)
     path.write_text(updated, encoding="utf-8")
+    catalog_cache.invalidate(path)
     return req_id
 
 

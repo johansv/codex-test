@@ -16,6 +16,7 @@ from reqflow.catalog import (
     append_non_functional_requirement,
     catalog_root,
 )
+from reqflow.catalog_cache import catalog_cache
 
 RequirementType = Literal["functional", "non-functional"]
 
@@ -233,7 +234,14 @@ class RequirementPlanner:
         )
         if not catalog_path.exists():
             return None
-        entries = list(_load_titles(catalog_path.read_text(encoding="utf-8")))
+        try:
+            entries = catalog_cache.parse(
+                catalog_path,
+                "titles",
+                parser=lambda text: list(_load_titles(text)),
+            )
+        except FileNotFoundError:
+            return None
         best: RequirementMatch | None = None
         for req_id, title in entries:
             similarity = SequenceMatcher(None, draft.title.lower(), title.lower()).ratio()

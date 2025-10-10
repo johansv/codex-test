@@ -405,7 +405,10 @@ def main(argv: list[str] | None = None) -> int:
 
 def _load_functional_sections(path: Path) -> tuple[list[RequirementEntry], list[RequirementEntry]]:
     text = path.read_text(encoding="utf-8")
+    return _parse_catalog_sections(text)
 
+
+def _parse_catalog_sections(text: str) -> tuple[list[RequirementEntry], list[RequirementEntry]]:
     before_todo, todo_header, remainder = text.partition(_TODO_MARKER)
     if not todo_header:
         raise ValueError("Functional catalog missing todo section")

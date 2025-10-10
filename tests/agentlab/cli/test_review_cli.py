@@ -3,6 +3,14 @@ from pathlib import Path
 import pytest
 
 from agentlab.cli import review
+from reqflow.catalog_cache import catalog_cache
+
+
+@pytest.fixture(autouse=True)
+def reset_catalog_cache() -> None:
+    catalog_cache.clear()
+    yield
+    catalog_cache.clear()
 
 def _write(path: Path, content: str) -> None:
     path.write_text(content, encoding="utf-8")
@@ -163,3 +171,44 @@ def test_review_cli_detects_multiple_doing(catalog_dir: Path, capsys: pytest.Cap
     assert exit_code == 1
     captured = capsys.readouterr()
     assert "multiple primary requirements" in captured.err
+
+
+def test_review_cli_reuses_catalog_cache(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:
+    functional = catalog_dir / "functional.md"
+    non_functional = catalog_dir / "non-functional.md"
+    counts = {"functional": 0, "non-functional": 0}
+    original_read = Path.read_text
+
+    def tracked_read(path: Path, *args, **kwargs):  # type: ignore[override]
+        if path == functional:
+            counts["functional"] += 1
+        elif path == non_functional:
+            counts["non-functional"] += 1
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", tracked_read)
+
+    review.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+        ]
+    )
+    assert counts == {"functional": 1, "non-functional": 1}
+
+    review.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+        ]
+    )
+    assert counts == {"functional": 1, "non-functional": 1}
+
+    review.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--refresh-cache",
+        ]
+    )
+    assert counts == {"functional": 2, "non-functional": 2}

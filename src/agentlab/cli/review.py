@@ -16,6 +16,7 @@ from reqflow.catalog import (
     _update_trace,
     catalog_root,
 )
+from reqflow.catalog_cache import catalog_cache
 
 from . import start as start_cli
 
@@ -56,6 +57,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Move drifted done requirements back to todo with a reassessment reason.",
     )
+    parser.add_argument(
+        "--refresh-cache",
+        action="store_true",
+        help="Ignore cached catalog digests and reload catalogs from disk.",
+    )
     return parser
 
 
@@ -91,7 +97,10 @@ def main(argv: list[str] | None = None) -> int:
         return _emit_results(issue_records, warnings)
 
     try:
-        func_todo, func_done = start_cli._load_functional_sections(functional_path)  # type: ignore[attr-defined]
+        func_todo, func_done = _load_sections(
+            functional_path,
+            refresh=args.refresh_cache,
+        )
     except ValueError as exc:
         issue_records.append(
             {
@@ -123,7 +132,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if non_functional_path.exists():
         try:
-            nf_todo, nf_done = start_cli._load_functional_sections(non_functional_path)  # type: ignore[attr-defined]
+            nf_todo, nf_done = _load_sections(
+                non_functional_path,
+                refresh=args.refresh_cache,
+            )
         except ValueError as exc:
             issue_records.append(
                 {
@@ -198,6 +210,19 @@ def _emit_results(issue_records: Iterable[dict[str, str]], warnings: Iterable[st
             print(f"- {item}", file=target)
 
     return 1 if issues else 0
+
+
+def _load_sections(
+    path: Path,
+    *,
+    refresh: bool,
+) -> tuple[list[start_cli.RequirementEntry], list[start_cli.RequirementEntry]]:  # type: ignore[attr-defined]
+    return catalog_cache.parse(
+        path,
+        "sections",
+        parser=start_cli._parse_catalog_sections,  # type: ignore[attr-defined]
+        refresh=refresh,
+    )
 
 
 def _validate_entries(
@@ -316,31 +341,11 @@ def _split_section(section: str) -> list[list[str]]:
     if current:
         entries.append(current)
     return entries
-
-
 def _format_section(entries: list[list[str]]) -> str:
     if not entries:
-        return "
-
-"
-    body = "
-
-".join("
-".join(entry) for entry in entries)
-    return f"
-
-{body}
-
-"
-    body = "
-
-".join("
-".join(entry) for entry in entries)
-    return f"
-
-{body}
-
-"
+        return "\n\n"
+    body = "\n\n".join("\n".join(entry) for entry in entries)
+    return f"\n\n{body}\n\n"
 
 
 def _find_overlap_warnings(
@@ -491,6 +496,7 @@ def _prune_requirement(
     )
     updated_contents = _update_status_summary(updated_contents)
     path.write_text(updated_contents, encoding="utf-8")
+    catalog_cache.invalidate(path)
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main(sys.argv[1:]))

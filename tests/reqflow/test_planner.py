@@ -3,7 +3,15 @@ from pathlib import Path
 import pytest
 import re
 
+from reqflow.catalog_cache import catalog_cache
 from reqflow.planner import RequirementPlanner, build_requirement_draft
+
+
+@pytest.fixture(autouse=True)
+def reset_catalog_cache() -> None:
+    catalog_cache.clear()
+    yield
+    catalog_cache.clear()
 
 
 @pytest.fixture()
@@ -94,6 +102,36 @@ def test_build_requirement_draft_compacts_non_functional_narrative() -> None:
     assert len(draft.narrative) <= 140
     assert draft.narrative.endswith("...") or draft.narrative == draft.narrative.strip()
     assert draft.acceptance == ["Acceptance criteria to be detailed from prompt."]
+
+
+def test_requirement_planner_reuses_catalog_cache(monkeypatch: pytest.MonkeyPatch, catalog_dir: Path) -> None:
+    planner = RequirementPlanner(catalog_dir)
+    functional_path = catalog_dir / "functional.md"
+    reads = {"count": 0}
+    original_read = Path.read_text
+
+    def tracked_read(path: Path, *args, **kwargs):  # type: ignore[override]
+        if path == functional_path:
+            reads["count"] += 1
+        return original_read(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", tracked_read)
+
+    planner.ensure_requirement(
+        "monitor prompt ingestion latency for regressions",
+        reference="prompt-301",
+        author="codex",
+        dry_run=True,
+    )
+    assert reads["count"] == 1
+
+    planner.ensure_requirement(
+        "monitor prompt ingestion latency for regressions",
+        reference="prompt-301",
+        author="codex",
+        dry_run=True,
+    )
+    assert reads["count"] == 1
 
 
 def test_build_requirement_draft_classifies_non_functional() -> None:
