@@ -102,6 +102,34 @@ def test_review_cli_detects_missing_files(catalog_dir: Path, capsys: pytest.Capt
     assert "references missing tests file" in captured.err
 
 
+def test_review_cli_prunes_drift_candidates(catalog_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    (catalog_dir.parent / "tests" / "sample.py").unlink()
+
+    exit_code = review.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--prune",
+        ]
+    )
+    assert exit_code == 0
+    captured = capsys.readouterr()
+    assert "Pruned functional requirement REQ-F-200" in captured.out
+
+    functional = (catalog_dir / "functional.md").read_text(encoding="utf-8")
+    assert "### REQ-F-200: Example done" in functional
+    assert "- Status: todo" in functional
+    assert "Awaiting reassessment" in functional
+
+    exit_code = review.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+        ]
+    )
+    assert exit_code == 0
+
+
 def test_review_cli_detects_multiple_doing(catalog_dir: Path, capsys: pytest.CaptureFixture[str]) -> None:
     functional = catalog_dir / "functional.md"
     text = functional.read_text(encoding="utf-8").replace(

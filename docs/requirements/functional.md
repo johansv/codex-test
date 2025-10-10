@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 4 (backlog=4); Done: 15 (done=15); Retired: 0
+Todo: 3 (backlog=3, doing=0); Done: 16 (done=16); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -57,19 +57,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R17, tests none, commits none
 ---
 
-### REQ-F-20251010T073931-RY: Requirement drift detection
-- Owner: codex
-- Narrative: As a maintainer, I want automated drift detection that checks done requirements against the repository so that obsolete or inconsistent specifications are caught promptly.
-- Acceptance Criteria:
-  * Review tooling warns when done requirements reference missing files/tests or no longer align with the codebase.
-  * Provide a prune option that flags obsolete requirements and moves them back to backlog/todo for reassessment.
-  * Tests cover missing file detection, obsolete requirements, and successful drift clearance.
-- Priority: medium
-- Status: backlog
-- Reason: Needs prioritization
-- Trace: prompts R18, tests none, commits none
----
-
 ### REQ-F-20251010T073939-HE: Wait-for-approval enforcement
 - Owner: codex
 - Narrative: As a maintainer, I want safeguards that block automatic mark-done operations without approval so that the wait-for-approval workflow cannot be bypassed.
@@ -96,6 +83,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Non-functional lifecycle helpers aligned with functional flow
 - Trace: prompts R15, tests tests/agentlab/cli/test_start_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+---
+
+### REQ-F-20251010T073931-RY: Requirement drift detection
+- Owner: codex
+- Narrative: As a maintainer, I want automated drift detection that checks done requirements against the repository so that obsolete or inconsistent specifications are caught promptly.
+- Acceptance Criteria:
+  * Review tooling warns when done requirements reference missing files/tests or no longer align with the codebase.
+  * Provide a prune option that flags obsolete requirements and moves them back to backlog/todo for reassessment.
+  * Tests cover missing file detection, obsolete requirements, and successful drift clearance.
+- Priority: medium
+- Status: done
+- Reason: Drift prune reuses catalog helpers for consistent resets
+- Trace: prompts R18, tests tests/agentlab/cli/test_review_cli.py, commits none
 ---
 
 ### REQ-F-20251010T073801-G1: Automated requirements review CLI

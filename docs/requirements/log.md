@@ -61,3 +61,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-F-20251010T073801-G1 | Marked REQ-F-20251010T073801-G1 done: Automated requirements review CLI available | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T073809-JN | Started implementation for REQ-F-20251010T073809-JN; non-functional: REQ-NF-000 | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T073809-JN | Marked REQ-F-20251010T073809-JN done: Non-functional lifecycle helpers aligned with functional flow | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T073931-RY | Started implementation for REQ-F-20251010T073931-RY; non-functional: REQ-NF-000 | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T073931-RY | Marked REQ-F-20251010T073931-RY done: Drift prune reuses catalog helpers | codex | implementation |
