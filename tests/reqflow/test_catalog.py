@@ -9,6 +9,7 @@ from reqflow.catalog import (
     append_functional_requirement,
     append_non_functional_requirement,
     begin_historic_amendment,
+    bulk_reopen_functional_requirements,
     generate_next_id,
 )
 
@@ -226,3 +227,160 @@ def test_begin_historic_amendment_requires_reason(tmp_path: Path) -> None:
             req_id="REQ-F-100",
             amendment_reason="   ",
         )
+
+
+def test_bulk_reopen_functional_requirements_reopens_entries(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (doing=1); Done: 2 (done=2); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-001: Active primary\n"
+        "- Owner: product\n"
+        "- Narrative: Active work\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: In progress\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "### REQ-F-100: Completed component A\n"
+        "- Owner: product\n"
+        "- Narrative: Done item A\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/a.py, commits none\n"
+        "---\n\n"
+        "### REQ-F-200: Completed component B\n"
+        "- Owner: product\n"
+        "- Narrative: Done item B\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/b.py, commits none\n"
+        "---\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    reopened = bulk_reopen_functional_requirements(
+        catalog,
+        primary_id="REQ-F-001",
+        amendment_ids=["REQ-F-100", "REQ-F-200"],
+        reason="Update shared component docs",
+    )
+
+    assert reopened == ["REQ-F-100", "REQ-F-200"]
+    contents = catalog.read_text(encoding="utf-8")
+    todo_index = contents.index("## Todo Requirements")
+    done_index = contents.index("## Done Requirements")
+    todo_section = contents[todo_index:done_index]
+    assert "- Amends: REQ-F-001" in todo_section
+    assert todo_section.count("- Status: doing") >= 3
+    assert "Bulk amendment in progress under REQ-F-001: Update shared component docs" in todo_section
+
+
+def test_bulk_reopen_functional_requirements_validates_ids(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (doing=1); Done: 1 (done=1); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-001: Active primary\n"
+        "- Owner: product\n"
+        "- Narrative: Active work\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: In progress\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "### REQ-F-100: Completed component A\n"
+        "- Owner: product\n"
+        "- Narrative: Done item A\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: done\n"
+        "- Reason: implemented\n"
+        "- Trace: prompts none, tests tests/a.py, commits none\n"
+        "---\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Requirement REQ-F-999 not found"):
+        bulk_reopen_functional_requirements(
+            catalog,
+            primary_id="REQ-F-001",
+            amendment_ids=["REQ-F-999"],
+            reason="Update docs",
+        )
+
+    with pytest.raises(ValueError, match="already in progress"):
+        bulk_reopen_functional_requirements(
+            catalog,
+            primary_id="REQ-F-001",
+            amendment_ids=["REQ-F-001"],
+            reason="Refresh metadata",
+        )
+
+
+def test_bulk_reopen_functional_requirements_allows_doing_override(tmp_path: Path) -> None:
+    catalog = tmp_path / "functional.md"
+    catalog.write_text(
+        "# Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (doing=1); Done: 1 (done=1); Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-F-001: Active primary\n"
+        "- Owner: product\n"
+        "- Narrative: Active work\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: In progress\n"
+        "- Trace: prompts none, tests none, commits none\n"
+        "---\n\n"
+        "### REQ-F-100: Already reopened\n"
+        "- Owner: product\n"
+        "- Narrative: Amendment work\n"
+        "- Acceptance Criteria:\n"
+        "  * Placeholder\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Amends: REQ-F-001\n"
+        "- Reason: Amendment in progress\n"
+        "- Trace: prompts none, tests tests/a.py, commits none\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "## Retired Requirements\n\n",
+        encoding="utf-8",
+    )
+
+    reopened = bulk_reopen_functional_requirements(
+        catalog,
+        primary_id="REQ-F-001",
+        amendment_ids=["REQ-F-100"],
+        reason="Refresh reason",
+        allow_doing=True,
+    )
+
+    assert reopened == ["REQ-F-100"]
+    contents = catalog.read_text(encoding="utf-8")
+    assert "Bulk amendment in progress under REQ-F-001: Refresh reason" in contents

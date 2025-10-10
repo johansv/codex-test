@@ -42,3 +42,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-09 | REQ-F-20251009T204414-NU | Marked REQ-F-20251009T204414-NU done: Historic amendment CLI and catalog flow implemented | codex | implementation |
 | 2025-10-10 | REQ-F-20251009T182153-NN | Reopened REQ-F-20251009T182153-NN for historic amendment: need correction | codex | implementation |
 | 2025-10-10 | REQ-F-20251009T182153-NN | Marked REQ-F-20251009T182153-NN done: Related requirement surfacing implemented | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T062944-EA | Added functional requirement REQ-F-20251010T062944-EA: Bulk amendment reopen helper | codex | R11 |
+| 2025-10-10 | REQ-F-20251010T062944-EA | Started implementation for REQ-F-20251010T062944-EA | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T062944-EA | Marked REQ-F-20251010T062944-EA done: Bulk amendment CLI and catalog helper implemented | codex | implementation |

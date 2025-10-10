@@ -24,6 +24,7 @@ agentlab-worker = "agentlab.cli.worker:main"
 agentlab-mark-done = "agentlab.cli.mark_done:main"
 agentlab-start = "agentlab.cli.start:main"
 agentlab-amend = "agentlab.cli.amend:main"
+agentlab-bulk-amend = "agentlab.cli.bulk_amend:main"
 
 [tool.uv]
 package = true

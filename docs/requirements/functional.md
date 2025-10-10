@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 10 (done=10); Retired: 0
+Todo: 0; Done: 11 (done=11); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -31,6 +31,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ## Todo Requirements
 
 ## Done Requirements
+
+### REQ-F-20251010T062944-EA: Bulk amendment reopen helper
+- Owner: codex
+- Narrative: As a maintainer, I want a CLI that reopens multiple requirements at once so that large refactors keep catalog updates consistent.
+- Acceptance Criteria:
+  * Command accepts one or more requirement IDs and reopens each as an amendment with Amends metadata tied to a supplied primary.
+  * Log entries record the reopening operation once per requirement with author/reference metadata.
+  * Helper validates IDs exist and refuses to proceed if any are unsuitable (e.g., already doing unless override is set).
+  * Tests cover successful bulk reopen, mixed invalid IDs, and log output.
+- Priority: high
+- Status: done
+- Reason: Bulk amendment CLI and catalog helper implemented
+- Trace: prompts R11, tests tests/agentlab/cli/test_bulk_amend_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251009T182153-NN: Surface cross-cutting requirement candidates
 - Owner: codex

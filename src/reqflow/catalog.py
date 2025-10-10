@@ -20,6 +20,7 @@ __all__ = [
     "generate_next_id",
     "mark_functional_requirement_done",
     "begin_historic_amendment",
+    "bulk_reopen_functional_requirements",
     "reopen_functional_requirement_for_amendment",
     "start_functional_requirement",
 ]
@@ -519,6 +520,99 @@ def begin_historic_amendment(
         primary_id=req_id,
         reason=f"Historic amendment in progress: {reason_text}",
     )
+
+
+def bulk_reopen_functional_requirements(
+    path: Path,
+    primary_id: str,
+    amendment_ids: Sequence[str],
+    *,
+    reason: str,
+    allow_doing: bool = False,
+) -> list[str]:
+    """Reopen multiple requirements under *primary_id* as amendments."""
+
+    unique_ids: list[str] = []
+    seen: set[str] = set()
+    for amendment_id in amendment_ids:
+        trimmed = amendment_id.strip()
+        if not trimmed:
+            continue
+        if trimmed in seen:
+            continue
+        seen.add(trimmed)
+        unique_ids.append(trimmed)
+
+    if not unique_ids:
+        raise ValueError("Provide at least one requirement ID to reopen.")
+
+    reason_text = reason.strip()
+    if not reason_text:
+        raise ValueError("Provide a non-empty reason summarising the amendment.")
+
+    contents = path.read_text(encoding="utf-8")
+
+    heading = f"### {primary_id}"
+    if heading not in contents:
+        raise ValueError(f"Primary requirement {primary_id} not found in {path}")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Functional catalog missing done section")
+
+    done_section, retired_header, _suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    status_map: dict[str, tuple[str, list[str]]] = {}
+    for entry in todo_entries:
+        req = _extract_requirement_id(entry)
+        if req:
+            status_map[req] = ("todo", entry)
+    for entry in done_entries:
+        req = _extract_requirement_id(entry)
+        if req:
+            status_map[req] = ("done", entry)
+
+    for req in unique_ids:
+        if req not in status_map:
+            raise ValueError(f"Requirement {req} not found in {path}")
+        section, entry = status_map[req]
+        current_status = (_extract_status(entry) or "").lower()
+        if section == "todo":
+            if current_status == "doing":
+                if not allow_doing:
+                    raise ValueError(
+                        f"Requirement {req} is already in progress; use --allow-doing to override."
+                    )
+                continue
+            raise ValueError(
+                f"Requirement {req} is not done and cannot be reopened as an amendment."
+            )
+        if current_status != "done":
+            raise ValueError(
+                f"Requirement {req} must be done before reopening; current status is {current_status or 'unknown'}."
+            )
+
+    reopened: list[str] = []
+    bulk_reason = f"Bulk amendment in progress under {primary_id}: {reason_text}"
+    for req in unique_ids:
+        reopen_functional_requirement_for_amendment(
+            path,
+            amendment_id=req,
+            primary_id=primary_id,
+            reason=bulk_reason,
+        )
+        reopened.append(req)
+
+    return reopened
 
 def start_functional_requirement(
     path: Path,
