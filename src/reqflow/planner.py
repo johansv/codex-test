@@ -322,7 +322,7 @@ def build_requirement_draft(
     inferred_owner = owner or _NON_FUNCTIONAL_DEFAULT_OWNER
     inferred_category = category or infer_category(prompt)
     measurement = synthesise_measurement(prompt)
-    narrative = prompt
+    narrative = _summarise_prompt(prompt, limit=140, fallback="documented constraint")
     return RequirementDraft(
         kind=kind,
         title=title,
@@ -406,24 +406,7 @@ def synthesise_narrative(prompt: str) -> str:
     prefix = f"As a {owner}, I want "
     suffix = " so the capability is traceable."
     allowed = max(10, 120 - len(prefix) - len(suffix))
-
-    raw = prompt.strip()
-    if not raw:
-        summary = "a documented capability"
-    else:
-        first_line = raw.splitlines()[0]
-        sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0]
-        summary = " ".join(sentence.split())
-        if not summary:
-            summary = "a documented capability"
-    if len(summary) > allowed:
-        trimmed = summary[:allowed].rstrip()
-        if len(trimmed) < len(summary):
-            trimmed = trimmed.rstrip(".:,;")
-            trimmed = trimmed[: max(0, allowed - 3)].rstrip()
-            summary = f"{trimmed}..."
-        else:
-            summary = trimmed
+    summary = _summarise_prompt(prompt, limit=allowed, fallback="a documented capability")
     return f"{prefix}{summary}{suffix}"
 
 
@@ -441,6 +424,25 @@ def extract_acceptance(prompt: str) -> Iterable[str]:
         yield from bullets
     else:
         yield _DEFAULT_ACCEPTANCE_PLACEHOLDER
+
+
+def _summarise_prompt(prompt: str, *, limit: int, fallback: str) -> str:
+    raw = prompt.strip()
+    if not raw:
+        summary = fallback
+    else:
+        first_line = raw.splitlines()[0]
+        sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0]
+        summary = " ".join(sentence.split()) or fallback
+    if len(summary) > limit:
+        trimmed = summary[:limit].rstrip()
+        if len(trimmed) < len(summary):
+            trimmed = trimmed.rstrip(".:,;")
+            trimmed = trimmed[: max(0, limit - 3)].rstrip()
+            summary = f"{trimmed}..."
+        else:
+            summary = trimmed
+    return summary
 
 
 def _load_titles(contents: str) -> Iterable[tuple[str, str]]:

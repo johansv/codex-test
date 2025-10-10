@@ -84,6 +84,18 @@ def test_build_requirement_draft_uses_placeholder_acceptance() -> None:
     assert draft.acceptance == ["Acceptance criteria to be detailed from prompt."]
 
 
+def test_build_requirement_draft_compacts_non_functional_narrative() -> None:
+    prompt = (
+        "Ensure ingestion latency stays under two seconds during peak traffic so that "
+        "customers experience fast responses even when workloads spike."
+    )
+    draft = build_requirement_draft(prompt)
+    assert draft.kind == "non-functional"
+    assert len(draft.narrative) <= 140
+    assert draft.narrative.endswith("...") or draft.narrative == draft.narrative.strip()
+    assert draft.acceptance == ["Acceptance criteria to be detailed from prompt."]
+
+
 def test_build_requirement_draft_classifies_non_functional() -> None:
     prompt = "ensure prompt ingestion latency stays under two seconds"
     draft = build_requirement_draft(prompt)

@@ -1,7 +1,7 @@
 # Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 4 (backlog=1, todo=3); Done: 0; Retired: 0
+Todo: 3 (backlog=1, todo=2); Done: 1 (done=1); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -27,6 +27,8 @@ so the catalog retains history.
 ---
 ```
 
+> Auto-captured entries may include the placeholder acceptance bullet "Acceptance criteria to be detailed from prompt." Replace it with concrete checks during refinement.
+
 ## Todo Requirements
 
 ### REQ-NF-000: Placeholder example
@@ -39,17 +41,6 @@ so the catalog retains history.
 - Reason: pending
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.
----
-
-### REQ-NF-20251010T151535-UV: Non-functional capture summarisation
-- Owner: codex
-- Category: performance
-- Description: Auto-generated non-functional entries store concise narratives and placeholders to keep catalog size predictable.
-- Measurement: Summaries trimmed to <=140 characters and placeholder acceptance recorded for manual refinement.
-- Priority: medium
-- Status: todo
-- Reason: Ready for implementation
-- Trace: prompts R22, tests none, scripts none, monitors none
 ---
 
 ### REQ-NF-20251010T151543-IE: Catalog digest caching for planner and review
@@ -75,6 +66,17 @@ so the catalog retains history.
 ---
 
 ## Done Requirements
+
+### REQ-NF-20251010T151535-UV: Non-functional capture summarisation
+- Owner: codex
+- Category: performance
+- Description: Auto-generated non-functional entries store concise narratives and placeholders to keep catalog size predictable.
+- Measurement: Summaries trimmed to <=140 characters and placeholder acceptance recorded for manual refinement.
+- Priority: medium
+- Status: done
+- Reason: Auto-captured non-functional entries now summarise narratives with placeholder acceptance
+- Trace: prompts R22, tests tests/reqflow/test_planner.py, scripts none, monitors none
+---
 
 List retired or done non-functional requirements here to preserve history.
 Keep entries sorted by ID and update measurement notes with the proof of compliance.

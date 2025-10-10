@@ -28,7 +28,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 ```
 
-> Auto-captured entries may include the placeholder acceptance bullet “Acceptance criteria to be detailed from prompt.” Replace it with concrete checks during refinement.
+> Auto-captured entries may include the placeholder acceptance bullet "Acceptance criteria to be detailed from prompt." Replace it with concrete checks during refinement.
 
 ## Todo Requirements
 
