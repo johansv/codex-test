@@ -12,7 +12,10 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 - <code>uv sync</code> - install dependencies into the managed environment.
 - <code>uv run python -m agentlab.cli.review</code> - validate requirement catalogs for drift, missing files, and overlaps before implementation.
 - <code>uv run python -m agentlab.cli.dev</code> - start the interactive agent loop for manual testing.
-- <code>uv run python -m agentlab.cli.start --requirement REQ-F-...</code> - promote an approved requirement to doing after acknowledging collisions.
+- <code>uv run python -m agentlab.cli.start --requirement REQ-F-...</code> - promote an approved functional requirement to doing after acknowledging collisions.
+- <code>uv run python -m agentlab.cli.start_nonfunctional --requirement REQ-NF-...</code> - promote an approved non-functional requirement while enforcing the WIP guard.
+- <code>uv run python -m agentlab.cli.mark_done --id REQ-F-...</code> - mark functional requirements done with catalog/log updates.
+- <code>uv run python -m agentlab.cli.mark_done_nonfunctional --id REQ-NF-...</code> - mark non-functional requirements done while clearing linked amendments.
 - <code>uv run python -m agentlab.cli.worker</code> - run the background worker for CI or hosted runs.
 - <code>uv run pytest</code> - execute the automated suite; add <code>uv run coverage run -m pytest</code> before releases.
 - Expose wrappers in <code>scripts/dev.*</code>, <code>scripts/test.*</code>, and <code>scripts/setup.*</code>.

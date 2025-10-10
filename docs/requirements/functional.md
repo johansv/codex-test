@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 5 (backlog=5); Done: 14 (done=14); Retired: 0
+Todo: 4 (backlog=4); Done: 15 (done=15); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -29,19 +29,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ```
 
 ## Todo Requirements
-
-### REQ-F-20251010T073809-JN: Non-functional lifecycle parity
-- Owner: codex
-- Narrative: As a maintainer, I want non-functional requirements to share the same lifecycle helpers as functional ones so that amendments and done-state tracking stay consistent across catalogs.
-- Acceptance Criteria:
-  * Provide mark-done and WIP guard helpers for non-functional requirements mirroring the functional workflow.
-  * Closing a functional requirement clears dependent non-functional amendments automatically and vice versa.
-  * Tests cover non-functional mark-done flows, amendment reopening, and synchronization with functional primaries.
-- Priority: high
-- Status: backlog
-- Reason: Needs prioritization
-- Trace: prompts R15, tests none, commits none
----
 
 ### REQ-F-20251010T073818-5B: Batch review orchestration
 - Owner: codex
@@ -97,6 +84,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251010T073809-JN: Non-functional lifecycle parity
+- Owner: codex
+- Narrative: As a maintainer, I want non-functional requirements to share the same lifecycle helpers as functional ones so that amendments and done-state tracking stay consistent across catalogs.
+- Acceptance Criteria:
+  * Provide mark-done and WIP guard helpers for non-functional requirements mirroring the functional workflow.
+  * Closing a functional requirement clears dependent non-functional amendments automatically and vice versa.
+  * Tests cover non-functional mark-done flows, amendment reopening, and synchronization with functional primaries.
+- Priority: high
+- Status: done
+- Reason: Non-functional lifecycle helpers aligned with functional flow
+- Trace: prompts R15, tests tests/agentlab/cli/test_start_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251010T073801-G1: Automated requirements review CLI
 - Owner: codex

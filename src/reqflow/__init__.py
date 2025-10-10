@@ -12,9 +12,11 @@ from .catalog import (
     catalog_root,
     generate_next_id,
     mark_functional_requirement_done,
+    mark_non_functional_requirement_done,
     reopen_functional_requirement_for_amendment,
     reopen_non_functional_requirement_for_amendment,
     start_functional_requirement,
+    start_non_functional_requirement,
 )
 from .planner import (
     RequirementAction,
@@ -41,8 +43,10 @@ __all__ = [
     "catalog_root",
     "generate_next_id",
     "mark_functional_requirement_done",
+    "mark_non_functional_requirement_done",
     "reopen_functional_requirement_for_amendment",
     "reopen_non_functional_requirement_for_amendment",
     "should_block_for_manual_update",
     "start_functional_requirement",
+    "start_non_functional_requirement",
 ]

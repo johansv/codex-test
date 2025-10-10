@@ -166,3 +166,54 @@ def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert "Closed amendment REQ-F-200" in log
 
+
+def test_mark_done_cli_closes_non_functional_amendments(catalog_dir: Path) -> None:
+    non_functional = (
+        "# Non-Functional Requirements\n\n"
+        "<!-- STATUS-SUMMARY:START -->\n"
+        "Todo: 1 (doing=1); Done: 0; Retired: 0\n"
+        "<!-- STATUS-SUMMARY:END -->\n\n"
+        "## Todo Requirements\n\n"
+        "### REQ-NF-300: Latency alignment\n"
+        "- Owner: platform\n"
+        "- Category: performance\n"
+        "- Description: Amendment for REQ-F-123.\n"
+        "- Measurement: Synthetic monitor\n"
+        "- Priority: medium\n"
+        "- Status: doing\n"
+        "- Reason: Active\n"
+        "- Amends: REQ-F-123\n"
+        "- Trace: prompts none, tests tests/existing.py, scripts scripts/historical.py, monitors monitors/history.json\n"
+        "---\n\n"
+        "## Done Requirements\n\n"
+        "## Retired Requirements\n"
+    )
+    (catalog_dir / "non-functional.md").write_text(non_functional, encoding="utf-8")
+
+    repo_root = catalog_dir.parent
+    (repo_root / "tests").mkdir(parents=True, exist_ok=True)
+    (repo_root / "tests" / "existing.py").write_text("# existing\n", encoding="utf-8")
+    (repo_root / "scripts").mkdir(parents=True, exist_ok=True)
+    (repo_root / "scripts" / "historical.py").write_text("# script\n", encoding="utf-8")
+    (repo_root / "monitors").mkdir(parents=True, exist_ok=True)
+    (repo_root / "monitors" / "history.json").write_text("{}", encoding="utf-8")
+
+    exit_code = cli.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--id",
+            "REQ-F-123",
+            "--reason",
+            "Functional and non-functional amendments completed",
+            "--tests",
+            "tests/new_probe.py",
+        ]
+    )
+    assert exit_code == 0
+
+    nf_doc = (catalog_dir / "non-functional.md").read_text(encoding="utf-8")
+    assert "### REQ-NF-300: Latency alignment" in nf_doc
+    assert "- Status: done" in nf_doc
+    assert "- Amends:" not in nf_doc
+    assert "Amendment completed under REQ-F-123" in nf_doc

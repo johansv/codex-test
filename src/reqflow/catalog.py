@@ -21,6 +21,8 @@ __all__ = [
     "mark_functional_requirement_done",
     "begin_historic_amendment",
     "bulk_reopen_functional_requirements",
+    "mark_non_functional_requirement_done",
+    "start_non_functional_requirement",
     "reopen_non_functional_requirement_for_amendment",
     "reopen_functional_requirement_for_amendment",
     "start_functional_requirement",
@@ -245,6 +247,57 @@ def _update_trace(entry: list[str], tests_value: str, commits_value: str, *, def
 
 
 
+def _update_non_functional_trace(
+    entry: list[str],
+    tests_value: str,
+    scripts_value: str,
+    monitors_value: str,
+    *,
+    default_prompts: str = "none",
+) -> list[str]:
+    updated: list[str] = []
+    replaced = False
+    for line in entry:
+        stripped = line.strip()
+        if stripped.startswith("- Trace:"):
+            remainder = stripped[len("- Trace: "):]
+            trace_parts: dict[str, str] = {}
+            for part in remainder.split(','):
+                item = part.strip()
+                if not item:
+                    continue
+                key, _, value = item.partition(' ')
+                if value:
+                    trace_parts[key] = value
+            prompts_value = trace_parts.get('prompts', default_prompts)
+            updated.append(
+                (
+                    "- Trace: prompts {prompts}, tests {tests}, scripts {scripts}, monitors {monitors}"
+                ).format(
+                    prompts=prompts_value,
+                    tests=tests_value,
+                    scripts=scripts_value,
+                    monitors=monitors_value,
+                )
+            )
+            replaced = True
+        else:
+            updated.append(line)
+    if not replaced:
+        updated.append(
+            (
+                "- Trace: prompts {prompts}, tests {tests}, scripts {scripts}, monitors {monitors}"
+            ).format(
+                prompts=default_prompts,
+                tests=tests_value,
+                scripts=scripts_value,
+                monitors=monitors_value,
+            )
+        )
+    return updated
+
+
+
 def append_functional_requirement(path: Path, requirement: FunctionalRequirement) -> str:
     """Append *requirement* to the functional catalog located at *path*."""
 
@@ -379,6 +432,22 @@ def mark_functional_requirement_done(
             closed_amendments.append(amendment_id)
         else:
             remaining_todo.append(entry)
+
+    nf_closed: list[str] = []
+    nf_path = path.parent / "non-functional.md"
+    if nf_path.exists():
+        try:
+            nf_closed = _close_non_functional_amendments(
+                nf_path,
+                req_id,
+                default_tests=tests_value,
+                default_scripts="none",
+                default_monitors="none",
+            )
+        except ValueError:
+            nf_closed = []
+        else:
+            closed_amendments.extend(nf_closed)
 
     todo_entries = remaining_todo
 
@@ -614,6 +683,266 @@ def bulk_reopen_functional_requirements(
         reopened.append(req)
 
     return reopened
+
+
+
+
+def _close_non_functional_amendments(
+    path: Path,
+    primary_id: str,
+    *,
+    default_tests: str = "none",
+    default_scripts: str = "none",
+    default_monitors: str = "none",
+) -> list[str]:
+    contents = path.read_text(encoding="utf-8")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Non-functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Non-functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Non-functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    closed: list[str] = []
+    remaining_todo: list[list[str]] = []
+    for entry in todo_entries:
+        if _extract_amends(entry) == primary_id:
+            amendment_id = _extract_requirement_id(entry) or primary_id
+            trace_line = next((line.strip() for line in entry if line.strip().startswith('- Trace:')), None)
+            trace_map: dict[str, str] = {}
+            if trace_line:
+                remainder = trace_line[len('- Trace: '):]
+                for part in remainder.split(','):
+                    item = part.strip()
+                    if not item:
+                        continue
+                    key, _, value = item.partition(' ')
+                    if value:
+                        trace_map[key] = value
+            tests_value = trace_map.get('tests', default_tests) or default_tests
+            scripts_value = trace_map.get('scripts', default_scripts) or default_scripts
+            monitors_value = trace_map.get('monitors', default_monitors) or default_monitors
+            prompts_value = trace_map.get('prompts', 'none') or 'none'
+            entry = _set_status(entry, "done")
+            entry = _set_amends(entry, None)
+            entry = _set_reason(entry, f"Amendment completed under {primary_id}")
+            entry = _update_non_functional_trace(
+                entry,
+                tests_value or default_tests,
+                scripts_value or default_scripts,
+                monitors_value or default_monitors,
+                default_prompts=trace_map.get('prompts', 'none') or 'none',
+            )
+            done_entries.insert(0, entry)
+            closed.append(amendment_id)
+        else:
+            remaining_todo.append(entry)
+
+    if not closed:
+        return []
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(remaining_todo)
+        + done_header
+        + _format_requirement_section(done_entries)
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
+    return closed
+
+def mark_non_functional_requirement_done(
+    path: Path,
+    req_id: str,
+    reason: str,
+    tests: Sequence[str],
+    scripts: Sequence[str] | None = None,
+    monitors: Sequence[str] | None = None,
+) -> list[str]:
+    """Mark non-functional *req_id* done within the non-functional catalog."""
+
+    tests = [value for value in (tests or []) if value]
+    scripts = [value for value in (scripts or []) if value]
+    monitors = [value for value in (monitors or []) if value]
+    if not (tests or scripts or monitors):
+        raise ValueError(
+            "Provide at least one verifying artifact via --tests/--scripts/--monitors."
+        )
+
+    contents = path.read_text(encoding="utf-8")
+    heading = f"### {req_id}"
+    if heading not in contents:
+        raise ValueError(f"Requirement {req_id} not found in {path}")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Non-functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Non-functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Non-functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+    done_entries = _split_requirement_entries(done_section)
+
+    entry_index = next(
+        (
+            idx
+            for idx, entry in enumerate(todo_entries)
+            if entry and entry[0].strip().startswith(f"### {req_id}")
+        ),
+        None,
+    )
+
+    if entry_index is None:
+        if heading in done_section:
+            raise ValueError(f"Requirement {req_id} is already done")
+        if heading in suffix:
+            raise ValueError(f"Requirement {req_id} is retired")
+        raise ValueError(f"Requirement {req_id} not found in todo section")
+
+    entry_lines = todo_entries.pop(entry_index)
+    entry_lines = _set_status(entry_lines, "done")
+    entry_lines = _set_reason(entry_lines, reason)
+    tests_value = "; ".join(tests) if tests else "none"
+    scripts_value = "; ".join(scripts) if scripts else "none"
+    monitors_value = "; ".join(monitors) if monitors else "none"
+    entry_lines = _update_non_functional_trace(
+        entry_lines,
+        tests_value,
+        scripts_value,
+        monitors_value,
+        default_prompts="none",
+    )
+    entry_lines = _set_amends(entry_lines, None)
+    done_entries.insert(0, entry_lines)
+
+    closed_amendments: list[str] = []
+    remaining_todo: list[list[str]] = []
+    for entry in todo_entries:
+        amends_target = _extract_amends(entry)
+        if amends_target == req_id:
+            amendment_id = _extract_requirement_id(entry) or req_id
+            entry = _set_status(entry, "done")
+            entry = _set_amends(entry, None)
+            entry = _set_reason(entry, f"Amendment completed under {req_id}")
+            entry = _update_non_functional_trace(
+                entry,
+                tests_value,
+                scripts_value,
+                monitors_value,
+                default_prompts="none",
+            )
+            done_entries.insert(0, entry)
+            closed_amendments.append(amendment_id)
+        else:
+            remaining_todo.append(entry)
+
+    todo_entries = remaining_todo
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(todo_entries)
+        + done_header
+        + _format_requirement_section(done_entries)
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
+    return closed_amendments
+
+
+def start_non_functional_requirement(
+    path: Path,
+    req_id: str,
+    *,
+    allow_parallel: bool = False,
+) -> None:
+    """Promote *req_id* from todo to doing within the non-functional catalog at *path*."""
+
+    contents = path.read_text(encoding="utf-8")
+    heading = f"### {req_id}"
+    if heading not in contents:
+        raise ValueError(f"Requirement {req_id} not found in {path}")
+
+    before_todo, todo_header, remainder = contents.partition(_TODO_MARKER)
+    if not todo_header:
+        raise ValueError("Non-functional catalog missing todo section")
+
+    todo_section, done_header, remainder = remainder.partition(_DONE_MARKER)
+    if not done_header:
+        raise ValueError("Non-functional catalog missing done section")
+
+    done_section, retired_header, suffix = remainder.partition(_RETIRED_MARKER)
+    if not retired_header:
+        raise ValueError("Non-functional catalog missing retired section")
+
+    todo_entries = _split_requirement_entries(todo_section)
+
+    existing_primaries = [
+        _extract_requirement_id(entry)
+        for entry in todo_entries
+        if _extract_status(entry) == "doing"
+        and not _extract_amends(entry)
+        and _extract_requirement_id(entry) != req_id
+    ]
+    if existing_primaries and not allow_parallel:
+        existing = ", ".join(filter(None, existing_primaries))
+        raise ValueError(
+            "Another non-functional requirement is already in progress: "
+            f"{existing}. Re-run with --allow-parallel to override."
+        )
+
+    entry_index = next(
+        (
+            idx
+            for idx, entry in enumerate(todo_entries)
+            if entry and entry[0].strip().startswith(f"### {req_id}")
+        ),
+        None,
+    )
+
+    if entry_index is None:
+        if heading in done_section:
+            raise ValueError(f"Requirement {req_id} is already done")
+        if heading in suffix:
+            raise ValueError(f"Requirement {req_id} is retired")
+        raise ValueError(f"Requirement {req_id} not found in todo section")
+
+    entry_lines = todo_entries[entry_index]
+    entry_lines = _set_status(entry_lines, "doing")
+    entry_lines = _set_amends(entry_lines, None)
+    todo_entries[entry_index] = entry_lines
+
+    updated_contents = (
+        before_todo
+        + todo_header
+        + _format_requirement_section(todo_entries)
+        + done_header
+        + done_section
+        + retired_header
+        + suffix
+    )
+    updated_contents = _update_status_summary(updated_contents)
+    path.write_text(updated_contents, encoding="utf-8")
 
 
 def reopen_non_functional_requirement_for_amendment(
