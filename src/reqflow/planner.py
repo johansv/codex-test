@@ -58,6 +58,7 @@ _ARCHITECTURAL_KEYWORDS = {
 }
 
 _SIMILARITY_THRESHOLD = 0.72
+_DEFAULT_ACCEPTANCE_PLACEHOLDER = "Acceptance criteria to be detailed from prompt."
 
 
 @dataclass(slots=True)
@@ -402,7 +403,28 @@ def synthesise_title(prompt: str) -> str:
 
 def synthesise_narrative(prompt: str) -> str:
     owner = infer_owner(prompt) or "user"
-    return f"As a {owner}, I want {prompt} so that the capability is traceable."
+    prefix = f"As a {owner}, I want "
+    suffix = " so the capability is traceable."
+    allowed = max(10, 120 - len(prefix) - len(suffix))
+
+    raw = prompt.strip()
+    if not raw:
+        summary = "a documented capability"
+    else:
+        first_line = raw.splitlines()[0]
+        sentence = re.split(r"(?<=[.!?])\s+", first_line, maxsplit=1)[0]
+        summary = " ".join(sentence.split())
+        if not summary:
+            summary = "a documented capability"
+    if len(summary) > allowed:
+        trimmed = summary[:allowed].rstrip()
+        if len(trimmed) < len(summary):
+            trimmed = trimmed.rstrip(".:,;")
+            trimmed = trimmed[: max(0, allowed - 3)].rstrip()
+            summary = f"{trimmed}..."
+        else:
+            summary = trimmed
+    return f"{prefix}{summary}{suffix}"
 
 
 def synthesise_measurement(prompt: str) -> str:
@@ -418,10 +440,7 @@ def extract_acceptance(prompt: str) -> Iterable[str]:
     if bullets:
         yield from bullets
     else:
-        yield (
-            "Given the prompt when it is actioned then the capability matches: "
-            f"{prompt}"
-        )
+        yield _DEFAULT_ACCEPTANCE_PLACEHOLDER
 
 
 def _load_titles(contents: str) -> Iterable[tuple[str, str]]:

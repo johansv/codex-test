@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 3 (backlog=3, doing=0); Done: 16 (done=16); Retired: 0
+Todo: 3 (backlog=3); Done: 17 (done=17); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -27,6 +27,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Notes: optional clarifications or open questions.
 ---
 ```
+
+> Auto-captured entries may include the placeholder acceptance bullet “Acceptance criteria to be detailed from prompt.” Replace it with concrete checks during refinement.
 
 ## Todo Requirements
 
@@ -71,6 +73,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251010T151527-BX: Functional auto-capture text compaction
+- Owner: codex
+- Narrative: As a requirements maintainer, I want auto-generated functional entries to store compact narratives and placeholders so that catalogs stay concise.
+- Acceptance Criteria:
+  * Auto-generated narrative capped at about 120 characters derived from the first sentence.
+  * Fallback acceptance criterion uses a fixed placeholder instead of copying the full prompt.
+  * Docs direct maintainers to expand the placeholder acceptance bullet during refinement.
+- Priority: medium
+- Status: done
+- Reason: Auto-captured narrative and acceptance outputs are compact with supporting tests
+- Trace: prompts R21, tests tests/reqflow/test_planner.py, commits none
+---
 
 ### REQ-F-20251010T073809-JN: Non-functional lifecycle parity
 - Owner: codex

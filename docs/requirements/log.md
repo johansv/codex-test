@@ -63,3 +63,9 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-F-20251010T073809-JN | Marked REQ-F-20251010T073809-JN done: Non-functional lifecycle helpers aligned with functional flow | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T073931-RY | Started implementation for REQ-F-20251010T073931-RY; non-functional: REQ-NF-000 | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T073931-RY | Marked REQ-F-20251010T073931-RY done: Drift prune reuses catalog helpers | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T151527-BX | Added functional requirement REQ-F-20251010T151527-BX: Functional auto-capture text compaction | codex | prompt |
+| 2025-10-10 | REQ-NF-20251010T151535-UV | Added non-functional requirement REQ-NF-20251010T151535-UV: Non-functional capture summarisation | codex | prompt |
+| 2025-10-10 | REQ-NF-20251010T151543-IE | Added non-functional requirement REQ-NF-20251010T151543-IE: Catalog digest caching for planner and review | codex | prompt |
+| 2025-10-10 | REQ-NF-20251010T151552-8U | Added non-functional requirement REQ-NF-20251010T151552-8U: Scoped requirement streaming in CLI | codex | prompt |
+| 2025-10-10 | REQ-F-20251010T151527-BX | Started implementation for REQ-F-20251010T151527-BX; non-functional: REQ-NF-20251010T151552-8U, REQ-NF-20251010T151535-UV, REQ-NF-20251010T151543-IE, REQ-NF-000 | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T151527-BX | Marked REQ-F-20251010T151527-BX done: Auto-captured narrative and acceptance outputs are compact with supporting tests | codex | implementation |

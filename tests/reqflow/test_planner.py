@@ -67,6 +67,23 @@ def test_build_requirement_draft_classifies_functional() -> None:
     assert not draft.architectural
 
 
+def test_build_requirement_draft_generates_compact_narrative() -> None:
+    prompt = (
+        "enable multi-stage prompt refinement for complex customers so that long-form "
+        "instructions remain coherent across edits and minimise rework for the agent"
+    )
+    draft = build_requirement_draft(prompt)
+    assert draft.kind == "functional"
+    assert len(draft.narrative) <= 120
+    assert draft.narrative.endswith(" so the capability is traceable.")
+
+
+def test_build_requirement_draft_uses_placeholder_acceptance() -> None:
+    prompt = "capture orchestration prompts for later refinement"
+    draft = build_requirement_draft(prompt)
+    assert draft.acceptance == ["Acceptance criteria to be detailed from prompt."]
+
+
 def test_build_requirement_draft_classifies_non_functional() -> None:
     prompt = "ensure prompt ingestion latency stays under two seconds"
     draft = build_requirement_draft(prompt)

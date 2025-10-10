@@ -1,7 +1,7 @@
 # Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 0; Retired: 0
+Todo: 4 (backlog=1, todo=3); Done: 0; Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -39,6 +39,39 @@ so the catalog retains history.
 - Reason: pending
 - Trace: prompts none, tests none, scripts none, monitors none
 - Notes: Delete or repurpose when real constraints are documented.
+---
+
+### REQ-NF-20251010T151535-UV: Non-functional capture summarisation
+- Owner: codex
+- Category: performance
+- Description: Auto-generated non-functional entries store concise narratives and placeholders to keep catalog size predictable.
+- Measurement: Summaries trimmed to <=140 characters and placeholder acceptance recorded for manual refinement.
+- Priority: medium
+- Status: todo
+- Reason: Ready for implementation
+- Trace: prompts R22, tests none, scripts none, monitors none
+---
+
+### REQ-NF-20251010T151543-IE: Catalog digest caching for planner and review
+- Owner: codex
+- Category: performance
+- Description: Planner and review tooling reuse cached catalog digests to avoid rereading unchanged files.
+- Measurement: Checksum-based cache and refresh flag deliver >=25% faster repeated overlap checks.
+- Priority: medium
+- Status: todo
+- Reason: Ready for implementation
+- Trace: prompts R23, tests none, scripts none, monitors none
+---
+
+### REQ-NF-20251010T151552-8U: Scoped requirement streaming in CLI
+- Owner: codex
+- Category: usability
+- Description: CLI streams only requested requirement IDs or tags plus summaries for unrelated entries to keep agent context small.
+- Measurement: Outputs limit unrelated summaries to <=250 tokens and pass slice tests for mixed selections.
+- Priority: medium
+- Status: todo
+- Reason: Ready for implementation
+- Trace: prompts R24, tests none, scripts none, monitors none
 ---
 
 ## Done Requirements
