@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 0; Done: 13 (done=13); Retired: 0
+Todo: 5 (backlog=5); Done: 14 (done=14); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -30,7 +30,87 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
+### REQ-F-20251010T073809-JN: Non-functional lifecycle parity
+- Owner: codex
+- Narrative: As a maintainer, I want non-functional requirements to share the same lifecycle helpers as functional ones so that amendments and done-state tracking stay consistent across catalogs.
+- Acceptance Criteria:
+  * Provide mark-done and WIP guard helpers for non-functional requirements mirroring the functional workflow.
+  * Closing a functional requirement clears dependent non-functional amendments automatically and vice versa.
+  * Tests cover non-functional mark-done flows, amendment reopening, and synchronization with functional primaries.
+- Priority: high
+- Status: backlog
+- Reason: Needs prioritization
+- Trace: prompts R15, tests none, commits none
+---
+
+### REQ-F-20251010T073818-5B: Batch review orchestration
+- Owner: codex
+- Narrative: As a maintainer, I want batch workflows to handle multiple requirements and persist summaries so that large refactors can be prepared in one automated pass.
+- Acceptance Criteria:
+  * Batch CLI accepts multiple primary requirement IDs or analyzes all doing requirements in one run.
+  * Command writes a machine-readable summary (e.g., JSON) capturing collisions, overlaps, and auto-reopens for later use.
+  * Acknowledgement flags remain mandatory unless auto-reopen is explicitly requested.
+  * Tests cover multi-requirement refactors, summary persistence, and acknowledgement enforcement.
+- Priority: medium
+- Status: backlog
+- Reason: Needs prioritization
+- Trace: prompts R16, tests none, commits none
+---
+
+### REQ-F-20251010T073826-CD: Documentation and refactor requirement alignment
+- Owner: codex
+- Narrative: As a maintainer, I want documentation and refactor tasks to run automated requirement checks so that catalogs stay aligned even when code logic changes minimally.
+- Acceptance Criteria:
+  * Provide a CLI wrapper that runs the review/batch workflow for documentation-only or refactor changes.
+  * Wrapper prompts for requirement adjustments when changes affect shared components, even if no functional code paths are touched.
+  * Tests cover doc-only updates, refactors, and confirmation that catalogs remain consistent.
+- Priority: medium
+- Status: backlog
+- Reason: Needs prioritization
+- Trace: prompts R17, tests none, commits none
+---
+
+### REQ-F-20251010T073931-RY: Requirement drift detection
+- Owner: codex
+- Narrative: As a maintainer, I want automated drift detection that checks done requirements against the repository so that obsolete or inconsistent specifications are caught promptly.
+- Acceptance Criteria:
+  * Review tooling warns when done requirements reference missing files/tests or no longer align with the codebase.
+  * Provide a prune option that flags obsolete requirements and moves them back to backlog/todo for reassessment.
+  * Tests cover missing file detection, obsolete requirements, and successful drift clearance.
+- Priority: medium
+- Status: backlog
+- Reason: Needs prioritization
+- Trace: prompts R18, tests none, commits none
+---
+
+### REQ-F-20251010T073939-HE: Wait-for-approval enforcement
+- Owner: codex
+- Narrative: As a maintainer, I want safeguards that block automatic mark-done operations without approval so that the wait-for-approval workflow cannot be bypassed.
+- Acceptance Criteria:
+  * Introduce configuration checked by CLI commands to refuse mark-done unless approval has been recorded or an explicit override is passed.
+  * Codex Cloud agents must record user approval before invoking mark-done; CLI should log the approval source.
+  * Tests cover refusal without approval, override flows, and approval logging.
+- Priority: high
+- Status: backlog
+- Reason: Needs prioritization
+- Trace: prompts R19, tests none, commits none
+---
+
 ## Done Requirements
+
+### REQ-F-20251010T073801-G1: Automated requirements review CLI
+- Owner: codex
+- Narrative: As a maintainer, I want a review command that validates functional and non-functional catalogs against the codebase so that requirement changes catch conflicts and missing updates automatically.
+- Acceptance Criteria:
+  * CLI scans functional and non-functional catalogs for missing acknowledgements, contradictory statuses, and references to deleted files.
+  * Review output highlights potential overlaps/contradictions and refuses to pass until acknowledged.
+  * Command integrates with CI, failing when catalogs diverge from the repository.
+  * Tests cover scenarios with contradictory requirements, missing files, and resolved acknowledgements.
+- Priority: high
+- Status: done
+- Reason: Automated requirements review CLI available
+- Trace: prompts R14, tests tests/agentlab/cli/test_review_cli.py; tests/reqflow/test_catalog.py, commits none
+---
 
 ### REQ-F-20251010T072114-M5: Batch workflow utilities
 - Owner: codex

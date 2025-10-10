@@ -10,6 +10,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 ## Build, Test, and Development Commands
 - <code>uv sync</code> - install dependencies into the managed environment.
+- <code>uv run python -m agentlab.cli.review</code> - validate requirement catalogs for drift, missing files, and overlaps before implementation.
 - <code>uv run python -m agentlab.cli.dev</code> - start the interactive agent loop for manual testing.
 - <code>uv run python -m agentlab.cli.start --requirement REQ-F-...</code> - promote an approved requirement to doing after acknowledging collisions.
 - <code>uv run python -m agentlab.cli.worker</code> - run the background worker for CI or hosted runs.
@@ -49,6 +50,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
    - Before coding, Codex promotes the approved requirement to doing (or otherwise records the in-progress start) and confirms the user is ready to proceed.
    - Confirm the user explicitly wants to proceed, then promote the chosen requirement to `doing` before making any code or catalog edits.
    - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
+   - Run `uv run python -m agentlab.cli.review` (or the batch workflow) before starting implementation to surface collisions, overlaps, and drift automatically.
 
 
 

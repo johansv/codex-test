@@ -26,6 +26,7 @@ agentlab-start = "agentlab.cli.start:main"
 agentlab-amend = "agentlab.cli.amend:main"
 agentlab-bulk-amend = "agentlab.cli.bulk_amend:main"
 agentlab-batch = "agentlab.cli.batch:main"
+agentlab-review = "agentlab.cli.review:main"
 
 [tool.uv]
 package = true

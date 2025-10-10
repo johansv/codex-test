@@ -50,3 +50,12 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-F-20251010T072114-M5 | Added functional requirement REQ-F-20251010T072114-M5: Batch workflow utilities | codex | R13 |
 | 2025-10-10 | REQ-F-20251010T072114-M5 | Started implementation for REQ-F-20251010T072114-M5; non-functional: REQ-NF-000 | codex | implementation |
 | 2025-10-10 | REQ-F-20251010T072114-M5 | Marked REQ-F-20251010T072114-M5 done: Batch workflow CLI automates collision, overlap, and reopen flows | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T073801-G1 | Added functional requirement REQ-F-20251010T073801-G1: Automated requirements review CLI | codex | R14 |
+| 2025-10-10 | REQ-F-20251010T073809-JN | Added functional requirement REQ-F-20251010T073809-JN: Non-functional lifecycle parity | codex | R15 |
+| 2025-10-10 | REQ-F-20251010T073818-5B | Added functional requirement REQ-F-20251010T073818-5B: Batch review orchestration | codex | R16 |
+| 2025-10-10 | REQ-F-20251010T073826-CD | Added functional requirement REQ-F-20251010T073826-CD: Documentation and refactor requirement alignment | codex | R17 |
+| 2025-10-10 | REQ-F-20251010T073931-RY | Added functional requirement REQ-F-20251010T073931-RY: Requirement drift detection | codex | R18 |
+| 2025-10-10 | REQ-F-20251010T073939-HE | Added functional requirement REQ-F-20251010T073939-HE: Wait-for-approval enforcement | codex | R19 |
+| 2025-10-10 | REQ-F-20251010T073801-G1 | Promoted REQ-F-20251010T073801-G1 to todo for implementation | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T073801-G1 | Started implementation for REQ-F-20251010T073801-G1; non-functional: REQ-NF-000 | codex | implementation |
+| 2025-10-10 | REQ-F-20251010T073801-G1 | Marked REQ-F-20251010T073801-G1 done: Automated requirements review CLI available | codex | implementation |
