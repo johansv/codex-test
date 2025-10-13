@@ -1,7 +1,7 @@
 # Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=1, todo=1); Done: 2 (done=2); Retired: 0
+Todo: 1 (backlog=1); Done: 3 (done=3); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -43,18 +43,18 @@ so the catalog retains history.
 - Notes: Delete or repurpose when real constraints are documented.
 ---
 
-### REQ-NF-20251010T151552-8U: Scoped requirement streaming in CLI
-- Owner: codex
-- Category: usability
-- Description: CLI streams only requested requirement IDs or tags plus summaries for unrelated entries to keep agent context small.
-- Measurement: Outputs limit unrelated summaries to <=250 tokens and pass slice tests for mixed selections.
-- Priority: medium
-- Status: todo
-- Reason: Ready for implementation
-- Trace: prompts R24, tests none, scripts none, monitors none
----
-
 ## Done Requirements
+
+### REQ-NF-20251010T151552-8U: Scoped requirement streaming in CLI
+  - Owner: codex
+  - Category: usability
+  - Description: CLI streams only requested requirement IDs or tags plus summaries for unrelated entries to keep agent context small.
+  - Measurement: Outputs limit unrelated summaries to <=250 tokens and pass slice tests for mixed selections.
+  - Priority: medium
+- Status: done
+- Reason: Scoped slice CLI streams selected entries with tag/id filters and compact summaries
+- Trace: prompts R24, tests tests/agentlab/cli/test_slice_cli.py, scripts none, monitors none
+---
 
 ### REQ-NF-20251010T151543-IE: Catalog digest caching for planner and review
 - Owner: codex

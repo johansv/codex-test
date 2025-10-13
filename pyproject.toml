@@ -29,6 +29,7 @@ agentlab-batch = "agentlab.cli.batch:main"
 agentlab-review = "agentlab.cli.review:main"
 agentlab-start-nf = "agentlab.cli.start_nonfunctional:main"
 agentlab-mark-done-nf = "agentlab.cli.mark_done_nonfunctional:main"
+agentlab-slice = "agentlab.cli.slice:main"
 
 [tool.uv]
 package = true

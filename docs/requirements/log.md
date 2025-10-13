@@ -73,3 +73,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-NF-20251010T151535-UV | Marked REQ-NF-20251010T151535-UV done: Auto-captured non-functional entries now summarise narratives with placeholder acceptance | codex | implementation |
 | 2025-10-10 | REQ-NF-20251010T151543-IE | Started non-functional implementation for REQ-NF-20251010T151543-IE | codex | implementation |
 | 2025-10-10 | REQ-NF-20251010T151543-IE | Marked REQ-NF-20251010T151543-IE done: Catalog digest cache accelerates planner and review with refresh controls | codex | implementation |
+| 2025-10-11 | REQ-NF-20251010T151552-8U | Started non-functional implementation for REQ-NF-20251010T151552-8U | codex | implementation |
+| 2025-10-11 | REQ-NF-20251010T151552-8U | Marked REQ-NF-20251010T151552-8U done: Scoped slice CLI streams selected entries with tag/id filters and compact summaries | codex | implementation |

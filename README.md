@@ -53,6 +53,7 @@ The hosted runner must mount this repository and have dependencies installed so
 - `uv run ruff check src tests` � lint the project.
 - `uv run python -m agentlab.cli.requirements ...` � manually add requirement
   entries when needed.
+- `uv run agentlab-slice --help` � stream specific requirement entries by ID/tag with a compact summary.
 
 ## Project Layout
 
