@@ -30,6 +30,7 @@ agentlab-review = "agentlab.cli.review:main"
 agentlab-start-nf = "agentlab.cli.start_nonfunctional:main"
 agentlab-mark-done-nf = "agentlab.cli.mark_done_nonfunctional:main"
 agentlab-slice = "agentlab.cli.slice:main"
+agentlab-doc-refactor = "agentlab.cli.doc_refactor:main"
 
 [tool.uv]
 package = true

@@ -46,6 +46,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
+## Done Requirements
+
 ### REQ-F-20251010T073826-CD: Documentation and refactor requirement alignment
 - Owner: codex
 - Narrative: As a maintainer, I want documentation and refactor tasks to run automated requirement checks so that catalogs stay aligned even when code logic changes minimally.
@@ -54,12 +56,10 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Wrapper prompts for requirement adjustments when changes affect shared components, even if no functional code paths are touched.
   * Tests cover doc-only updates, refactors, and confirmation that catalogs remain consistent.
 - Priority: medium
-- Status: backlog
-- Reason: Needs prioritization
-- Trace: prompts R17, tests none, commits none
+- Status: done
+- Reason: Documentation/refactor wrapper runs review and overlap checks with acknowledgement gating
+- Trace: prompts R17, tests tests/agentlab/cli/test_doc_refactor_cli.py, commits none
 ---
-
-## Done Requirements
 
 ### REQ-F-20251010T073939-HE: Wait-for-approval enforcement
 - Owner: codex
