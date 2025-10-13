@@ -5,6 +5,7 @@ import argparse
 from pathlib import Path
 from typing import Sequence
 
+from agentlab.utils.approvals import ApprovalError, validate_approval
 from reqflow.catalog import (
     append_log_entry,
     catalog_root,
@@ -65,6 +66,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Monitoring references; repeat the flag for multiple entries.",
     )
+    parser.add_argument(
+        "--approval-source",
+        default=None,
+        help="Recorded approver or ticket reference (required when approval enforcement is enabled).",
+    )
+    parser.add_argument(
+        "--override-wait-for-approval",
+        action="store_true",
+        help="Bypass approval enforcement when an explicit override has been granted.",
+    )
     return parser
 
 
@@ -92,6 +103,16 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
         return 2
 
+    try:
+        approval_context = validate_approval(
+            approval_source=args.approval_source,
+            override=args.override_wait_for_approval,
+            command_name="mark_done_nonfunctional",
+        )
+    except ApprovalError as exc:
+        parser.error(str(exc))
+        return 2
+
     catalog_path = catalog_dir / "non-functional.md"
     if not catalog_path.exists():
         parser.error("non-functional catalog not found; run setup first")
@@ -116,6 +137,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     summary = args.summary or f"Marked {args.id} done: {args.reason}"
+    if approval_context:
+        summary = f"{summary} (approval: {approval_context.label})"
     append_log_entry(
         log_path,
         req_id=args.id,
@@ -135,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     lines = [f"Marked {args.id} done in {catalog_path}"]
+    if approval_context:
+        lines.append(f"Approval: {approval_context.label}")
     if closed_amendments:
         lines.append("Closed amendments: " + ", ".join(closed_amendments))
     print("\n".join(lines))

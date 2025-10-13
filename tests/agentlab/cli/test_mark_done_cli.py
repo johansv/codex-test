@@ -41,6 +41,11 @@ def catalog_dir(tmp_path: Path) -> Path:
     return requirements_dir
 
 
+@pytest.fixture(autouse=True)
+def enforce_approval(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REQFLOW_REQUIRE_APPROVAL", "true")
+
+
 def test_mark_done_cli_marks_requirement_done(
     catalog_dir: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -60,6 +65,8 @@ def test_mark_done_cli_marks_requirement_done(
             "tests/agentlab/cli/test_mark_done_cli.py",
             "--commits",
             "abc123",
+            "--approval-source",
+            "support-ticket-42",
         ]
     )
 
@@ -80,6 +87,7 @@ def test_mark_done_cli_marks_requirement_done(
     log = (catalog_dir / "log.md").read_text(encoding="utf-8")
     assert "REQ-F-123" in log
     assert "Implementation merged" in log
+    assert "(approval: support-ticket-42)" in log
 
 
 def test_mark_done_cli_errors_when_requirement_missing(catalog_dir: Path) -> None:
@@ -97,6 +105,8 @@ def test_mark_done_cli_errors_when_requirement_missing(catalog_dir: Path) -> Non
                 "Missing implementation",
                 "--tests",
                 "tests/agentlab/cli/test_mark_done_cli.py",
+                "--approval-source",
+                "review",
             ]
         )
     assert exc.value.code == 2
@@ -151,6 +161,8 @@ def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
             "Primary and amendments completed",
             "--tests",
             "tests/agentlab/cli/test_mark_done_cli.py",
+            "--approval-source",
+            "qa-approval",
         ]
     )
     assert exit_code == 0
@@ -208,6 +220,8 @@ def test_mark_done_cli_closes_non_functional_amendments(catalog_dir: Path) -> No
             "Functional and non-functional amendments completed",
             "--tests",
             "tests/new_probe.py",
+            "--approval-source",
+            "qa-approval",
         ]
     )
     assert exit_code == 0
@@ -217,3 +231,37 @@ def test_mark_done_cli_closes_non_functional_amendments(catalog_dir: Path) -> No
     assert "- Status: done" in nf_doc
     assert "- Amends:" not in nf_doc
     assert "Amendment completed under REQ-F-123" in nf_doc
+
+
+def test_mark_done_cli_enforces_approval_requirement(catalog_dir: Path) -> None:
+    with pytest.raises(SystemExit) as exc:
+        cli.main(
+            [
+                "--catalog-root",
+                str(catalog_dir),
+                "--id",
+                "REQ-F-123",
+                "--reason",
+                "Missing approval metadata",
+                "--tests",
+                "tests/agentlab/cli/test_mark_done_cli.py",
+            ]
+        )
+    assert exc.value.code == 2
+
+
+def test_mark_done_cli_allows_override_without_source(catalog_dir: Path) -> None:
+    exit_code = cli.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--id",
+            "REQ-F-123",
+            "--reason",
+            "Override approval granted",
+            "--tests",
+            "tests/agentlab/cli/test_mark_done_cli.py",
+            "--override-wait-for-approval",
+        ]
+    )
+    assert exit_code == 0

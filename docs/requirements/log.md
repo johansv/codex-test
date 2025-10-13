@@ -75,3 +75,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-10 | REQ-NF-20251010T151543-IE | Marked REQ-NF-20251010T151543-IE done: Catalog digest cache accelerates planner and review with refresh controls | codex | implementation |
 | 2025-10-11 | REQ-NF-20251010T151552-8U | Started non-functional implementation for REQ-NF-20251010T151552-8U | codex | implementation |
 | 2025-10-11 | REQ-NF-20251010T151552-8U | Marked REQ-NF-20251010T151552-8U done: Scoped slice CLI streams selected entries with tag/id filters and compact summaries | codex | implementation |
+| 2025-10-11 | REQ-F-20251010T073939-HE | Started implementation for REQ-F-20251010T073939-HE | codex | implementation |
+| 2025-10-11 | REQ-F-20251010T073939-HE | Marked REQ-F-20251010T073939-HE done: Wait-for-approval enforcement with overrides logged | codex | implementation |

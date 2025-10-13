@@ -69,3 +69,9 @@ The hosted runner must mount this repository and have dependencies installed so
 For more detailed guidance, see `AGENTS.md`, which Codex consumes directly when
 planning tasks.
 
+
+## Approval Enforcement
+
+Set `REQFLOW_REQUIRE_APPROVAL=true` (default) to require `--approval-source` when running mark-done
+CLIs. Use `--override-wait-for-approval` for exceptional cases (the CLI logs the override in the
+requirements log).

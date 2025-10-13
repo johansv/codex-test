@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 3 (backlog=3); Done: 17 (done=17); Retired: 0
+Todo: 2 (backlog=2); Done: 18 (done=18); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -59,6 +59,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R17, tests none, commits none
 ---
 
+## Done Requirements
+
 ### REQ-F-20251010T073939-HE: Wait-for-approval enforcement
 - Owner: codex
 - Narrative: As a maintainer, I want safeguards that block automatic mark-done operations without approval so that the wait-for-approval workflow cannot be bypassed.
@@ -67,12 +69,10 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Codex Cloud agents must record user approval before invoking mark-done; CLI should log the approval source.
   * Tests cover refusal without approval, override flows, and approval logging.
 - Priority: high
-- Status: backlog
-- Reason: Needs prioritization
-- Trace: prompts R19, tests none, commits none
+- Status: done
+- Reason: Mark-done CLIs enforce approvals with sources or explicit overrides
+- Trace: prompts R19, tests tests/agentlab/cli/test_mark_done_cli.py; tests/agentlab/cli/test_mark_done_nonfunctional_cli.py, commits none
 ---
-
-## Done Requirements
 
 ### REQ-F-20251010T151527-BX: Functional auto-capture text compaction
 - Owner: codex

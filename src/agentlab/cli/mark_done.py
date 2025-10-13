@@ -5,6 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
+from agentlab.utils.approvals import ApprovalError, validate_approval
 from reqflow.catalog import (
     append_log_entry,
     catalog_root,
@@ -60,6 +61,16 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help="Commit hash referencing the implementation; repeat as needed.",
     )
+    parser.add_argument(
+        "--approval-source",
+        default=None,
+        help="Recorded approver or ticket reference (required when approval enforcement is enabled).",
+    )
+    parser.add_argument(
+        "--override-wait-for-approval",
+        action="store_true",
+        help="Bypass approval enforcement when an explicit override has been granted.",
+    )
     return parser
 
 
@@ -76,6 +87,15 @@ def main(argv: list[str] | None = None) -> int:
     try:
         catalog_dir = args.catalog_root if args.catalog_root else catalog_root(Path.cwd())
     except FileNotFoundError as exc:  # pragma: no cover - defensive guard
+        parser.error(str(exc))
+
+    try:
+        approval_context = validate_approval(
+            approval_source=args.approval_source,
+            override=args.override_wait_for_approval,
+            command_name="mark_done",
+        )
+    except ApprovalError as exc:
         parser.error(str(exc))
 
     catalog_path = catalog_dir / "functional.md"
@@ -100,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     summary = args.summary or f"Marked {args.id} done: {args.reason}"
+    if approval_context:
+        summary = f"{summary} (approval: {approval_context.label})"
     append_log_entry(
         log_path,
         req_id=args.id,
@@ -117,6 +139,8 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     lines = [f"Marked {args.id} done in {catalog_path}"]
+    if approval_context:
+        lines.append(f"Approval: {approval_context.label}")
     if closed_amendments:
         lines.append("Closed amendments: " + ", ".join(closed_amendments))
     print("\n".join(lines))

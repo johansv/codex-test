@@ -61,6 +61,11 @@ def catalog_dir(tmp_path: Path) -> Path:
     return req_dir
 
 
+@pytest.fixture(autouse=True)
+def enforce_approval(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("REQFLOW_REQUIRE_APPROVAL", "true")
+
+
 def _read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -80,6 +85,8 @@ def test_mark_done_nonfunctional_updates_catalog(catalog_dir: Path) -> None:
             "scripts/latency.py",
             "--monitors",
             "monitors/latency.json",
+            "--approval-source",
+            "platform-lead",
         ]
     )
     assert exit_code == 0
@@ -105,6 +112,42 @@ def test_mark_done_nonfunctional_requires_artifact(catalog_dir: Path) -> None:
                 "REQ-NF-100",
                 "--reason",
                 "Missing artifacts",
+                "--approval-source",
+                "platform-lead",
             ]
         )
     assert exc.value.code == 2
+
+
+def test_mark_done_nonfunctional_requires_approval(catalog_dir: Path) -> None:
+    with pytest.raises(SystemExit) as exc:
+        mark_done_nonfunctional.main(
+            [
+                "--catalog-root",
+                str(catalog_dir),
+                "--id",
+                "REQ-NF-100",
+                "--reason",
+                "Missing approval metadata",
+                "--tests",
+                "tests/latency_probe.py",
+            ]
+        )
+    assert exc.value.code == 2
+
+
+def test_mark_done_nonfunctional_supports_override(catalog_dir: Path) -> None:
+    exit_code = mark_done_nonfunctional.main(
+        [
+            "--catalog-root",
+            str(catalog_dir),
+            "--id",
+            "REQ-NF-100",
+            "--reason",
+            "Override approval granted",
+            "--tests",
+            "tests/latency_probe.py",
+            "--override-wait-for-approval",
+        ]
+    )
+    assert exit_code == 0
