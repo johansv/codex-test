@@ -77,3 +77,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-11 | REQ-NF-20251010T151552-8U | Marked REQ-NF-20251010T151552-8U done: Scoped slice CLI streams selected entries with tag/id filters and compact summaries | codex | implementation |
 | 2025-10-11 | REQ-F-20251010T073939-HE | Started implementation for REQ-F-20251010T073939-HE | codex | implementation |
 | 2025-10-11 | REQ-F-20251010T073939-HE | Marked REQ-F-20251010T073939-HE done: Wait-for-approval enforcement with overrides logged | codex | implementation |
+| 2025-10-13 | REQ-F-20251010T073939-HE | Reopened REQ-F-20251010T073939-HE for historic amendment: Implementation pending | codex | implementation |
+| 2025-10-13 | REQ-F-20251010T073939-HE | Marked REQ-F-20251010T073939-HE done: Approval config enforces wait-for-approval guard (approval: manual-review) | codex | implementation |
