@@ -7,6 +7,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "python-dotenv>=1.0.0",
+    "garminconnect==0.2.30",
 ]
 
 [project.optional-dependencies]
@@ -31,6 +32,7 @@ agentlab-start-nf = "agentlab.cli.start_nonfunctional:main"
 agentlab-mark-done-nf = "agentlab.cli.mark_done_nonfunctional:main"
 agentlab-slice = "agentlab.cli.slice:main"
 agentlab-doc-refactor = "agentlab.cli.doc_refactor:main"
+agentlab-garmin-fetch = "agentlab.cli.garmin_fetch:main"
 
 [tool.uv]
 package = true

@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 6 (backlog=1, todo=5); Done: 19 (done=19); Retired: 0
+Todo: 5 (backlog=1, todo=4); Done: 20 (done=20); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -44,20 +44,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: backlog
 - Reason: Needs prioritization
 - Trace: prompts R16, tests none, commits none
----
-
-### REQ-F-20251014T120001-GA: Garmin data session fetcher
-- Owner: codex
-- Narrative: As a data owner, I want a CLI that authenticates to Garmin Connect and fetches every explicit 0.2.30 endpoint so that my Health Coach AI receives complete daily data.
-- Acceptance Criteria:
-  * CLI reads Garmin credentials from environment variables and signs in without interactive prompts.
-  * Program pulls every explicitly enumerated garminconnect 0.2.30 data endpoint sequentially.
-  * Execution supports --date for a single day or --start-date/--end-date for ranges plus endpoint subset flags.
-  * Implementation uses direct endpoint calls mirroring project demos with no reflection-based dispatch.
-- Priority: high
-- Status: todo
-- Reason: Agreed scope for Garmin ingestion tooling
-- Trace: prompts Garmin ingestion design discussion, tests none, commits none
 ---
 
 ### REQ-F-20251014T120032-GS: Date-partitioned storage layout
@@ -117,6 +103,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251014T120001-GA: Garmin data session fetcher
+- Owner: codex
+- Narrative: As a data owner, I want a CLI that authenticates to Garmin Connect and fetches every explicit 0.2.30 endpoint so that my Health Coach AI receives complete daily data.
+- Acceptance Criteria:
+  * CLI reads Garmin credentials from environment variables and signs in without interactive prompts.
+  * Program pulls every explicitly enumerated garminconnect 0.2.30 data endpoint sequentially.
+  * Execution supports --date for a single day or --start-date/--end-date for ranges plus endpoint subset flags.
+  * Implementation uses direct endpoint calls mirroring project demos with no reflection-based dispatch.
+- Priority: high
+- Status: done
+- Reason: Garmin fetch CLI authenticates, enumerates endpoints, and supports range filtering
+- Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/cli/test_garmin_fetch_cli.py; tests/agentlab/runners/test_garmin_fetcher.py, commits none
+---
 
 ### REQ-F-20251010T073939-HE: Wait-for-approval enforcement
 - Owner: codex

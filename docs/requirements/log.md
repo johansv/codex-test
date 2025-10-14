@@ -84,3 +84,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-13 | REQ-F-20251014T120058-GC | Captured endpoint configuration controls requirement. | codex | Garmin ingestion plan |
 | 2025-10-13 | REQ-F-20251014T120121-GR | Captured resilient error handling requirement for Garmin ingestion. | codex | Garmin ingestion plan |
 | 2025-10-13 | REQ-F-20251014T120146-GT | Captured account-safety execution requirement for Garmin ingestion. | codex | Garmin ingestion plan |
+| 2025-10-14 | REQ-F-20251014T120001-GA | Started implementation for REQ-F-20251014T120001-GA; related: REQ-F-20251014T120032-GS, REQ-F-20251014T120146-GT, REQ-F-20251014T120058-GC, REQ-F-20251014T120121-GR; non-functional: REQ-NF-20251010T151535-UV, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151543-IE, REQ-NF-000 | codex | implementation |
+| 2025-10-14 | REQ-F-20251014T120001-GA | Marked REQ-F-20251014T120001-GA done: Garmin fetch CLI authenticates, enumerates endpoints, and supports range filtering (approval: manual-review) | codex | implementation |
