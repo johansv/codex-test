@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 19 (done=19); Retired: 0
+Todo: 6 (backlog=1, todo=5); Done: 19 (done=19); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -44,6 +44,76 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: backlog
 - Reason: Needs prioritization
 - Trace: prompts R16, tests none, commits none
+---
+
+### REQ-F-20251014T120001-GA: Garmin data session fetcher
+- Owner: codex
+- Narrative: As a data owner, I want a CLI that authenticates to Garmin Connect and fetches every explicit 0.2.30 endpoint so that my Health Coach AI receives complete daily data.
+- Acceptance Criteria:
+  * CLI reads Garmin credentials from environment variables and signs in without interactive prompts.
+  * Program pulls every explicitly enumerated garminconnect 0.2.30 data endpoint sequentially.
+  * Execution supports --date for a single day or --start-date/--end-date for ranges plus endpoint subset flags.
+  * Implementation uses direct endpoint calls mirroring project demos with no reflection-based dispatch.
+- Priority: high
+- Status: todo
+- Reason: Agreed scope for Garmin ingestion tooling
+- Trace: prompts Garmin ingestion design discussion, tests none, commits none
+---
+
+### REQ-F-20251014T120032-GS: Date-partitioned storage layout
+- Owner: codex
+- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
+- Acceptance Criteria:
+  * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
+  * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
+  * Failures emit <endpoint>.error.json containing structured metadata and full stack trace.
+  * Re-running for the same dates replaces prior files without leaving partial artifacts.
+- Priority: high
+- Status: todo
+- Reason: Agreed scope for storage layout
+- Trace: prompts Garmin ingestion design discussion, tests none, commits none
+---
+
+### REQ-F-20251014T120058-GC: Endpoint configuration controls
+- Owner: codex
+- Narrative: As a maintainer, I want configurable defaults and overrides for Garmin endpoints so that I can tailor downloads without rewriting code.
+- Acceptance Criteria:
+  * Configuration file defines default endpoint enablement and is loaded automatically by the CLI.
+  * Command line flags include and exclude endpoints explicitly, validating names against the supported list.
+  * Unknown or disabled endpoint requests report actionable errors without starting downloads.
+  * Documentation explains adjusting defaults and invoking ad hoc endpoint subsets.
+- Priority: medium
+- Status: todo
+- Reason: Agreed scope for configurability
+- Trace: prompts Garmin ingestion design discussion, tests none, commits none
+---
+
+### REQ-F-20251014T120121-GR: Resilient error handling and logging
+- Owner: codex
+- Narrative: As an operator, I want failures logged per endpoint without halting runs so that I still harvest partial Garmin data with useful diagnostics.
+- Acceptance Criteria:
+  * Each endpoint call is wrapped to log errors, write the matching <endpoint>.error.json, and continue.
+  * CLI emits a success and failure summary at completion including retry outcomes.
+  * Process exits with success when at least one endpoint succeeds and non-zero only when all fail.
+  * Structured logs capture request context and correlation IDs for debugging.
+- Priority: high
+- Status: todo
+- Reason: Agreed scope for resilience
+- Trace: prompts Garmin ingestion design discussion, tests none, commits none
+---
+
+### REQ-F-20251014T120146-GT: Account-safety execution policies
+- Owner: codex
+- Narrative: As a Garmin account holder, I want conservative pacing and retries so that the downloader avoids triggering rate limits or suspensions.
+- Acceptance Criteria:
+  * Default pacing applies configurable delays (5s post-login, 2s between endpoints, 1s within pagination) with ?20% jitter.
+  * Execution remains single threaded and processes endpoints sequentially.
+  * Each endpoint retries at most once after the first pass completes, using the same pacing controls.
+  * Configuration surface exposes delay and retry settings for tuning without code changes.
+- Priority: high
+- Status: todo
+- Reason: Agreed scope for safety
+- Trace: prompts Garmin ingestion design discussion, tests none, commits none
 ---
 
 ## Done Requirements
