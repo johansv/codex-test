@@ -1,6 +1,8 @@
 """Runtime helpers for collecting Garmin Connect data."""
 from __future__ import annotations
 
+import json
+import logging
 import traceback
 from dataclasses import dataclass, field
 from datetime import date
@@ -15,6 +17,8 @@ from agentlab.core.garmin import (
     GarminCredentials,
     GarminFetchRequest,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(slots=True)
@@ -63,6 +67,8 @@ class GarminDataFetcher:
         credentials: GarminCredentials,
         request: GarminFetchRequest,
         observer: Callable[[str], None] | None = None,
+        *,
+        correlation_id: str | None = None,
     ) -> FetchOutcome:
         """Authenticate and pull data for the requested endpoints."""
 
@@ -81,26 +87,67 @@ class GarminDataFetcher:
         context = GarminFetchContext()
         results: list[EndpointResult] = []
         errors: list[EndpointError] = []
+        request_metadata = _request_metadata(request)
+
+        _log_event(
+            logging.INFO,
+            "garmin.fetch.start",
+            correlation_id,
+            request=request_metadata,
+        )
 
         for handler in self._handlers:
             if request.includes(handler.name):
                 if observer:
                     observer(handler.name)
+
+                _log_event(
+                    logging.INFO,
+                    "garmin.endpoint.start",
+                    correlation_id,
+                    request=request_metadata,
+                    endpoint=handler.name,
+                )
                 try:
                     handler_results = handler.execute(client, request, context)
                 except Exception as exc:  # pragma: no cover - reliance on API stability
-                    errors.append(
-                        EndpointError(
-                            endpoint=handler.name,
-                            scope={},
-                            message=str(exc),
-                            traceback="".join(
-                                traceback.format_exception(type(exc), exc, exc.__traceback__)
-                            ),
-                        )
+                    error = EndpointError(
+                        endpoint=handler.name,
+                        scope={},
+                        message=str(exc),
+                        traceback="".join(
+                            traceback.format_exception(type(exc), exc, exc.__traceback__)
+                        ),
+                    )
+                    errors.append(error)
+                    _log_event(
+                        logging.ERROR,
+                        "garmin.endpoint.error",
+                        correlation_id,
+                        request=request_metadata,
+                        endpoint=handler.name,
+                        error_message=error.message,
                     )
                 else:
                     results.extend(handler_results)
+                    _log_event(
+                        logging.INFO,
+                        "garmin.endpoint.success",
+                        correlation_id,
+                        request=request_metadata,
+                        endpoint=handler.name,
+                        result_count=len(handler_results),
+                        scopes=[result.scope for result in handler_results],
+                    )
+
+        _log_event(
+            logging.INFO,
+            "garmin.fetch.completed",
+            correlation_id,
+            request=request_metadata,
+            result_count=len(results),
+            error_count=len(errors),
+        )
 
         return FetchOutcome(results=results, errors=errors)
 
@@ -195,6 +242,33 @@ def _endpoint_result(name: str, scope: dict[str, str | int], payload: Any) -> En
     """Helper to construct endpoint results with consistent typing."""
 
     return EndpointResult(endpoint=name, scope=scope, payload=payload)
+
+
+def _request_metadata(request: GarminFetchRequest) -> dict[str, Any]:
+    """Return a serialisable snapshot of the request for logging."""
+
+    return {
+        "start_date": request.start_date.isoformat(),
+        "end_date": request.end_date.isoformat(),
+        "endpoints": sorted(request.endpoints) if request.endpoints is not None else None,
+    }
+
+
+def _log_event(
+    level: int,
+    event: str,
+    correlation_id: str | None,
+    **payload: Any,
+) -> None:
+    if not logger.isEnabledFor(level):
+        return
+
+    record = {
+        "event": event,
+        "correlation_id": correlation_id,
+        **{key: value for key, value in payload.items() if value is not None},
+    }
+    logger.log(level, json.dumps(record, default=str))
 
 
 def _fetch_user_profile(

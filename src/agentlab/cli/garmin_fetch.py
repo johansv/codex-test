@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import sys
+import uuid
 from datetime import date
 from pathlib import Path
 from typing import Sequence
@@ -21,6 +23,7 @@ from agentlab.runners.garmin_fetcher import GarminDataFetcher
 from agentlab.utils.storage import GarminStorageWriter
 
 _DEFAULT_CONFIG_RELATIVE = Path("assets") / "config" / "garmin-endpoints.toml"
+logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -233,7 +236,41 @@ def _select_endpoints(
     return selection
 
 
+def _configure_logging() -> None:
+    root = logging.getLogger()
+    if root.handlers:
+        return
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+
+def _log_cli_event(
+    level: int,
+    event: str,
+    correlation_id: str,
+    **payload: object,
+) -> None:
+    if not logger.isEnabledFor(level):
+        return
+
+    record = {
+        "event": event,
+        "correlation_id": correlation_id,
+        **{key: value for key, value in payload.items() if value is not None},
+    }
+    logger.log(level, json.dumps(record, default=str))
+
+
+def _accumulate_retry_totals(
+    totals: dict[str, int],
+    delta: dict[str, int],
+) -> None:
+    for key in ("scheduled", "succeeded", "failed"):
+        totals[key] = totals.get(key, 0) + delta.get(key, 0)
+
+
 def main(argv: list[str] | None = None) -> int:
+    _configure_logging()
+
     parser = build_parser()
     args = parser.parse_args(argv)
 
@@ -251,10 +288,32 @@ def main(argv: list[str] | None = None) -> int:
     output_root = Path(args.output_dir)
     storage = GarminStorageWriter(output_root)
 
+    run_id = uuid.uuid4().hex
+    _log_cli_event(
+        logging.INFO,
+        "garmin.cli.run.start",
+        run_id,
+        start_date=start.isoformat(),
+        end_date=end.isoformat(),
+        endpoints=endpoints,
+    )
+
     summary: list[dict[str, object]] = []
     days = list(GarminFetchRequest(start_date=start, end_date=end).iter_dates())
+    retry_totals = {"scheduled": 0, "succeeded": 0, "failed": 0}
+    any_success = False
+
     for day in days:
         day_request = GarminFetchRequest(start_date=day, end_date=day, endpoints=endpoints)
+        day_correlation_id = f"{run_id}:{day.isoformat()}"
+
+        _log_cli_event(
+            logging.INFO,
+            "garmin.cli.day.start",
+            day_correlation_id,
+            date=day.isoformat(),
+            endpoints=endpoints,
+        )
 
         observer = None
         if args.debug:
@@ -265,20 +324,62 @@ def main(argv: list[str] | None = None) -> int:
 
             observer = _observer
 
-        outcome = fetcher.fetch(credentials, day_request, observer=observer)
+        outcome = fetcher.fetch(
+            credentials,
+            day_request,
+            observer=observer,
+            correlation_id=day_correlation_id,
+        )
         storage.store(day, outcome)
+
+        successes = list(dict.fromkeys(result.endpoint for result in outcome.results))
+        failures = [
+            {"endpoint": error.endpoint, "message": error.message}
+            for error in outcome.errors
+        ]
+        retry_summary = {"scheduled": 0, "succeeded": 0, "failed": 0}
+        _accumulate_retry_totals(retry_totals, retry_summary)
+        any_success = any_success or bool(successes)
 
         summary.append(
             {
                 "date": day.isoformat(),
-                "saved": list(dict.fromkeys(result.endpoint for result in outcome.results)),
-                "errors": list(dict.fromkeys(error.endpoint for error in outcome.errors)),
+                "successes": successes,
+                "failures": failures,
+                "retry_outcomes": retry_summary,
             }
         )
 
+        _log_cli_event(
+            logging.INFO,
+            "garmin.cli.day.completed",
+            day_correlation_id,
+            date=day.isoformat(),
+            successes=len(successes),
+            failures=len(failures),
+            retry_outcomes=retry_summary,
+        )
+
+    total_successes = sum(len(entry["successes"]) for entry in summary)
+    total_failures = sum(len(entry["failures"]) for entry in summary)
+    exit_code = 0 if any_success else 1
+
+    _log_cli_event(
+        logging.INFO if exit_code == 0 else logging.ERROR,
+        "garmin.cli.run.completed" if exit_code == 0 else "garmin.cli.run.failed",
+        run_id,
+        totals={
+            "days": len(summary),
+            "successes": total_successes,
+            "failures": total_failures,
+            "retry_outcomes": retry_totals,
+        },
+        exit_code=exit_code,
+    )
+
     json.dump(summary, sys.stdout, indent=2)
     print()
-    return 0
+    return exit_code
 
 
 if __name__ == "__main__":  # pragma: no cover

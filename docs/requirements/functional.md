@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 3 (backlog=1, todo=2); Done: 22 (done=22); Retired: 0
+Todo: 2 (backlog=1, todo=1); Done: 23 (done=23); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -46,20 +46,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
-### REQ-F-20251014T120121-GR: Resilient error handling and logging
-- Owner: codex
-- Narrative: As an operator, I want failures logged per endpoint without halting runs so that I still harvest partial Garmin data with useful diagnostics.
-- Acceptance Criteria:
-  * Each endpoint call is wrapped to log errors, write the matching <endpoint>.error.json, and continue.
-  * CLI emits a success and failure summary at completion including retry outcomes.
-  * Process exits with success when at least one endpoint succeeds and non-zero only when all fail.
-  * Structured logs capture request context and correlation IDs for debugging.
-- Priority: high
-- Status: todo
-- Reason: Agreed scope for resilience
-- Trace: prompts Garmin ingestion design discussion, tests none, commits none
----
-
 ### REQ-F-20251014T120146-GT: Account-safety execution policies
 - Owner: codex
 - Narrative: As a Garmin account holder, I want conservative pacing and retries so that the downloader avoids triggering rate limits or suspensions.
@@ -75,6 +61,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251014T120121-GR: Resilient error handling and logging
+- Owner: codex
+- Narrative: As an operator, I want failures logged per endpoint without halting runs so that I still harvest partial Garmin data with useful diagnostics.
+- Acceptance Criteria:
+  * Each endpoint call is wrapped to log errors, write the matching <endpoint>.error.json, and continue.
+  * CLI emits a success and failure summary at completion including retry outcomes.
+  * Process exits with success when at least one endpoint succeeds and non-zero only when all fail.
+  * Structured logs capture request context and correlation IDs for debugging.
+- Priority: high
+- Status: done
+- Reason: Structured logging and resilient error handling verified
+- Trace: prompts Garmin ingestion design discussion, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251014T120032-GS: Date-partitioned storage layout
 - Owner: codex

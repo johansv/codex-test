@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import logging
 from datetime import date
 
 from agentlab.core.garmin import EndpointResult, GarminCredentials, GarminFetchRequest
@@ -146,7 +148,7 @@ def test_fetch_invokes_requested_endpoints_in_order():
     assert Factory.created.calls == ["login", "beta", "gamma"]
 
 
-def test_fetch_collects_errors():
+def test_fetch_collects_errors(caplog):
     def failing_handler(client: DummyGarmin, request: GarminFetchRequest, _context):
         raise RuntimeError("boom")
 
@@ -158,7 +160,13 @@ def test_fetch_collects_errors():
     request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
     credentials = GarminCredentials(username="user", password="pass")
 
-    outcome = fetcher.fetch(credentials, request)
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    outcome = fetcher.fetch(
+        credentials,
+        request,
+        correlation_id="run-123",
+    )
 
     assert outcome.results == []
     assert len(outcome.errors) == 1
@@ -166,3 +174,14 @@ def test_fetch_collects_errors():
     assert error.endpoint == "alpha"
     assert "boom" in error.message
     assert "RuntimeError" in error.traceback
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    error_events = [event for event in events if event["event"] == "garmin.endpoint.error"]
+    assert error_events, "Expected garmin.endpoint.error log entry"
+    error_event = error_events[0]
+    assert error_event["correlation_id"] == "run-123"
+    assert error_event["endpoint"] == "alpha"
