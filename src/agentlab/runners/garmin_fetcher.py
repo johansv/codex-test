@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import json
 import logging
+import random
+import time
 import traceback
 from dataclasses import dataclass, field
 from datetime import date
+from functools import wraps
 from typing import Any, Callable, Sequence
 
 from garminconnect import Garmin
@@ -16,6 +19,7 @@ from agentlab.core.garmin import (
     FetchOutcome,
     GarminCredentials,
     GarminFetchRequest,
+    RetrySummary,
 )
 
 logger = logging.getLogger(__name__)
@@ -45,6 +49,95 @@ class EndpointHandler:
     execute: callable
 
 
+@dataclass(slots=True, frozen=True)
+class GarminPacingConfig:
+    """Pacing knobs applied to Garmin API calls."""
+
+    post_login_delay: float = 5.0
+    between_endpoints_delay: float = 2.0
+    pagination_delay: float = 1.0
+    jitter_ratio: float = 0.2
+    retry_limit: int = 1
+
+    def __post_init__(self) -> None:
+        for label, value in (
+            ("post_login_delay", self.post_login_delay),
+            ("between_endpoints_delay", self.between_endpoints_delay),
+            ("pagination_delay", self.pagination_delay),
+        ):
+            if value < 0:
+                raise ValueError(f"{label} must be non-negative")
+        if self.jitter_ratio < 0:
+            raise ValueError("jitter_ratio must be non-negative")
+        if self.retry_limit < 0:
+            raise ValueError("retry_limit must be non-negative")
+
+
+class _PacingController:
+    """Apply jittered sleeps aligned with pacing configuration."""
+
+    def __init__(
+        self,
+        config: GarminPacingConfig,
+        sleep_fn: Callable[[float], None],
+        random_source: random.Random,
+    ) -> None:
+        self._config = config
+        self._sleep = sleep_fn
+        self._random = random_source
+        self._call_counter = 0
+        self._first_endpoint = True
+
+    def after_login(self) -> None:
+        self._sleep_with_jitter(self._config.post_login_delay)
+        self.reset_between_endpoints()
+
+    def reset_between_endpoints(self) -> None:
+        self._first_endpoint = True
+
+    def prepare_endpoint(self) -> None:
+        if not self._first_endpoint:
+            self._sleep_with_jitter(self._config.between_endpoints_delay)
+        self._first_endpoint = False
+        self._call_counter = 0
+
+    def before_api_call(self) -> None:
+        if self._call_counter > 0:
+            self._sleep_with_jitter(self._config.pagination_delay)
+        self._call_counter += 1
+
+    def _sleep_with_jitter(self, base_delay: float) -> None:
+        if base_delay <= 0:
+            return
+        jitter = self._config.jitter_ratio
+        lower = max(0.0, 1.0 - jitter)
+        upper = 1.0 + jitter
+        factor = self._random.uniform(lower, upper)
+        delay = base_delay * factor
+        if delay > 0:
+            self._sleep(delay)
+
+
+class _PacedGarminClient:
+    """Proxy that enforces pacing before Garmin API calls."""
+
+    def __init__(self, client: Garmin, controller: _PacingController) -> None:
+        self._client = client
+        self._controller = controller
+
+    def __getattr__(self, name: str) -> Any:
+        attribute = getattr(self._client, name)
+        if not callable(attribute):
+            return attribute
+
+        @wraps(attribute)
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
+            self._controller.before_api_call()
+            return attribute(*args, **kwargs)
+
+        return wrapper
+
+
 class GarminDataFetcher:
     """Coordinate sequential retrieval of Garmin Connect endpoints."""
 
@@ -52,9 +145,15 @@ class GarminDataFetcher:
         self,
         client_factory: type[Garmin] = Garmin,
         handlers: Sequence[EndpointHandler] | None = None,
+        pacing: GarminPacingConfig | None = None,
+        sleep: Callable[[float], None] | None = None,
+        random_source: random.Random | None = None,
     ) -> None:
         self._client_factory = client_factory
         self._handlers = list(handlers) if handlers is not None else _build_default_handlers()
+        self._pacing = pacing or GarminPacingConfig()
+        self._sleep = sleep or time.sleep
+        self._random = random_source or random.Random()
 
     @property
     def supported_endpoints(self) -> list[str]:
@@ -84,9 +183,14 @@ class GarminDataFetcher:
         else:
             client.login()
 
+        controller = _PacingController(self._pacing, self._sleep, self._random)
+        controller.after_login()
+        paced_client = _PacedGarminClient(client, controller)
+
         context = GarminFetchContext()
         results: list[EndpointResult] = []
-        errors: list[EndpointError] = []
+        retry_summary = RetrySummary()
+        error_map: dict[str, EndpointError] = {}
         request_metadata = _request_metadata(request)
 
         _log_event(
@@ -96,8 +200,20 @@ class GarminDataFetcher:
             request=request_metadata,
         )
 
-        for handler in self._handlers:
-            if request.includes(handler.name):
+        def run_pass(pass_index: int, permitted: set[str] | None) -> tuple[list[EndpointResult], dict[str, EndpointError], list[str]]:
+            controller.reset_between_endpoints()
+            pass_results: list[EndpointResult] = []
+            pass_errors: dict[str, EndpointError] = {}
+            pass_successes: list[str] = []
+
+            for handler in self._handlers:
+                if permitted is not None and handler.name not in permitted:
+                    continue
+                if not request.includes(handler.name):
+                    continue
+
+                controller.prepare_endpoint()
+
                 if observer:
                     observer(handler.name)
 
@@ -107,9 +223,10 @@ class GarminDataFetcher:
                     correlation_id,
                     request=request_metadata,
                     endpoint=handler.name,
+                    attempt=pass_index,
                 )
                 try:
-                    handler_results = handler.execute(client, request, context)
+                    handler_results = handler.execute(paced_client, request, context)
                 except Exception as exc:  # pragma: no cover - reliance on API stability
                     error = EndpointError(
                         endpoint=handler.name,
@@ -119,7 +236,7 @@ class GarminDataFetcher:
                             traceback.format_exception(type(exc), exc, exc.__traceback__)
                         ),
                     )
-                    errors.append(error)
+                    pass_errors[handler.name] = error
                     _log_event(
                         logging.ERROR,
                         "garmin.endpoint.error",
@@ -127,9 +244,11 @@ class GarminDataFetcher:
                         request=request_metadata,
                         endpoint=handler.name,
                         error_message=error.message,
+                        attempt=pass_index,
                     )
                 else:
-                    results.extend(handler_results)
+                    pass_results.extend(handler_results)
+                    pass_successes.append(handler.name)
                     _log_event(
                         logging.INFO,
                         "garmin.endpoint.success",
@@ -138,7 +257,55 @@ class GarminDataFetcher:
                         endpoint=handler.name,
                         result_count=len(handler_results),
                         scopes=[result.scope for result in handler_results],
+                        attempt=pass_index,
                     )
+
+            return pass_results, pass_errors, pass_successes
+
+        initial_results, initial_errors, _ = run_pass(0, None)
+        results.extend(initial_results)
+        error_map.update(initial_errors)
+
+        remaining = set(error_map.keys())
+        attempt_index = 1
+
+        while remaining and attempt_index <= self._pacing.retry_limit:
+            retry_targets = set(remaining)
+            retry_summary.scheduled += len(retry_targets)
+            _log_event(
+                logging.INFO,
+                "garmin.fetch.retry.start",
+                correlation_id,
+                request=request_metadata,
+                attempt=attempt_index,
+                endpoints=sorted(retry_targets),
+            )
+
+            pass_results, pass_errors, pass_successes = run_pass(attempt_index, retry_targets)
+            results.extend(pass_results)
+
+            for endpoint in pass_successes:
+                if endpoint in error_map:
+                    del error_map[endpoint]
+            retry_summary.succeeded += len(pass_successes)
+
+            for endpoint, err in pass_errors.items():
+                error_map[endpoint] = err
+
+            remaining = set(error_map.keys())
+            failed_this_attempt = len(remaining)
+            _log_event(
+                logging.INFO if failed_this_attempt == 0 else logging.WARNING,
+                "garmin.fetch.retry.completed",
+                correlation_id,
+                request=request_metadata,
+                attempt=attempt_index,
+                succeeded=len(pass_successes),
+                remaining=failed_this_attempt,
+            )
+            attempt_index += 1
+
+        retry_summary.failed = len(error_map)
 
         _log_event(
             logging.INFO,
@@ -146,10 +313,15 @@ class GarminDataFetcher:
             correlation_id,
             request=request_metadata,
             result_count=len(results),
-            error_count=len(errors),
+            error_count=len(error_map),
+            retries=_retry_summary_payload(retry_summary),
         )
 
-        return FetchOutcome(results=results, errors=errors)
+        return FetchOutcome(
+            results=results,
+            errors=list(error_map.values()),
+            retries=retry_summary,
+        )
 
 
 def _build_default_handlers() -> list[EndpointHandler]:
@@ -269,6 +441,14 @@ def _log_event(
         **{key: value for key, value in payload.items() if value is not None},
     }
     logger.log(level, json.dumps(record, default=str))
+
+
+def _retry_summary_payload(summary: RetrySummary) -> dict[str, int]:
+    return {
+        "scheduled": summary.scheduled,
+        "succeeded": summary.succeeded,
+        "failed": summary.failed,
+    }
 
 
 def _fetch_user_profile(

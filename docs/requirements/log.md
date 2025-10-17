@@ -93,3 +93,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-17 | REQ-F-20251014T120032-GS | Marked REQ-F-20251014T120032-GS done: Garmin fetch storage overwrites outputs and clears stale error files (approval: manual-review) | codex | implementation |
 | 2025-10-17 | REQ-F-20251014T120121-GR | Started implementation for REQ-F-20251014T120121-GR; related: REQ-F-20251014T120146-GT; non-functional: REQ-NF-20251010T151552-8U, REQ-NF-20251010T151535-UV, REQ-NF-000, REQ-NF-20251010T151543-IE | codex | implementation |
 | 2025-10-17 | REQ-F-20251014T120121-GR | Marked REQ-F-20251014T120121-GR done: Structured logging and resilient error handling verified (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-17 | REQ-F-20251014T120146-GT | Started implementation for REQ-F-20251014T120146-GT; non-functional: REQ-NF-20251010T151552-8U, REQ-NF-000, REQ-NF-20251010T151543-IE, REQ-NF-20251010T151535-UV | codex | implementation |
+| 2025-10-17 | REQ-F-20251014T120146-GT | Marked REQ-F-20251014T120146-GT done: Pacing and retry controls verified (approval: DEV-LOCAL) | codex | implementation |

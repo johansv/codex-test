@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 from datetime import date
 
 from agentlab.core.garmin import EndpointResult, GarminCredentials, GarminFetchRequest
-from agentlab.runners.garmin_fetcher import EndpointHandler, GarminDataFetcher
+from agentlab.runners.garmin_fetcher import (
+    EndpointHandler,
+    GarminDataFetcher,
+    GarminPacingConfig,
+)
 
 
 def test_supported_endpoints_matches_registry():
@@ -127,7 +132,20 @@ def test_fetch_invokes_requested_endpoints_in_order():
             super().__init__(*args, **kwargs)
             Factory.created = self
 
-    fetcher = GarminDataFetcher(client_factory=Factory, handlers=handlers)
+    pacing = GarminPacingConfig(
+        post_login_delay=0.0,
+        between_endpoints_delay=0.0,
+        pagination_delay=0.0,
+        jitter_ratio=0.0,
+        retry_limit=0,
+    )
+    fetcher = GarminDataFetcher(
+        client_factory=Factory,
+        handlers=handlers,
+        pacing=pacing,
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
     request = GarminFetchRequest(
         start_date=date(2024, 1, 1),
         end_date=date(2024, 1, 1),
@@ -156,7 +174,20 @@ def test_fetch_collects_errors(caplog):
         EndpointHandler(name="alpha", execute=failing_handler),
     ]
 
-    fetcher = GarminDataFetcher(client_factory=DummyGarmin, handlers=handlers)
+    pacing = GarminPacingConfig(
+        post_login_delay=0.0,
+        between_endpoints_delay=0.0,
+        pagination_delay=0.0,
+        jitter_ratio=0.0,
+        retry_limit=1,
+    )
+    fetcher = GarminDataFetcher(
+        client_factory=DummyGarmin,
+        handlers=handlers,
+        pacing=pacing,
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
     request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
     credentials = GarminCredentials(username="user", password="pass")
 
@@ -182,6 +213,108 @@ def test_fetch_collects_errors(caplog):
     ]
     error_events = [event for event in events if event["event"] == "garmin.endpoint.error"]
     assert error_events, "Expected garmin.endpoint.error log entry"
-    error_event = error_events[0]
-    assert error_event["correlation_id"] == "run-123"
-    assert error_event["endpoint"] == "alpha"
+    assert len(error_events) == 2  # initial attempt + retry
+    for error_event in error_events:
+        assert error_event["correlation_id"] == "run-123"
+        assert error_event["endpoint"] == "alpha"
+    assert outcome.retries.scheduled == 1
+    assert outcome.retries.succeeded == 0
+    assert outcome.retries.failed == 1
+
+
+def test_fetch_retries_failed_endpoint_once():
+    attempt_counter = 0
+
+    def flaky_handler(client: DummyGarmin, request: GarminFetchRequest, _context):
+        nonlocal attempt_counter
+        attempt_counter += 1
+        if attempt_counter == 1:
+            raise RuntimeError("temp failure")
+        return [
+            EndpointResult(
+                endpoint="alpha",
+                scope={"start": request.start_date.isoformat()},
+                payload={"value": 42},
+            )
+        ]
+
+    handlers = [EndpointHandler(name="alpha", execute=flaky_handler)]
+    pacing = GarminPacingConfig(
+        post_login_delay=0.0,
+        between_endpoints_delay=0.0,
+        pagination_delay=0.0,
+        jitter_ratio=0.0,
+        retry_limit=1,
+    )
+    fetcher = GarminDataFetcher(
+        client_factory=DummyGarmin,
+        handlers=handlers,
+        pacing=pacing,
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    assert attempt_counter == 2
+    assert [result.endpoint for result in outcome.results] == ["alpha"]
+    assert outcome.errors == []
+    assert outcome.retries.scheduled == 1
+    assert outcome.retries.succeeded == 1
+    assert outcome.retries.failed == 0
+
+
+def test_fetch_applies_configured_delays():
+    sleep_calls: list[float] = []
+
+    def fake_sleep(delay: float) -> None:
+        sleep_calls.append(delay)
+
+    class PacingDummy(DummyGarmin):
+        def call_alpha(self) -> None:
+            self.calls.append("call_alpha")
+
+        def fetch_page(self) -> dict[str, int]:
+            self.calls.append("fetch_page")
+            return {"page": len([name for name in self.calls if name == "fetch_page"])}
+
+    def alpha_handler(client: PacingDummy, request: GarminFetchRequest, _context):
+        client.call_alpha()
+        return [
+            EndpointResult(endpoint="alpha", scope={}, payload={"value": 1}),
+        ]
+
+    def beta_handler(client: PacingDummy, request: GarminFetchRequest, _context):
+        client.fetch_page()
+        client.fetch_page()
+        return [
+            EndpointResult(endpoint="beta", scope={}, payload={"value": 2}),
+        ]
+
+    handlers = [
+        EndpointHandler(name="alpha", execute=alpha_handler),
+        EndpointHandler(name="beta", execute=beta_handler),
+    ]
+    pacing = GarminPacingConfig(
+        post_login_delay=0.5,
+        between_endpoints_delay=0.2,
+        pagination_delay=0.1,
+        jitter_ratio=0.0,
+        retry_limit=0,
+    )
+    fetcher = GarminDataFetcher(
+        client_factory=PacingDummy,
+        handlers=handlers,
+        pacing=pacing,
+        sleep=fake_sleep,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    assert sleep_calls == [0.5, 0.2, 0.1]
+    assert [result.endpoint for result in outcome.results] == ["alpha", "beta"]

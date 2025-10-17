@@ -1,7 +1,7 @@
 """Core contracts for Garmin data collection workflows."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Iterable, Sequence
 
@@ -59,8 +59,18 @@ class EndpointError:
 
 
 @dataclass(slots=True)
+class RetrySummary:
+    """Track retry outcomes for a fetch run."""
+
+    scheduled: int = 0
+    succeeded: int = 0
+    failed: int = 0
+
+
+@dataclass(slots=True)
 class FetchOutcome:
     """Aggregate successful results and failures from a fetch run."""
 
     results: list[EndpointResult]
     errors: list[EndpointError]
+    retries: RetrySummary = field(default_factory=RetrySummary)

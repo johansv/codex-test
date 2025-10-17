@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=1, todo=1); Done: 23 (done=23); Retired: 0
+Todo: 1 (backlog=1); Done: 24 (done=24); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -46,6 +46,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
+## Done Requirements
+
 ### REQ-F-20251014T120146-GT: Account-safety execution policies
 - Owner: codex
 - Narrative: As a Garmin account holder, I want conservative pacing and retries so that the downloader avoids triggering rate limits or suspensions.
@@ -55,12 +57,10 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Each endpoint retries at most once after the first pass completes, using the same pacing controls.
   * Configuration surface exposes delay and retry settings for tuning without code changes.
 - Priority: high
-- Status: todo
-- Reason: Agreed scope for safety
-- Trace: prompts Garmin ingestion design discussion, tests none, commits none
+- Status: done
+- Reason: Pacing and retry controls verified
+- Trace: prompts Garmin ingestion design discussion, tests uv run pytest, commits none
 ---
-
-## Done Requirements
 
 ### REQ-F-20251014T120121-GR: Resilient error handling and logging
 - Owner: codex

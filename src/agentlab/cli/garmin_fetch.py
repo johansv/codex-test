@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover
 from dotenv import load_dotenv
 
 from agentlab.core.garmin import GarminCredentials, GarminFetchRequest
-from agentlab.runners.garmin_fetcher import GarminDataFetcher
+from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig
 from agentlab.utils.storage import GarminStorageWriter
 
 _DEFAULT_CONFIG_RELATIVE = Path("assets") / "config" / "garmin-endpoints.toml"
@@ -81,6 +81,36 @@ def build_parser() -> argparse.ArgumentParser:
         "--debug",
         action="store_true",
         help="Log each endpoint as it executes.",
+    )
+    parser.add_argument(
+        "--delay-post-login",
+        type=float,
+        default=5.0,
+        help="Seconds to wait after login before first endpoint (default: 5.0).",
+    )
+    parser.add_argument(
+        "--delay-between-endpoints",
+        type=float,
+        default=2.0,
+        help="Seconds to wait between endpoints (default: 2.0).",
+    )
+    parser.add_argument(
+        "--delay-pagination",
+        type=float,
+        default=1.0,
+        help="Seconds to wait between paginated API calls (default: 1.0).",
+    )
+    parser.add_argument(
+        "--delay-jitter",
+        type=float,
+        default=0.2,
+        help="Relative jitter applied to delays (0.2 => ±20%%; default: 0.2).",
+    )
+    parser.add_argument(
+        "--retry-limit",
+        type=int,
+        default=1,
+        help="Maximum number of retry passes for failed endpoints (default: 1).",
     )
     return parser
 
@@ -274,7 +304,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    fetcher = GarminDataFetcher()
+    pacing = GarminPacingConfig(
+        post_login_delay=args.delay_post_login,
+        between_endpoints_delay=args.delay_between_endpoints,
+        pagination_delay=args.delay_pagination,
+        jitter_ratio=args.delay_jitter,
+        retry_limit=args.retry_limit,
+    )
+    fetcher = GarminDataFetcher(pacing=pacing)
 
     if args.list_endpoints:
         for name in fetcher.supported_endpoints:
@@ -337,7 +374,11 @@ def main(argv: list[str] | None = None) -> int:
             {"endpoint": error.endpoint, "message": error.message}
             for error in outcome.errors
         ]
-        retry_summary = {"scheduled": 0, "succeeded": 0, "failed": 0}
+        retry_summary = {
+            "scheduled": outcome.retries.scheduled,
+            "succeeded": outcome.retries.succeeded,
+            "failed": outcome.retries.failed,
+        }
         _accumulate_retry_totals(retry_totals, retry_summary)
         any_success = any_success or bool(successes)
 
