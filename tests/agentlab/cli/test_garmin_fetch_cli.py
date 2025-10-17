@@ -16,6 +16,20 @@ from agentlab.core.garmin import (
 )
 
 
+def write_config(tmp_path: Path, *, enabled: list[str], disabled: list[str] | None = None) -> Path:
+    config_path = tmp_path / "endpoints.toml"
+    disabled = disabled or []
+    lines = [
+        "[defaults]",
+        f"enabled = {json.dumps(enabled)}",
+    ]
+    if disabled:
+        lines.append(f"disabled = {json.dumps(disabled)}")
+    lines.append("")
+    config_path.write_text("\n".join(lines), encoding="utf-8")
+    return config_path
+
+
 class StubFetcher:
     def __init__(self, names: list[str], outcomes: list[FetchOutcome]) -> None:
         self._names = names
@@ -38,12 +52,9 @@ class StubFetcher:
         self.requests.append(request)
         outcome = self._outcomes.pop(0)
         if observer:
-            for result in outcome.results:
-                observer(result.endpoint)
-                self.observed.append(result.endpoint)
-            for error in outcome.errors:
-                observer(error.endpoint)
-                self.observed.append(error.endpoint)
+            for name in list(request.endpoints or self._names):
+                observer(name)
+                self.observed.append(name)
         return outcome
 
 
@@ -71,6 +82,8 @@ def test_cli_runs_fetch_writes_output(
     result = EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})
     outcome = FetchOutcome(results=[result], errors=[])
     fetcher = StubFetcher(["alpha"], [outcome])
+    config_path = write_config(tmp_path, enabled=["alpha"])
+    output_dir = tmp_path / "out"
 
     monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
     monkeypatch.setenv("GARMIN_PASSWORD", "secret")
@@ -80,16 +93,16 @@ def test_cli_runs_fetch_writes_output(
         [
             "--date",
             "2024-01-01",
-            "--endpoint",
-            "alpha",
             "--output-dir",
-            str(tmp_path),
+            str(output_dir),
+            "--config",
+            str(config_path),
         ]
     )
 
     captured = capsys.readouterr()
     summary = json.loads(captured.out)
-    output_path = tmp_path / "2024-01-01" / "alpha.json"
+    output_path = output_dir / "2024-01-01" / "alpha.json"
 
     assert exit_code == 0
     assert summary == [{"date": "2024-01-01", "saved": ["alpha"], "errors": []}]
@@ -104,14 +117,11 @@ def test_cli_writes_error_files(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    error = EndpointError(
-        endpoint="beta",
-        scope={},
-        message="boom",
-        traceback="trace",
-    )
+    error = EndpointError(endpoint="beta", scope={}, message="boom", traceback="trace")
     outcome = FetchOutcome(results=[], errors=[error])
     fetcher = StubFetcher(["beta"], [outcome])
+    config_path = write_config(tmp_path, enabled=["beta"])
+    output_dir = tmp_path / "out"
 
     monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
     monkeypatch.setenv("GARMIN_PASSWORD", "secret")
@@ -121,16 +131,16 @@ def test_cli_writes_error_files(
         [
             "--date",
             "2024-01-02",
-            "--endpoint",
-            "beta",
             "--output-dir",
-            str(tmp_path),
+            str(output_dir),
+            "--config",
+            str(config_path),
         ]
     )
 
     captured = capsys.readouterr()
     summary = json.loads(captured.out)
-    error_path = tmp_path / "2024-01-02" / "beta.error.json"
+    error_path = output_dir / "2024-01-02" / "beta.error.json"
     payload = json.loads(error_path.read_text(encoding="utf-8"))
 
     assert summary == [{"date": "2024-01-02", "saved": [], "errors": ["beta"]}]
@@ -145,7 +155,9 @@ def test_cli_debug_logs_endpoints(
 ) -> None:
     result = EndpointResult(endpoint="gamma", scope={}, payload={"value": 3})
     outcome = FetchOutcome(results=[result], errors=[])
-    fetcher = StubFetcher(["gamma"], [outcome])
+    fetcher = StubFetcher(["alpha", "gamma"], [outcome])
+    config_path = write_config(tmp_path, enabled=["alpha"])
+    output_dir = tmp_path / "out"
 
     monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
     monkeypatch.setenv("GARMIN_PASSWORD", "secret")
@@ -155,10 +167,12 @@ def test_cli_debug_logs_endpoints(
         [
             "--date",
             "2024-01-03",
-            "--endpoint",
-            "gamma",
             "--output-dir",
-            str(tmp_path),
+            str(output_dir),
+            "--config",
+            str(config_path),
+            "--include",
+            "gamma",
             "--debug",
         ]
     )
@@ -167,18 +181,88 @@ def test_cli_debug_logs_endpoints(
     summary = json.loads(captured.out)
 
     assert exit_code == 0
+    assert "[garmin] 2024-01-03 -> alpha" in captured.err
     assert "[garmin] 2024-01-03 -> gamma" in captured.err
     assert summary == [{"date": "2024-01-03", "saved": ["gamma"], "errors": []}]
-    assert fetcher.observed == ["gamma"]
+    assert fetcher.observed == ["alpha", "gamma"]
 
 
-def test_cli_rejects_unknown_endpoint(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_cli_rejects_unknown_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     fetcher = StubFetcher(["alpha"], [])
+    config_path = write_config(tmp_path, enabled=["alpha"])
+
     monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
     monkeypatch.setenv("GARMIN_PASSWORD", "secret")
     monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", lambda: fetcher)
 
     with pytest.raises(SystemExit) as excinfo:
-        garmin_fetch.main(["--date", "2024-01-01", "--endpoint", "unknown"])
+        garmin_fetch.main(
+            [
+                "--date",
+                "2024-01-01",
+                "--config",
+                str(config_path),
+                "--include",
+                "unknown",
+            ]
+        )
 
     assert "Unknown endpoint(s)" in str(excinfo.value)
+
+
+def test_cli_blocks_disabled_endpoint(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    fetcher = StubFetcher(["alpha", "beta"], [])
+    config_path = write_config(tmp_path, enabled=["alpha"], disabled=["beta"])
+
+    monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
+    monkeypatch.setenv("GARMIN_PASSWORD", "secret")
+    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", lambda: fetcher)
+
+    with pytest.raises(SystemExit) as excinfo:
+        garmin_fetch.main(
+            [
+                "--date",
+                "2024-01-01",
+                "--config",
+                str(config_path),
+                "--include",
+                "beta",
+            ]
+        )
+
+    assert "disabled via configuration" in str(excinfo.value)
+
+
+def test_cli_exclude_removes_default(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    outcome = FetchOutcome(results=[], errors=[])
+    fetcher = StubFetcher(["alpha", "beta"], [outcome])
+    config_path = write_config(tmp_path, enabled=["alpha", "beta"])
+    output_dir = tmp_path / "out"
+
+    monkeypatch.setenv("GARMIN_EMAIL", "user@example.com")
+    monkeypatch.setenv("GARMIN_PASSWORD", "secret")
+    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", lambda: fetcher)
+
+    garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-01",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(output_dir),
+            "--exclude",
+            "alpha",
+        ]
+    )
+
+    assert fetcher.requests[0].endpoints == ["beta"]

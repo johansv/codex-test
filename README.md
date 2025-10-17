@@ -55,6 +55,13 @@ The hosted runner must mount this repository and have dependencies installed so
   entries when needed.
 - `uv run agentlab-slice --help` � stream specific requirement entries by ID/tag with a compact summary.
 
+## Garmin Fetch CLI
+
+- Default endpoint selections live in `assets/config/garmin-endpoints.toml`. Adjust the `enabled` list to change the baseline run or add a `disabled` entry to block specific endpoints.
+- Use `--config` to point at an alternate TOML file, `--include`/`--exclude` to tweak endpoints for a single execution, and `--debug` to print the endpoint sequence.
+- Output files land in `./out/<YYYY-MM-DD>/` by default; override with `--output-dir`.
+- Example: `uv run agentlab-garmin-fetch --start-date 2024-01-01 --end-date 2024-01-03 --include sleep --exclude workouts --debug`
+
 ## Project Layout
 
 ```

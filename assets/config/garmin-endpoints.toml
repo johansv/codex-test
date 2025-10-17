@@ -1,0 +1,14 @@
+[defaults]
+enabled = [
+  "user-profile",
+  "user-summary",
+  "stats",
+  "sleep",
+  "activities",
+  "activity-detail",
+  "workouts",
+  "workout-detail",
+]
+disabled = [
+  "activity-download",
+]

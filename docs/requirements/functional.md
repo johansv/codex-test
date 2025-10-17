@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 4 (backlog=1, todo=3); Done: 21 (done=21); Retired: 0
+Todo: 3 (backlog=1, todo=2); Done: 22 (done=22); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -46,20 +46,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
-### REQ-F-20251014T120058-GC: Endpoint configuration controls
-- Owner: codex
-- Narrative: As a maintainer, I want configurable defaults and overrides for Garmin endpoints so that I can tailor downloads without rewriting code.
-- Acceptance Criteria:
-  * Configuration file defines default endpoint enablement and is loaded automatically by the CLI.
-  * Command line flags include and exclude endpoints explicitly, validating names against the supported list.
-  * Unknown or disabled endpoint requests report actionable errors without starting downloads.
-  * Documentation explains adjusting defaults and invoking ad hoc endpoint subsets.
-- Priority: medium
-- Status: todo
-- Reason: Agreed scope for configurability
-- Trace: prompts Garmin ingestion design discussion, tests none, commits none
----
-
 ### REQ-F-20251014T120121-GR: Resilient error handling and logging
 - Owner: codex
 - Narrative: As an operator, I want failures logged per endpoint without halting runs so that I still harvest partial Garmin data with useful diagnostics.
@@ -89,6 +75,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251014T120058-GC: Endpoint configuration controls
+- Owner: codex
+- Narrative: As a maintainer, I want configurable defaults and overrides for Garmin endpoints so that I can tailor downloads without rewriting code.
+- Acceptance Criteria:
+  * Configuration file defines default endpoint enablement and is loaded automatically by the CLI.
+  * Command line flags include and exclude endpoints explicitly, validating names against the supported list.
+  * Unknown or disabled endpoint requests report actionable errors without starting downloads.
+  * Documentation explains adjusting defaults and invoking ad hoc endpoint subsets.
+- Priority: medium
+- Status: done
+- Reason: Garmin fetch CLI honors endpoint config with include/exclude flags
+- Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
+---
 
 ### REQ-F-20251014T120032-GS: Date-partitioned storage layout
 - Owner: codex

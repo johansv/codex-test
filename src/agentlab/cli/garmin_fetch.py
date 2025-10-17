@@ -9,11 +9,18 @@ from datetime import date
 from pathlib import Path
 from typing import Sequence
 
+try:  # Python 3.11+
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore[no-redef]
+
 from dotenv import load_dotenv
 
 from agentlab.core.garmin import GarminCredentials, GarminFetchRequest
 from agentlab.runners.garmin_fetcher import GarminDataFetcher
 from agentlab.utils.storage import GarminStorageWriter
+
+_DEFAULT_CONFIG_RELATIVE = Path("assets") / "config" / "garmin-endpoints.toml"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -33,11 +40,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="End date for collection (YYYY-MM-DD).",
     )
     parser.add_argument(
-        "--endpoint",
-        dest="endpoints",
+        "--include",
+        dest="include",
         action="append",
         default=None,
-        help="Endpoint identifier to collect (repeat to specify more than one).",
+        help="Explicitly include an endpoint (repeat to specify more than one).",
+    )
+    parser.add_argument(
+        "--exclude",
+        dest="exclude",
+        action="append",
+        default=None,
+        help="Exclude an endpoint from the run (repeat to specify more than one).",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Endpoint configuration file (default: assets/config/garmin-endpoints.toml).",
     )
     parser.add_argument(
         "--list-endpoints",
@@ -94,18 +114,123 @@ def _load_credentials(args: argparse.Namespace) -> GarminCredentials:
     return GarminCredentials(username=username, password=password, mfa_code=args.mfa_code)
 
 
-def _resolve_endpoints(
+def _default_config_path() -> Path:
+    current = Path(__file__).resolve()
+    for candidate_root in (current.parent, *current.parents):
+        candidate = candidate_root / _DEFAULT_CONFIG_RELATIVE
+        if candidate.exists():
+            return candidate
+    raise SystemExit(
+        f"Could not locate default endpoint config at {_DEFAULT_CONFIG_RELATIVE}"
+    )
+
+
+def _load_endpoint_defaults(
     fetcher: GarminDataFetcher,
-    endpoints: Sequence[str] | None,
-) -> Sequence[str] | None:
-    if endpoints is None:
-        return None
+    config_path: Path | None,
+) -> tuple[list[str], set[str]]:
+    path = config_path if config_path is not None else _default_config_path()
+    if not path.exists():
+        raise SystemExit(f"Endpoint config not found: {path}")
 
     supported = set(fetcher.supported_endpoints)
-    unknown = [entry for entry in endpoints if entry not in supported]
-    if unknown:
-        raise SystemExit(f"Unknown endpoint(s): {', '.join(sorted(unknown))}")
-    return list(dict.fromkeys(endpoints))
+    with path.open("rb") as handle:
+        data = tomllib.load(handle)
+
+    defaults_section = data.get("defaults", {})
+    enabled = defaults_section.get("enabled")
+    if not isinstance(enabled, list) or not all(isinstance(name, str) for name in enabled):
+        raise SystemExit("Endpoint config must define defaults.enabled as a list of strings.")
+    if not enabled:
+        raise SystemExit("Endpoint config defaults.enabled must contain at least one entry.")
+    disabled = defaults_section.get("disabled", [])
+    if disabled and (
+        not isinstance(disabled, list) or not all(isinstance(name, str) for name in disabled)
+    ):
+        raise SystemExit(
+            "Endpoint config defaults.disabled must be a list of strings when provided."
+        )
+
+    duplicates = [name for name in enabled if enabled.count(name) > 1]
+    if duplicates:
+        duplicate_labels = ", ".join(sorted(set(duplicates)))
+        raise SystemExit(
+            f"Endpoint config defaults.enabled contains duplicates: {duplicate_labels}"
+        )
+
+    unknown_defaults = [name for name in enabled if name not in supported]
+    if unknown_defaults:
+        unknown_labels = ", ".join(sorted(unknown_defaults))
+        raise SystemExit(
+            f"Endpoint config references unsupported endpoint(s): {unknown_labels}"
+        )
+
+    disabled_set = set(disabled)
+    unknown_disabled = [name for name in disabled_set if name not in supported]
+    if unknown_disabled:
+        raise SystemExit(
+            f"Endpoint config disabled list references unsupported endpoint(s): "
+            f"{', '.join(sorted(unknown_disabled))}"
+        )
+
+    overlap = [name for name in enabled if name in disabled_set]
+    if overlap:
+        raise SystemExit(
+            f"Endpoint config lists the same endpoint as enabled and disabled: "
+            f"{', '.join(sorted(overlap))}"
+        )
+
+    return list(enabled), disabled_set
+
+
+def _select_endpoints(
+    fetcher: GarminDataFetcher,
+    defaults: list[str],
+    disabled: set[str],
+    include: Sequence[str] | None,
+    exclude: Sequence[str] | None,
+) -> list[str]:
+    supported = set(fetcher.supported_endpoints)
+
+    def _normalise(values: Sequence[str] | None) -> list[str]:
+        result: list[str] = []
+        if not values:
+            return result
+        for entry in values:
+            item = entry.strip()
+            if item and item not in result:
+                result.append(item)
+        return result
+
+    include = _normalise(include)
+    exclude = _normalise(exclude)
+
+    def _validate(names: Sequence[str]) -> None:
+        unknown = [name for name in names if name not in supported]
+        if unknown:
+            raise SystemExit(f"Unknown endpoint(s): {', '.join(sorted(unknown))}")
+
+    _validate(include)
+    _validate(exclude)
+
+    disallowed = [name for name in include if name in disabled]
+    if disallowed:
+        raise SystemExit(
+            f"Endpoint(s) disabled via configuration: {', '.join(sorted(disallowed))}"
+        )
+
+    selection: list[str] = list(dict.fromkeys(defaults))
+    for name in include:
+        if name not in selection:
+            selection.append(name)
+
+    exclude_set = set(exclude)
+    selection = [name for name in selection if name not in exclude_set]
+
+    if not selection:
+        raise SystemExit("No endpoints selected after applying include/exclude rules.")
+
+    return selection
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -121,7 +246,8 @@ def main(argv: list[str] | None = None) -> int:
 
     start, end = _resolve_range(args)
     credentials = _load_credentials(args)
-    endpoints = _resolve_endpoints(fetcher, args.endpoints)
+    defaults, disabled = _load_endpoint_defaults(fetcher, args.config)
+    endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
     output_root = Path(args.output_dir)
     storage = GarminStorageWriter(output_root)
 
@@ -145,8 +271,8 @@ def main(argv: list[str] | None = None) -> int:
         summary.append(
             {
                 "date": day.isoformat(),
-                "saved": [result.endpoint for result in outcome.results],
-                "errors": [error.endpoint for error in outcome.errors],
+                "saved": list(dict.fromkeys(result.endpoint for result in outcome.results)),
+                "errors": list(dict.fromkeys(error.endpoint for error in outcome.errors)),
             }
         )
 
