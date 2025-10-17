@@ -51,7 +51,7 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
         results=[
             EndpointResult(
                 endpoint="activity-download",
-                scope={"format": "TCX"},
+                scope={"activityId": 123, "format": "TCX"},
                 payload=payload,
             )
         ],
@@ -60,7 +60,7 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
 
     writer.store(date(2024, 1, 1), outcome)
 
-    path = tmp_path / "2024-01-01" / "activity-download.tcx"
+    path = tmp_path / "2024-01-01" / "activity-download_123.tcx"
     assert path.read_bytes() == payload
 
 
@@ -123,4 +123,30 @@ def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
         ),
     )
 
+    assert not error_path.exists()
+
+
+def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path)
+    day = date(2024, 1, 1)
+    result = EndpointResult(
+        endpoint="activity-detail",
+        scope={"activityId": 456},
+        payload={"detail": "value"},
+    )
+    error = EndpointError(
+        endpoint="activity-detail",
+        scope={"activityId": 456},
+        message="failed",
+        traceback="traceback",
+    )
+
+    writer.store(day, FetchOutcome(results=[], errors=[error]))
+    error_path = tmp_path / "2024-01-01" / "activity-detail_456.error.json"
+    assert error_path.exists()
+
+    writer.store(day, FetchOutcome(results=[result], errors=[]))
+
+    data_path = tmp_path / "2024-01-01" / "activity-detail_456.json"
+    assert json.loads(data_path.read_text(encoding="utf-8")) == {"detail": "value"}
     assert not error_path.exists()

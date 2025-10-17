@@ -393,3 +393,72 @@ def test_fetch_logs_login_failure(caplog):
     assert failure_events
     assert failure_events[0]["error_message"] == "bad credentials"
     assert failure_events[0]["method"] == "login"
+
+
+def test_activity_detail_handlers_emit_activity_id():
+    class ActivityClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.activities_payload = [
+                {"activityId": 101},
+                {"activityId": 202},
+            ]
+
+        def get_activities(self, _start: int, _limit: int) -> list[dict[str, int]]:
+            return self.activities_payload
+
+        def get_activity(self, activity_id: str) -> dict[str, str]:
+            return {"activityId": activity_id, "detail": "ok"}
+
+    def activities_handler(
+        client: ActivityClient,
+        request: GarminFetchRequest,
+        context,
+    ) -> list[EndpointResult]:
+        payload = client.get_activities(0, 100)
+        context.activities = payload
+        return [EndpointResult(endpoint="activities", scope={}, payload=payload)]
+
+    def detail_handler(
+        client: ActivityClient,
+        request: GarminFetchRequest,
+        context,
+    ) -> list[EndpointResult]:
+        results: list[EndpointResult] = []
+        for activity in context.activities:
+            activity_id = str(activity["activityId"])
+            payload = client.get_activity(activity_id)
+            results.append(
+                EndpointResult(
+                    endpoint="activity-detail",
+                    scope={"activityId": activity_id},
+                    payload=payload,
+                )
+            )
+        return results
+
+    handlers = [
+        EndpointHandler(name="activities", execute=activities_handler),
+        EndpointHandler(name="activity-detail", execute=detail_handler),
+    ]
+    fetcher = GarminDataFetcher(
+        client_factory=ActivityClient,
+        handlers=handlers,
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    assert len(outcome.results) == 3  # 1 activities + 2 detail entries
+    detail_results = [result for result in outcome.results if result.endpoint == "activity-detail"]
+    assert [result.scope["activityId"] for result in detail_results] == ["101", "202"]

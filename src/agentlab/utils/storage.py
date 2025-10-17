@@ -27,7 +27,7 @@ class GarminStorageWriter:
             payload = self._serialise_payload(result)
             target_path = day_dir / filename
             self._write_atomic(target_path, payload)
-            error_path = day_dir / f"{result.endpoint}.error.json"
+            error_path = day_dir / self._error_filename(result.endpoint, result.scope)
             if error_path.exists():
                 error_path.unlink()
 
@@ -35,7 +35,7 @@ class GarminStorageWriter:
             self._write_error(day_dir, error)
 
     def _write_error(self, day_dir: Path, error: EndpointError) -> None:
-        path = day_dir / f"{error.endpoint}.error.json"
+        path = day_dir / self._error_filename(error.endpoint, error.scope)
         content = json.dumps(
             {
                 "endpoint": error.endpoint,
@@ -59,7 +59,8 @@ class GarminStorageWriter:
 
     def _result_filename(self, result: EndpointResult) -> str:
         extension = self._determine_extension(result)
-        return f"{result.endpoint}.{extension}"
+        basename = self._compose_basename(result.endpoint, result.scope)
+        return f"{basename}.{extension}"
 
     def _determine_extension(self, result: EndpointResult) -> str:
         payload = result.payload
@@ -73,6 +74,16 @@ class GarminStorageWriter:
         if isinstance(payload, str):
             return "txt"
         return "json"
+
+    def _compose_basename(self, endpoint: str, scope: dict[str, str | int]) -> str:
+        activity_id = scope.get("activityId")
+        if activity_id is not None:
+            return f"{endpoint}_{activity_id}"
+        return endpoint
+
+    def _error_filename(self, endpoint: str, scope: dict[str, str | int]) -> str:
+        basename = self._compose_basename(endpoint, scope)
+        return f"{basename}.error.json"
 
     @staticmethod
     def _write_atomic(path: Path, data: bytes) -> None:

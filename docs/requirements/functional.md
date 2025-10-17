@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 25 (done=25); Retired: 0
+Todo: 1 (backlog=1); Done: 26 (done=26); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251017T164320-L0: Activity detail pagination and naming fix
+- Owner: codex
+- Narrative: As an operator, I want the Garmin fetcher to iterate activity-detail endpoints per activity with IDs propagated so that long runs don’t hang and outputs stay uniquely traceable.
+- Acceptance Criteria:
+  * Activity detail endpoints iterate exactly once per activity by passing activityId
+  * Outputs for activity-centric endpoints append _<activityId> to filenames and error files
+  * Regression tests cover multiple activities and filename uniqueness
+- Priority: high
+- Status: done
+- Reason: Activity detail endpoints iterate per activity with unique filenames
+- Trace: prompts Activity detail hang report, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251017T162547-59: Garmin CLI job diagnostics logging
 - Owner: codex
