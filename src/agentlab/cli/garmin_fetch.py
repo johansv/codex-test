@@ -16,7 +16,7 @@ try:  # Python 3.11+
 except ModuleNotFoundError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from agentlab.core.garmin import GarminCredentials, GarminFetchRequest
 from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig
@@ -139,7 +139,11 @@ def _resolve_range(args: argparse.Namespace) -> tuple[date, date]:
 
 
 def _load_credentials(args: argparse.Namespace) -> GarminCredentials:
-    load_dotenv()
+    dotenv_path = find_dotenv(usecwd=True)
+    if dotenv_path:
+        load_dotenv(dotenv_path=dotenv_path, override=False)
+    else:
+        load_dotenv()
     username = os.getenv("GARMIN_EMAIL")
     password = os.getenv("GARMIN_PASSWORD")
     if not username or not password:

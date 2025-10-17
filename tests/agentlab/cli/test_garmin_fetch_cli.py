@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -173,3 +174,52 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     ]
     failure_events = [event for event in events if event["event"] == "garmin.cli.run.failed"]
     assert failure_events, "Expected garmin.cli.run.failed log entry"
+
+
+def test_main_loads_credentials_from_dotenv(tmp_path, monkeypatch, capsys):
+    StubFetcher.outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    instances: list[StubFetcher] = []
+
+    def factory(*args, **kwargs) -> StubFetcher:
+        instance = StubFetcher(*args, **kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+
+    config_path = tmp_path / "config.toml"
+    _write_config(config_path)
+
+    env_path = tmp_path / ".env"
+    env_path.write_text(
+        "GARMIN_EMAIL=dotenv@example.com\nGARMIN_PASSWORD=from-dotenv\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("GARMIN_EMAIL", raising=False)
+    monkeypatch.delenv("GARMIN_PASSWORD", raising=False)
+
+    exit_code = garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-03",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    summary = json.loads(captured.out)
+    assert summary[0]["successes"] == ["alpha"]
+    assert exit_code == 0
+    assert os.getenv("GARMIN_EMAIL") == "dotenv@example.com"
+    assert os.getenv("GARMIN_PASSWORD") == "from-dotenv"
+    monkeypatch.delenv("GARMIN_EMAIL", raising=False)
+    monkeypatch.delenv("GARMIN_PASSWORD", raising=False)

@@ -112,13 +112,13 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Owner: codex
 - Narrative: As a data owner, I want a CLI that authenticates to Garmin Connect and fetches every explicit 0.2.30 endpoint so that my Health Coach AI receives complete daily data.
 - Acceptance Criteria:
-  * CLI reads Garmin credentials from environment variables and signs in without interactive prompts.
+  * CLI reads Garmin credentials from environment variables (or a colocated `.env` file) and signs in without interactive prompts.
   * Program pulls every explicitly enumerated garminconnect 0.2.30 data endpoint sequentially.
   * Execution supports --date for a single day or --start-date/--end-date for ranges plus endpoint subset flags.
   * Implementation uses direct endpoint calls mirroring project demos with no reflection-based dispatch.
 - Priority: high
 - Status: done
-- Reason: Garmin fetch CLI authenticates, enumerates endpoints, and supports range filtering
+- Reason: CLI now honours dotenv fallback for credentials
 - Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/cli/test_garmin_fetch_cli.py; tests/agentlab/runners/test_garmin_fetcher.py, commits none
 ---
 
