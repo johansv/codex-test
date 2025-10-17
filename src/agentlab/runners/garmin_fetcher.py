@@ -1,13 +1,20 @@
 """Runtime helpers for collecting Garmin Connect data."""
 from __future__ import annotations
 
+import traceback
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from garminconnect import Garmin
 
-from agentlab.core.garmin import EndpointResult, GarminCredentials, GarminFetchRequest
+from agentlab.core.garmin import (
+    EndpointError,
+    EndpointResult,
+    FetchOutcome,
+    GarminCredentials,
+    GarminFetchRequest,
+)
 
 
 @dataclass(slots=True)
@@ -55,7 +62,8 @@ class GarminDataFetcher:
         self,
         credentials: GarminCredentials,
         request: GarminFetchRequest,
-    ) -> list[EndpointResult]:
+        observer: Callable[[str], None] | None = None,
+    ) -> FetchOutcome:
         """Authenticate and pull data for the requested endpoints."""
 
         client = self._client_factory(
@@ -72,12 +80,29 @@ class GarminDataFetcher:
 
         context = GarminFetchContext()
         results: list[EndpointResult] = []
+        errors: list[EndpointError] = []
 
         for handler in self._handlers:
             if request.includes(handler.name):
-                results.extend(handler.execute(client, request, context))
+                if observer:
+                    observer(handler.name)
+                try:
+                    handler_results = handler.execute(client, request, context)
+                except Exception as exc:  # pragma: no cover - reliance on API stability
+                    errors.append(
+                        EndpointError(
+                            endpoint=handler.name,
+                            scope={},
+                            message=str(exc),
+                            traceback="".join(
+                                traceback.format_exception(type(exc), exc, exc.__traceback__)
+                            ),
+                        )
+                    )
+                else:
+                    results.extend(handler_results)
 
-        return results
+        return FetchOutcome(results=results, errors=errors)
 
 
 def _build_default_handlers() -> list[EndpointHandler]:

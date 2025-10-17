@@ -133,11 +133,36 @@ def test_fetch_invokes_requested_endpoints_in_order():
     )
     credentials = GarminCredentials(username="user", password="pass")
 
-    results = fetcher.fetch(credentials, request)
+    observed: list[str] = []
+    outcome = fetcher.fetch(credentials, request, observer=observed.append)
 
-    assert [result.endpoint for result in results] == ["beta", "gamma"]
-    assert results[0].payload == {"value": 2}
-    assert results[1].payload == {"value": 3}
+    assert [result.endpoint for result in outcome.results] == ["beta", "gamma"]
+    assert outcome.results[0].payload == {"value": 2}
+    assert outcome.results[1].payload == {"value": 3}
+    assert outcome.errors == []
+    assert observed == ["beta", "gamma"]
 
     assert Factory.created is not None
     assert Factory.created.calls == ["login", "beta", "gamma"]
+
+
+def test_fetch_collects_errors():
+    def failing_handler(client: DummyGarmin, request: GarminFetchRequest, _context):
+        raise RuntimeError("boom")
+
+    handlers = [
+        EndpointHandler(name="alpha", execute=failing_handler),
+    ]
+
+    fetcher = GarminDataFetcher(client_factory=DummyGarmin, handlers=handlers)
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    assert outcome.results == []
+    assert len(outcome.errors) == 1
+    error = outcome.errors[0]
+    assert error.endpoint == "alpha"
+    assert "boom" in error.message
+    assert "RuntimeError" in error.traceback

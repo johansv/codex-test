@@ -46,3 +46,21 @@ class EndpointResult:
     endpoint: str
     scope: dict[str, str | int]
     payload: object
+
+
+@dataclass(slots=True)
+class EndpointError:
+    """Capture details about an endpoint invocation failure."""
+
+    endpoint: str
+    scope: dict[str, str | int]
+    message: str
+    traceback: str
+
+
+@dataclass(slots=True)
+class FetchOutcome:
+    """Aggregate successful results and failures from a fetch run."""
+
+    results: list[EndpointResult]
+    errors: list[EndpointError]

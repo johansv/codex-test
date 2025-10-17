@@ -6,12 +6,14 @@ import json
 import os
 import sys
 from datetime import date
+from pathlib import Path
 from typing import Sequence
 
 from dotenv import load_dotenv
 
 from agentlab.core.garmin import GarminCredentials, GarminFetchRequest
 from agentlab.runners.garmin_fetcher import GarminDataFetcher
+from agentlab.utils.storage import GarminStorageWriter
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -46,6 +48,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--mfa-code",
         default=None,
         help="TOTP or MFA code when required for login (default: None).",
+    )
+    parser.add_argument(
+       "--output-dir",
+        default="out",
+        help="Directory where fetched data is stored (default: ./out).",
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Log each endpoint as it executes.",
     )
     return parser
 
@@ -110,18 +122,33 @@ def main(argv: list[str] | None = None) -> int:
     start, end = _resolve_range(args)
     credentials = _load_credentials(args)
     endpoints = _resolve_endpoints(fetcher, args.endpoints)
+    output_root = Path(args.output_dir)
+    storage = GarminStorageWriter(output_root)
 
-    request = GarminFetchRequest(start_date=start, end_date=end, endpoints=endpoints)
-    results = fetcher.fetch(credentials, request)
+    summary: list[dict[str, object]] = []
+    days = list(GarminFetchRequest(start_date=start, end_date=end).iter_dates())
+    for day in days:
+        day_request = GarminFetchRequest(start_date=day, end_date=day, endpoints=endpoints)
 
-    summary = [
-        {
-            "endpoint": item.endpoint,
-            "scope": item.scope,
-            "payload_type": type(item.payload).__name__,
-        }
-        for item in results
-    ]
+        observer = None
+        if args.debug:
+            day_str = day.isoformat()
+
+            def _observer(endpoint: str, *, _day=day_str) -> None:
+                print(f"[garmin] {_day} -> {endpoint}", file=sys.stderr)
+
+            observer = _observer
+
+        outcome = fetcher.fetch(credentials, day_request, observer=observer)
+        storage.store(day, outcome)
+
+        summary.append(
+            {
+                "date": day.isoformat(),
+                "saved": [result.endpoint for result in outcome.results],
+                "errors": [error.endpoint for error in outcome.errors],
+            }
+        )
 
     json.dump(summary, sys.stdout, indent=2)
     print()

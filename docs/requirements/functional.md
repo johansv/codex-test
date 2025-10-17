@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 5 (backlog=1, todo=4); Done: 20 (done=20); Retired: 0
+Todo: 4 (backlog=1, todo=3); Done: 21 (done=21); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -44,20 +44,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: backlog
 - Reason: Needs prioritization
 - Trace: prompts R16, tests none, commits none
----
-
-### REQ-F-20251014T120032-GS: Date-partitioned storage layout
-- Owner: codex
-- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
-- Acceptance Criteria:
-  * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
-  * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
-  * Failures emit <endpoint>.error.json containing structured metadata and full stack trace.
-  * Re-running for the same dates replaces prior files without leaving partial artifacts.
-- Priority: high
-- Status: todo
-- Reason: Agreed scope for storage layout
-- Trace: prompts Garmin ingestion design discussion, tests none, commits none
 ---
 
 ### REQ-F-20251014T120058-GC: Endpoint configuration controls
@@ -103,6 +89,23 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251014T120032-GS: Date-partitioned storage layout
+- Owner: codex
+- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
+- Acceptance Criteria:
+  * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
+  * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
+  * Failures emit <endpoint>.error.json containing structured metadata and full stack trace.
+  * Re-running for the same dates replaces prior files without leaving partial artifacts.
+  * CLI defaults to writing under ./out but accepts a configurable output directory argument.
+  * Date ranges are processed one day at a time with isolated per-date folders.
+  * CLI exposes a debug mode that logs each endpoint as it executes.
+- Priority: high
+- Status: done
+- Reason: Garmin fetch CLI writes per-day outputs with atomic storage and debug support
+- Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/utils/test_storage.py; tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
+---
 
 ### REQ-F-20251014T120001-GA: Garmin data session fetcher
 - Owner: codex
