@@ -1,7 +1,7 @@
 # Non-Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 3 (done=3); Retired: 0
+Todo: 1 (backlog=1); Done: 4 (done=4); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Track quality attributes, constraints, and operational expectations here.
@@ -44,6 +44,17 @@ so the catalog retains history.
 ---
 
 ## Done Requirements
+
+### REQ-NF-20251017T154134-DZ: Garmin Fetch CLI documentation refresh
+- Owner: codex
+- Category: documentation
+- Description: Document pacing controls, retry behaviour, and runtime expectations for the Garmin Fetch CLI.
+- Measurement: README and related docs cover pacing flags, retries, env vars, and logging signals with updated examples.
+- Priority: medium
+- Status: done
+- Reason: Garmin CLI documentation now covers pacing, retries, and observability
+- Trace: prompts Garmin documentation sync request, tests Documentation review, scripts none, monitors none
+---
 
 ### REQ-NF-20251010T151552-8U: Scoped requirement streaming in CLI
   - Owner: codex

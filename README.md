@@ -57,10 +57,15 @@ The hosted runner must mount this repository and have dependencies installed so
 
 ## Garmin Fetch CLI
 
-- Default endpoint selections live in `assets/config/garmin-endpoints.toml`. Adjust the `enabled` list to change the baseline run or add a `disabled` entry to block specific endpoints.
-- Use `--config` to point at an alternate TOML file, `--include`/`--exclude` to tweak endpoints for a single execution, and `--debug` to print the endpoint sequence.
-- Output files land in `./out/<YYYY-MM-DD>/` by default; override with `--output-dir`.
-- Example: `uv run agentlab-garmin-fetch --start-date 2024-01-01 --end-date 2024-01-03 --include sleep --exclude workouts --debug`
+- **Environment:** export `GARMIN_EMAIL` and `GARMIN_PASSWORD` (TOTP codes can be passed at runtime with `--mfa-code`).
+- **Defaults:** endpoint selections live in `assets/config/garmin-endpoints.toml`. Adjust `defaults.enabled`/`defaults.disabled` for long-term changes, or override per run with `--include`/`--exclude`.
+- **Pacing controls:** tune rate limiting with `--delay-post-login`, `--delay-between-endpoints`, `--delay-pagination`, `--delay-jitter`, and `--retry-limit`. Jitter is expressed as a ratio (0.2 = ±20%).
+- **Observability:** runs stream JSON logs with correlation IDs and emit a JSON summary on stdout that lists successes, failures, and retry counts for each day.
+- **Storage:** responses and error files land under `./out/<YYYY-MM-DD>/` by default; switch destinations with `--output-dir`.
+- **Examples:**
+  - Default daily sync: `uv run agentlab-garmin-fetch --date 2024-10-15`
+  - Long-range throttled sync:\
+    `uv run agentlab-garmin-fetch --start-date 2024-10-01 --end-date 2024-10-07 --delay-post-login 8 --delay-between-endpoints 3 --delay-pagination 1.5 --delay-jitter 0.3 --retry-limit 2 --include sleep --debug`
 
 ## Project Layout
 
