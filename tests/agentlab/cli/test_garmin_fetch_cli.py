@@ -50,6 +50,15 @@ def _write_config(path: Path) -> None:
     path.write_text(CONFIG_TEMPLATE.strip(), encoding="utf-8")
 
 
+def _install_stub_fetcher(monkeypatch, instances: list[StubFetcher]) -> None:
+    def factory(*args, **kwargs) -> StubFetcher:
+        instance = StubFetcher(*args, **kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+
+
 def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     outcome = FetchOutcome(
         results=[
@@ -60,13 +69,7 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     )
     StubFetcher.outcome = outcome
     instances: list[StubFetcher] = []
-
-    def factory(*args, **kwargs) -> StubFetcher:
-        instance = StubFetcher(*args, **kwargs)
-        instances.append(instance)
-        return instance
-
-    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+    _install_stub_fetcher(monkeypatch, instances)
 
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
@@ -111,6 +114,7 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
         if record.name == "agentlab.cli.garmin_fetch"
     ]
     assert any(event["event"] == "garmin.cli.run.completed" for event in events)
+    assert not any(event["event"] == "garmin.cli.config" for event in events)
 
 
 def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, caplog):
@@ -128,13 +132,7 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     )
     StubFetcher.outcome = outcome
     instances: list[StubFetcher] = []
-
-    def factory(*args, **kwargs) -> StubFetcher:
-        instance = StubFetcher(*args, **kwargs)
-        instances.append(instance)
-        return instance
-
-    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+    _install_stub_fetcher(monkeypatch, instances)
 
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
@@ -176,6 +174,49 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     assert failure_events, "Expected garmin.cli.run.failed log entry"
 
 
+def test_main_debug_logs_configuration_snapshot(tmp_path, monkeypatch, capsys, caplog):
+    outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    StubFetcher.outcome = outcome
+    instances: list[StubFetcher] = []
+    _install_stub_fetcher(monkeypatch, instances)
+
+    config_path = tmp_path / "config.toml"
+    _write_config(config_path)
+
+    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+
+    exit_code = garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-04",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(tmp_path / "out"),
+            "--debug",
+        ]
+    )
+
+    assert exit_code == 0
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.cli.garmin_fetch"
+    ]
+    config_events = [event for event in events if event["event"] == "garmin.cli.config"]
+    assert config_events, "Expected configuration snapshot event when debug is enabled"
+    settings = config_events[0]["settings"]
+    assert settings["username"] == "user@example.com"
+    assert settings["debug"] is True
+    assert settings["pacing"]["retry_limit"] == 1
+    assert "password" not in {key.lower() for key in settings.keys()}
+
+
 def test_main_loads_credentials_from_dotenv(tmp_path, monkeypatch, capsys):
     StubFetcher.outcome = FetchOutcome(
         results=[EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})],
@@ -183,13 +224,7 @@ def test_main_loads_credentials_from_dotenv(tmp_path, monkeypatch, capsys):
         retries=RetrySummary(),
     )
     instances: list[StubFetcher] = []
-
-    def factory(*args, **kwargs) -> StubFetcher:
-        instance = StubFetcher(*args, **kwargs)
-        instances.append(instance)
-        return instance
-
-    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+    _install_stub_fetcher(monkeypatch, instances)
 
     config_path = tmp_path / "config.toml"
     _write_config(config_path)

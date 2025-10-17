@@ -5,6 +5,8 @@ import logging
 import random
 from datetime import date
 
+import pytest
+
 from agentlab.core.garmin import EndpointResult, GarminCredentials, GarminFetchRequest
 from agentlab.runners.garmin_fetcher import (
     EndpointHandler,
@@ -318,3 +320,76 @@ def test_fetch_applies_configured_delays():
 
     assert sleep_calls == [0.5, 0.2, 0.1]
     assert [result.endpoint for result in outcome.results] == ["alpha", "beta"]
+
+
+def test_fetch_logs_login_success(caplog):
+    class LoginDummy(DummyGarmin):
+        def login(self) -> None:
+            super().login()
+
+    fetcher = GarminDataFetcher(
+        client_factory=LoginDummy,
+        handlers=[],
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    fetcher.fetch(credentials, request, correlation_id="run-login")
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    login_events = [event for event in events if event["event"] == "garmin.login.success"]
+    assert login_events
+    assert login_events[0]["username"] == "user"
+    assert login_events[0]["method"] == "login"
+
+
+def test_fetch_logs_login_failure(caplog):
+    class FailingLogin(DummyGarmin):
+        def login(self) -> None:
+            raise RuntimeError("bad credentials")
+
+    fetcher = GarminDataFetcher(
+        client_factory=FailingLogin,
+        handlers=[],
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    with pytest.raises(RuntimeError):
+        fetcher.fetch(credentials, request, correlation_id="run-login-fail")
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    failure_events = [event for event in events if event["event"] == "garmin.login.failed"]
+    assert failure_events
+    assert failure_events[0]["error_message"] == "bad credentials"
+    assert failure_events[0]["method"] == "login"

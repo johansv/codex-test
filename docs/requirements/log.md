@@ -98,3 +98,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-17 | REQ-NF-20251017T154134-DZ | Added non-functional requirement REQ-NF-20251017T154134-DZ: Garmin Fetch CLI documentation refresh | codex | prompt |
 | 2025-10-17 | REQ-NF-20251017T154134-DZ | Started non-functional implementation for REQ-NF-20251017T154134-DZ | codex | implementation |
 | 2025-10-17 | REQ-NF-20251017T154134-DZ | Marked REQ-NF-20251017T154134-DZ done: Garmin CLI documentation now covers pacing, retries, and observability (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-17 | REQ-F-20251017T162547-59 | Added functional requirement REQ-F-20251017T162547-59: Garmin CLI job diagnostics logging | codex | prompt |
+| 2025-10-17 | REQ-F-20251017T162547-59 | Started implementation for REQ-F-20251017T162547-59; non-functional: REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151535-UV, REQ-NF-000, REQ-NF-20251010T151543-IE | codex | implementation |
+| 2025-10-17 | REQ-F-20251017T162547-59 | Marked REQ-F-20251017T162547-59 done: Debug telemetry logs configuration snapshot and login outcomes (approval: DEV-LOCAL) | codex | implementation |

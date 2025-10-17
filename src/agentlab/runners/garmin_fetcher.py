@@ -178,10 +178,32 @@ class GarminDataFetcher:
             return_on_mfa=False,
         )
 
-        if credentials.mfa_code:
-            client.resume_login(client_state=None, mfa_code=credentials.mfa_code)
+        login_payload = {
+            "username": credentials.username,
+            "method": "resume_login" if credentials.mfa_code else "login",
+            "mfa_provided": bool(credentials.mfa_code),
+        }
+        try:
+            if credentials.mfa_code:
+                client.resume_login(client_state=None, mfa_code=credentials.mfa_code)
+            else:
+                client.login()
+        except Exception as exc:  # pragma: no cover - reliance on API stability
+            _log_event(
+                logging.ERROR,
+                "garmin.login.failed",
+                correlation_id,
+                error_message=str(exc),
+                **login_payload,
+            )
+            raise
         else:
-            client.login()
+            _log_event(
+                logging.INFO,
+                "garmin.login.success",
+                correlation_id,
+                **login_payload,
+            )
 
         controller = _PacingController(self._pacing, self._sleep, self._random)
         controller.after_login()

@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 24 (done=24); Retired: 0
+Todo: 1 (backlog=1); Done: 25 (done=25); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251017T162547-59: Garmin CLI job diagnostics logging
+- Owner: codex
+- Narrative: As an operator, I want the Garmin Fetch CLI to emit a debug snapshot of its settings and explicit login results so I can confirm jobs are configured correctly and authentication succeeds.
+- Acceptance Criteria:
+  * Debug runs emit a structured settings event omitting GARMIN_PASSWORD
+  * Login and MFA resume attempts log explicit success/failure events
+  * New telemetry uses existing correlation IDs in the JSON log stream
+- Priority: medium
+- Status: done
+- Reason: Debug telemetry logs configuration snapshot and login outcomes
+- Trace: prompts Garmin logging enhancement request, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251014T120146-GT: Account-safety execution policies
 - Owner: codex

@@ -165,7 +165,7 @@ def _default_config_path() -> Path:
 def _load_endpoint_defaults(
     fetcher: GarminDataFetcher,
     config_path: Path | None,
-) -> tuple[list[str], set[str]]:
+) -> tuple[list[str], set[str], Path]:
     path = config_path if config_path is not None else _default_config_path()
     if not path.exists():
         raise SystemExit(f"Endpoint config not found: {path}")
@@ -217,7 +217,7 @@ def _load_endpoint_defaults(
             f"{', '.join(sorted(overlap))}"
         )
 
-    return list(enabled), disabled_set
+    return list(enabled), disabled_set, path
 
 
 def _select_endpoints(
@@ -324,12 +324,42 @@ def main(argv: list[str] | None = None) -> int:
 
     start, end = _resolve_range(args)
     credentials = _load_credentials(args)
-    defaults, disabled = _load_endpoint_defaults(fetcher, args.config)
+    defaults, disabled, config_path_used = _load_endpoint_defaults(fetcher, args.config)
     endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
     output_root = Path(args.output_dir)
     storage = GarminStorageWriter(output_root)
 
     run_id = uuid.uuid4().hex
+
+    if args.debug:
+        job_settings = {
+            "username": credentials.username,
+            "mfa_provided": bool(credentials.mfa_code),
+            "date": args.date,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "include": args.include or [],
+            "exclude": args.exclude or [],
+            "endpoints": endpoints,
+            "defaults_disabled": sorted(disabled),
+            "config_path": str(config_path_used),
+            "output_dir": str(output_root),
+            "pacing": {
+                "post_login_delay": pacing.post_login_delay,
+                "between_endpoints_delay": pacing.between_endpoints_delay,
+                "pagination_delay": pacing.pagination_delay,
+                "jitter_ratio": pacing.jitter_ratio,
+                "retry_limit": pacing.retry_limit,
+            },
+            "debug": True,
+        }
+        _log_cli_event(
+            logging.INFO,
+            "garmin.cli.config",
+            run_id,
+            settings=job_settings,
+        )
+
     _log_cli_event(
         logging.INFO,
         "garmin.cli.run.start",
