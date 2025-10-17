@@ -14,6 +14,9 @@ from agentlab.runners.garmin_fetcher import (
     GarminPacingConfig,
     _fetch_activities,
     _fetch_activity_detail,
+    _fetch_body_composition,
+    _fetch_progress_summary,
+    GarminFetchContext,
 )
 
 
@@ -458,3 +461,52 @@ def test_activity_detail_handlers_emit_activity_id():
     assert client.activities_by_date_calls == [("2024-01-01", "2024-01-01")]
     assert client.activities_for_date_calls == []
     assert client.activity_calls == ["101", "202"]
+
+
+def test_body_composition_calls_single_day_ranges():
+    class BodyClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.calls: list[tuple[str, str]] = []
+
+        def get_body_composition(self, start: str, end: str) -> dict[str, str]:
+            self.calls.append((start, end))
+            return {"start": start, "end": end}
+
+    client = BodyClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 3))
+    context = GarminFetchContext()
+
+    results = _fetch_body_composition(client, request, context)
+
+    assert client.calls == [
+        ("2024-01-01", "2024-01-01"),
+        ("2024-01-02", "2024-01-02"),
+        ("2024-01-03", "2024-01-03"),
+    ]
+    assert [result.scope["start"] for result in results] == [
+        "2024-01-01",
+        "2024-01-02",
+        "2024-01-03",
+    ]
+    assert context.activities == []
+
+
+def test_progress_summary_calls_single_day_ranges():
+    class ProgressClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.calls: list[tuple[str, str]] = []
+
+        def get_progress_summary_between_dates(self, start: str, end: str) -> dict[str, str]:
+            self.calls.append((start, end))
+            return {"start": start, "end": end}
+
+    client = ProgressClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 2))
+    context = GarminFetchContext()
+
+    results = _fetch_progress_summary(client, request, context)
+
+    assert client.calls == [("2024-01-01", "2024-01-01"), ("2024-01-02", "2024-01-02")]
+    assert [result.scope["start"] for result in results] == ["2024-01-01", "2024-01-02"]

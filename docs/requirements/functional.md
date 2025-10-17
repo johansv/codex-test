@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 26 (done=26); Retired: 0
+Todo: 1 (backlog=1); Done: 27 (done=27); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251017T170307-45: Consistent per-day date range calls
+- Owner: codex
+- Narrative: As an operator, I want date-range Garmin endpoints to execute per day with matching start/end arguments so that daily syncs stay scoped and avoid multi-day hangs.
+- Acceptance Criteria:
+  * Endpoints that accept start/end dates call them per day using identical start and end values
+  * Stored scopes/filenames include the per-day identifiers
+  * Regression tests verify per-day iteration for representative endpoints
+- Priority: high
+- Status: done
+- Reason: Date-range endpoints now iterate daily with matching start/end arguments
+- Trace: prompts Date range scoping issue, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251017T164320-L0: Activity detail pagination and naming fix
 - Owner: codex

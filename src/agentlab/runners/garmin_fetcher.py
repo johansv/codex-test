@@ -556,14 +556,18 @@ def _fetch_floors(
 def _fetch_daily_steps(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_daily_steps(_iso(request.start_date), _iso(request.end_date))
-    return [
-        _endpoint_result(
-            "daily-steps",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_daily_steps(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "daily-steps",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_heart_rates(
@@ -579,27 +583,35 @@ def _fetch_heart_rates(
 def _fetch_body_composition(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_body_composition(_iso(request.start_date), _iso(request.end_date))
-    return [
-        _endpoint_result(
-            "body-composition",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_body_composition(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "body-composition",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_weigh_ins(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_weigh_ins(_iso(request.start_date), _iso(request.end_date))
-    return [
-        _endpoint_result(
-            "weigh-ins",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_weigh_ins(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "weigh-ins",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_daily_weigh_ins(
@@ -615,14 +627,18 @@ def _fetch_daily_weigh_ins(
 def _fetch_body_battery(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_body_battery(_iso(request.start_date), _iso(request.end_date))
-    return [
-        _endpoint_result(
-            "body-battery",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_body_battery(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "body-battery",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_body_battery_events(
@@ -638,14 +654,18 @@ def _fetch_body_battery_events(
 def _fetch_blood_pressure(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_blood_pressure(_iso(request.start_date), _iso(request.end_date))
-    return [
-        _endpoint_result(
-            "blood-pressure",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_blood_pressure(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "blood-pressure",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_max_metrics(
@@ -860,17 +880,18 @@ def _fetch_race_predictions(
 def _fetch_progress_summary(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_progress_summary_between_dates(
-        _iso(request.start_date),
-        _iso(request.end_date),
-    )
-    return [
-        _endpoint_result(
-            "progress-summary",
-            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+    results: list[EndpointResult] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        payload = client.get_progress_summary_between_dates(day_iso, day_iso)
+        results.append(
+            _endpoint_result(
+                "progress-summary",
+                {"start": day_iso, "end": day_iso},
+                payload,
+            )
         )
-    ]
+    return results
 
 
 def _fetch_goals(
