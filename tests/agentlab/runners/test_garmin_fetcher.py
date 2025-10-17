@@ -12,6 +12,8 @@ from agentlab.runners.garmin_fetcher import (
     EndpointHandler,
     GarminDataFetcher,
     GarminPacingConfig,
+    _fetch_activities,
+    _fetch_activity_detail,
 )
 
 
@@ -397,49 +399,37 @@ def test_fetch_logs_login_failure(caplog):
 
 def test_activity_detail_handlers_emit_activity_id():
     class ActivityClient(DummyGarmin):
+        created: "ActivityClient | None" = None
+
         def __init__(self, *args: object, **kwargs: object) -> None:
             super().__init__(*args, **kwargs)
             self.activities_payload = [
-                {"activityId": 101},
-                {"activityId": 202},
+                {"activityId": "101"},
+                {"activityId": "202"},
             ]
+            self.activities_by_date_calls: list[tuple[str, str]] = []
+            self.activities_for_date_calls: list[str] = []
+            self.activity_calls: list[str] = []
+            ActivityClient.created = self
 
-        def get_activities(self, _start: int, _limit: int) -> list[dict[str, int]]:
+        def get_activities(self, *_args: object, **_kwargs: object) -> list[dict[str, str]]:
+            raise AssertionError("get_activities should not be called for per-day requests")
+
+        def get_activities_by_date(self, start: str, end: str) -> list[dict[str, str]]:
+            self.activities_by_date_calls.append((start, end))
             return self.activities_payload
 
+        def get_activities_fordate(self, day: str) -> list[dict[str, str]]:
+            self.activities_for_date_calls.append(day)
+            return []
+
         def get_activity(self, activity_id: str) -> dict[str, str]:
+            self.activity_calls.append(activity_id)
             return {"activityId": activity_id, "detail": "ok"}
 
-    def activities_handler(
-        client: ActivityClient,
-        request: GarminFetchRequest,
-        context,
-    ) -> list[EndpointResult]:
-        payload = client.get_activities(0, 100)
-        context.activities = payload
-        return [EndpointResult(endpoint="activities", scope={}, payload=payload)]
-
-    def detail_handler(
-        client: ActivityClient,
-        request: GarminFetchRequest,
-        context,
-    ) -> list[EndpointResult]:
-        results: list[EndpointResult] = []
-        for activity in context.activities:
-            activity_id = str(activity["activityId"])
-            payload = client.get_activity(activity_id)
-            results.append(
-                EndpointResult(
-                    endpoint="activity-detail",
-                    scope={"activityId": activity_id},
-                    payload=payload,
-                )
-            )
-        return results
-
     handlers = [
-        EndpointHandler(name="activities", execute=activities_handler),
-        EndpointHandler(name="activity-detail", execute=detail_handler),
+        EndpointHandler(name="activities", execute=_fetch_activities),
+        EndpointHandler(name="activity-detail", execute=_fetch_activity_detail),
     ]
     fetcher = GarminDataFetcher(
         client_factory=ActivityClient,
@@ -462,3 +452,9 @@ def test_activity_detail_handlers_emit_activity_id():
     assert len(outcome.results) == 3  # 1 activities + 2 detail entries
     detail_results = [result for result in outcome.results if result.endpoint == "activity-detail"]
     assert [result.scope["activityId"] for result in detail_results] == ["101", "202"]
+
+    client = ActivityClient.created
+    assert client is not None
+    assert client.activities_by_date_calls == [("2024-01-01", "2024-01-01")]
+    assert client.activities_for_date_calls == []
+    assert client.activity_calls == ["101", "202"]

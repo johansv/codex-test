@@ -962,7 +962,7 @@ def _fetch_pregnancy_summary(
 def _fetch_activities(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_activities(0, 100)
+    payload = _load_activities_for_request(client, request)
     context.activities = payload
     return [_endpoint_result("activities", {}, payload)]
 
@@ -970,7 +970,7 @@ def _fetch_activities(
 def _fetch_activities_by_date(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_activities_by_date(_iso(request.start_date), _iso(request.end_date))
+    payload = _load_activities_for_request(client, request)
     if payload:
         context.activities = payload
     return [
@@ -1015,6 +1015,24 @@ def _require_activity_ids(context: GarminFetchContext) -> list[str]:
         if activity_id is not None:
             ids.append(str(activity_id))
     return ids
+
+
+def _load_activities_for_request(
+    client: Garmin,
+    request: GarminFetchRequest,
+) -> list[dict[str, Any]]:
+    start_iso = _iso(request.start_date)
+    end_iso = _iso(request.end_date)
+    payload: list[dict[str, Any]] | None = None
+    if request.start_date == request.end_date:
+        payload = client.get_activities_by_date(start_iso, end_iso)
+        if not payload:
+            payload = client.get_activities_fordate(start_iso)
+    else:
+        payload = client.get_activities_by_date(start_iso, end_iso)
+    if not payload:
+        return []
+    return list(payload)
 
 
 def _fetch_activity_detail(
