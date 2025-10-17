@@ -25,7 +25,11 @@ class GarminStorageWriter:
         for result in outcome.results:
             filename = self._result_filename(result)
             payload = self._serialise_payload(result)
-            self._write_atomic(day_dir / filename, payload)
+            target_path = day_dir / filename
+            self._write_atomic(target_path, payload)
+            error_path = day_dir / f"{result.endpoint}.error.json"
+            if error_path.exists():
+                error_path.unlink()
 
         for error in outcome.errors:
             self._write_error(day_dir, error)

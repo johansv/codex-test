@@ -85,3 +85,42 @@ def test_storage_writes_error_files(tmp_path: Path) -> None:
     assert payload["endpoint"] == "alpha"
     assert "boom" in payload["message"]
     assert "traceback" in payload["traceback"]
+
+
+def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path)
+    day = date(2024, 1, 1)
+
+    writer.store(
+        day,
+        FetchOutcome(
+            results=[],
+            errors=[
+                EndpointError(
+                    endpoint="alpha",
+                    scope={},
+                    message="boom",
+                    traceback="trace",
+                )
+            ],
+        ),
+    )
+
+    error_path = tmp_path / "2024-01-01" / "alpha.error.json"
+    assert error_path.exists()
+
+    writer.store(
+        day,
+        FetchOutcome(
+            results=[
+                EndpointResult(
+                    endpoint="alpha",
+                    scope={},
+                    payload={"value": 1},
+                )
+            ],
+            errors=[],
+        ),
+    )
+
+    assert not error_path.exists()

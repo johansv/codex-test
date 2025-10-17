@@ -76,6 +76,24 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
+### REQ-F-20251014T120032-GS: Date-partitioned storage layout
+- Owner: codex
+- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
+- Acceptance Criteria:
+  * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
+  * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
+  * Failures emit <endpoint>.error.json containing structured metadata and full stack trace.
+  * Re-running for the same dates replaces prior files without leaving partial artifacts.
+  * CLI defaults to writing under ./out but accepts a configurable output directory argument.
+  * Date ranges are processed one day at a time with isolated per-date folders.
+  * CLI exposes a debug mode that logs each endpoint as it executes.
+  * When an endpoint succeeds, any existing <endpoint>.error.json for that date is removed.
+- Priority: high
+- Status: done
+- Reason: Garmin fetch storage overwrites outputs and clears stale error files
+- Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/utils/test_storage.py; tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
+---
+
 ### REQ-F-20251014T120058-GC: Endpoint configuration controls
 - Owner: codex
 - Narrative: As a maintainer, I want configurable defaults and overrides for Garmin endpoints so that I can tailor downloads without rewriting code.
@@ -88,23 +106,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Garmin fetch CLI honors endpoint config with include/exclude flags
 - Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
----
-
-### REQ-F-20251014T120032-GS: Date-partitioned storage layout
-- Owner: codex
-- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
-- Acceptance Criteria:
-  * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
-  * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
-  * Failures emit <endpoint>.error.json containing structured metadata and full stack trace.
-  * Re-running for the same dates replaces prior files without leaving partial artifacts.
-  * CLI defaults to writing under ./out but accepts a configurable output directory argument.
-  * Date ranges are processed one day at a time with isolated per-date folders.
-  * CLI exposes a debug mode that logs each endpoint as it executes.
-- Priority: high
-- Status: done
-- Reason: Garmin fetch CLI writes per-day outputs with atomic storage and debug support
-- Trace: prompts Garmin ingestion design discussion, tests tests/agentlab/utils/test_storage.py; tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
 ---
 
 ### REQ-F-20251014T120001-GA: Garmin data session fetcher
