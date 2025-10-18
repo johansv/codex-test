@@ -4,11 +4,11 @@ enabled = [
   "user-summary",
   "stats",
   "sleep",
-  "activities",
+  "activities-by-date",
   "activity-detail",
-  "workouts",
-  "workout-detail",
 ]
 disabled = [
   "activity-download",
+  "activities",
+  "activities-for-date",
 ]
