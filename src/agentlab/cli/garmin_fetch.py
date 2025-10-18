@@ -18,7 +18,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 from dotenv import find_dotenv, load_dotenv
 
-from agentlab.core.garmin import GarminCredentials, GarminFetchRequest
+from agentlab.core.garmin import EndpointError, EndpointResult, GarminCredentials, GarminFetchRequest
 from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig
 from agentlab.utils.storage import GarminStorageWriter
 
@@ -395,13 +395,20 @@ def main(argv: list[str] | None = None) -> int:
 
             observer = _observer
 
+        def _on_result(result: EndpointResult, *, _day=day) -> None:
+            storage.write_result(_day, result)
+
+        def _on_error(error: EndpointError, *, _day=day) -> None:
+            storage.write_error(_day, error)
+
         outcome = fetcher.fetch(
             credentials,
             day_request,
             observer=observer,
             correlation_id=day_correlation_id,
+            result_callback=_on_result,
+            error_callback=_on_error,
         )
-        storage.store(day, outcome)
 
         successes = list(dict.fromkeys(result.endpoint for result in outcome.results))
         failures = [

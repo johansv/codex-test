@@ -168,6 +168,8 @@ class GarminDataFetcher:
         observer: Callable[[str], None] | None = None,
         *,
         correlation_id: str | None = None,
+        result_callback: Callable[[EndpointResult], None] | None = None,
+        error_callback: Callable[[EndpointError], None] | None = None,
     ) -> FetchOutcome:
         """Authenticate and pull data for the requested endpoints."""
 
@@ -259,6 +261,8 @@ class GarminDataFetcher:
                         ),
                     )
                     pass_errors[handler.name] = error
+                    if error_callback:
+                        error_callback(error)
                     _log_event(
                         logging.ERROR,
                         "garmin.endpoint.error",
@@ -269,6 +273,17 @@ class GarminDataFetcher:
                         attempt=pass_index,
                     )
                 else:
+                    if result_callback:
+                        for handler_result in handler_results:
+                            result_callback(handler_result)
+                        handler_results = [
+                            EndpointResult(
+                                endpoint=handler_result.endpoint,
+                                scope=handler_result.scope,
+                                payload=None,
+                            )
+                            for handler_result in handler_results
+                        ]
                     pass_results.extend(handler_results)
                     pass_successes.append(handler.name)
                     _log_event(

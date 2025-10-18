@@ -35,9 +35,30 @@ class StubFetcher:
         observer=None,
         *,
         correlation_id=None,
+        result_callback=None,
+        error_callback=None,
     ) -> FetchOutcome:
         self.correlations.append(correlation_id)
-        return self.outcome
+        results: list[EndpointResult] = []
+        if result_callback:
+            for result in self.outcome.results:
+                result_callback(result)
+                results.append(
+                    EndpointResult(
+                        endpoint=result.endpoint,
+                        scope=result.scope,
+                        payload=None,
+                    )
+                )
+        else:
+            results = list(self.outcome.results)
+
+        if error_callback:
+            for error in self.outcome.errors:
+                error_callback(error)
+        errors = list(self.outcome.errors)
+
+        return FetchOutcome(results=results, errors=errors, retries=self.outcome.retries)
 
 
 @pytest.fixture(autouse=True)

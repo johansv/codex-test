@@ -19,22 +19,24 @@ class GarminStorageWriter:
     def store(self, day: date, outcome: FetchOutcome) -> None:
         """Write results and errors for *day* to disk."""
 
-        day_dir = self.root / day.isoformat()
-        day_dir.mkdir(parents=True, exist_ok=True)
-
         for result in outcome.results:
-            filename = self._result_filename(result)
-            payload = self._serialise_payload(result)
-            target_path = day_dir / filename
-            self._write_atomic(target_path, payload)
-            error_path = day_dir / self._error_filename(result.endpoint, result.scope)
-            if error_path.exists():
-                error_path.unlink()
+            self.write_result(day, result)
 
         for error in outcome.errors:
-            self._write_error(day_dir, error)
+            self.write_error(day, error)
 
-    def _write_error(self, day_dir: Path, error: EndpointError) -> None:
+    def write_result(self, day: date, result: EndpointResult) -> None:
+        day_dir = self._ensure_day_dir(day)
+        filename = self._result_filename(result)
+        payload = self._serialise_payload(result)
+        target_path = day_dir / filename
+        self._write_atomic(target_path, payload)
+        error_path = day_dir / self._error_filename(result.endpoint, result.scope)
+        if error_path.exists():
+            error_path.unlink()
+
+    def write_error(self, day: date, error: EndpointError) -> None:
+        day_dir = self._ensure_day_dir(day)
         path = day_dir / self._error_filename(error.endpoint, error.scope)
         content = json.dumps(
             {
@@ -46,6 +48,11 @@ class GarminStorageWriter:
             indent=2,
         )
         self._write_atomic(path, content.encode("utf-8"))
+
+    def _ensure_day_dir(self, day: date) -> Path:
+        day_dir = self.root / day.isoformat()
+        day_dir.mkdir(parents=True, exist_ok=True)
+        return day_dir
 
     def _serialise_payload(self, result: EndpointResult) -> bytes:
         payload = result.payload
