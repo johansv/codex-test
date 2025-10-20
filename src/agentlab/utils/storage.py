@@ -76,7 +76,7 @@ class GarminStorageWriter:
             if isinstance(fmt, str):
                 lowered = fmt.lower()
                 if lowered == "original":
-                    return "fit"
+                    return "zip"
                 return lowered
             return "bin"
         if isinstance(payload, (dict, list)):

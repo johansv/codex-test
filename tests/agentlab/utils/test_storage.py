@@ -47,7 +47,7 @@ def test_storage_overwrites_existing_file(tmp_path: Path) -> None:
 def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
     writer = GarminStorageWriter(tmp_path)
     tcx_payload = b"tcx"
-    fit_payload = b"fit"
+    zip_payload = b"zip-data"
     outcome = FetchOutcome(
         results=[
             EndpointResult(
@@ -58,7 +58,7 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
             EndpointResult(
                 endpoint="activity-download",
                 scope={"activityId": 123, "format": "ORIGINAL"},
-                payload=fit_payload,
+                payload=zip_payload,
             ),
         ],
         errors=[],
@@ -67,9 +67,9 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
     writer.store(date(2024, 1, 1), outcome)
 
     tcx_path = tmp_path / "2024-01-01" / "activity-download_123.tcx"
-    fit_path = tmp_path / "2024-01-01" / "activity-download_123.fit"
+    zip_path = tmp_path / "2024-01-01" / "activity-download_123.zip"
     assert tcx_path.read_bytes() == tcx_payload
-    assert fit_path.read_bytes() == fit_payload
+    assert zip_path.read_bytes() == zip_payload
 
 
 def test_storage_writes_error_files(tmp_path: Path) -> None:
