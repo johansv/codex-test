@@ -109,6 +109,10 @@ enabled = [
   "activities-by-date",
   "activity-detail",
   "activity-details",
+  "gear",
+  "gear-stats",
+  "gear-defaults",
+  "gear-activities",
 ]
 
 disabled = [
@@ -159,8 +163,22 @@ enabled = [
   "activity-split-summaries",
   "activity-hr-timezones",
   "activity-gear",
-  "device-solar"
+  "device-solar",
 ]
+
+disabled = [
+  "activity-download",
+  "activities",
+]
+
+[presets.gear]
+enabled = [
+  "gear",
+  "gear-stats",
+  "gear-defaults",
+  "gear-activities",
+]
+
 disabled = [
   "activity-download",
   "activities",

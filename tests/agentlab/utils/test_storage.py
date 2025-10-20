@@ -158,3 +158,57 @@ def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
     data_path = tmp_path / "2024-01-01" / "activity-detail_456.json"
     assert json.loads(data_path.read_text(encoding="utf-8")) == {"detail": "value"}
     assert not error_path.exists()
+
+
+def test_storage_includes_gear_uuid_in_filenames(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path)
+    day = date(2024, 1, 1)
+    result = EndpointResult(
+        endpoint="gear-stats",
+        scope={"gearUuid": "gear-1"},
+        payload={"distance": 123},
+    )
+
+    writer.store(day, FetchOutcome(results=[result], errors=[]))
+
+    data_path = tmp_path / "2024-01-01" / "gear-stats_gear-1.json"
+    assert json.loads(data_path.read_text(encoding="utf-8")) == {"distance": 123}
+
+
+def test_storage_clears_legacy_gear_error_on_success(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path)
+    day = date(2024, 1, 1)
+
+    writer.store(
+        day,
+        FetchOutcome(
+            results=[],
+            errors=[
+                EndpointError(
+                    endpoint="gear-activities",
+                    scope={},
+                    message="boom",
+                    traceback="traceback",
+                )
+            ],
+        ),
+    )
+
+    legacy_error = tmp_path / "2024-01-01" / "gear-activities.error.json"
+    assert legacy_error.exists()
+
+    writer.store(
+        day,
+        FetchOutcome(
+            results=[
+                EndpointResult(
+                    endpoint="gear-activities",
+                    scope={"gearUuid": "gear-1"},
+                    payload=[{"gearUuid": "gear-1"}],
+                )
+            ],
+            errors=[],
+        ),
+    )
+
+    assert not legacy_error.exists()

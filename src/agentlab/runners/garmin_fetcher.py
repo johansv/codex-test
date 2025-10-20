@@ -1202,11 +1202,58 @@ def _resolve_user_profile_number(context: GarminFetchContext) -> str | None:
     for key in ("userProfileId", "userProfilePk", "profilePk"):
         if key in profile:
             return str(profile[key])
+    if "id" in profile:
+        return str(profile["id"])
     user_data = profile.get("userData", {}) if isinstance(profile, dict) else {}
-    for key in ("userProfileId", "userProfilePk"):
+    for key in ("userProfileId", "userProfilePk", "id"):
         if key in user_data:
             return str(user_data[key])
     return None
+
+
+def _normalise_gear_payload(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in ("gear", "userGear", "gearList"):
+            items = payload.get(key)
+            if isinstance(items, list):
+                return items
+    return []
+
+
+def _ensure_gear_catalog(
+    client: Garmin,
+    context: GarminFetchContext,
+) -> list[dict[str, Any]]:
+    if context.gear:
+        return context.gear
+
+    user_profile_number = _resolve_user_profile_number(context)
+    if user_profile_number is None:
+        context.user_profile = client.get_user_profile()
+        user_profile_number = _resolve_user_profile_number(context)
+        if user_profile_number is None:
+            return []
+
+    payload = client.get_gear(user_profile_number)
+    context.gear = _normalise_gear_payload(payload)
+    return context.gear
+
+
+def _extract_gear_uuid(item: dict[str, Any]) -> str | None:
+    for key in ("gearUuid", "gearUuidPk", "uuid"):
+        value = item.get(key)
+        if value:
+            return str(value)
+    return None
+
+
+def _resolve_gear_activities_method(client: Garmin) -> Callable[[str], Any]:
+    try:
+        return getattr(client, "get_gear_activities")
+    except AttributeError:
+        return getattr(client, "get_gear_ativities")
 
 
 def _fetch_gear(
@@ -1216,7 +1263,7 @@ def _fetch_gear(
     if user_profile_number is None:
         return []
     payload = client.get_gear(user_profile_number)
-    context.gear = payload
+    context.gear = _normalise_gear_payload(payload)
     return [_endpoint_result("gear", {"userProfileNumber": user_profile_number}, payload)]
 
 
@@ -1224,13 +1271,13 @@ def _fetch_gear_stats(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for item in context.gear:
-        gear_uuid = item.get("gearUuid") or item.get("gearUuidPk")
+    for item in _ensure_gear_catalog(client, context):
+        gear_uuid = _extract_gear_uuid(item)
         if gear_uuid is None:
             continue
         payload = client.get_gear_stats(gear_uuid)
-        context.gear_stats[str(gear_uuid)] = payload
-        results.append(_endpoint_result("gear-stats", {"gearUuid": str(gear_uuid)}, payload))
+        context.gear_stats[gear_uuid] = payload
+        results.append(_endpoint_result("gear-stats", {"gearUuid": gear_uuid}, payload))
     return results
 
 
@@ -1250,13 +1297,14 @@ def _fetch_gear_activities(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for item in context.gear:
-        gear_uuid = item.get("gearUuid") or item.get("gearUuidPk")
+    fetch_activities = _resolve_gear_activities_method(client)
+    for item in _ensure_gear_catalog(client, context):
+        gear_uuid = _extract_gear_uuid(item)
         if gear_uuid is None:
             continue
-        payload = client.get_gear_ativities(gear_uuid)
+        payload = fetch_activities(gear_uuid)
         results.append(
-            _endpoint_result("gear-activities", {"gearUuid": str(gear_uuid)}, payload)
+            _endpoint_result("gear-activities", {"gearUuid": gear_uuid}, payload)
         )
     return results
 

@@ -31,8 +31,8 @@ class GarminStorageWriter:
         payload = self._serialise_payload(result)
         target_path = day_dir / filename
         self._write_atomic(target_path, payload)
-        error_path = day_dir / self._error_filename(result.endpoint, result.scope)
-        if error_path.exists():
+        error_path = self._matching_error_file(day_dir, result.endpoint, result.scope)
+        if error_path is not None and error_path.exists():
             error_path.unlink()
 
     def write_error(self, day: date, error: EndpointError) -> None:
@@ -89,11 +89,32 @@ class GarminStorageWriter:
         activity_id = scope.get("activityId")
         if activity_id is not None:
             return f"{endpoint}_{activity_id}"
+        gear_uuid = scope.get("gearUuid")
+        if gear_uuid is not None:
+            return f"{endpoint}_{gear_uuid}"
         return endpoint
 
     def _error_filename(self, endpoint: str, scope: dict[str, str | int]) -> str:
         basename = self._compose_basename(endpoint, scope)
         return f"{basename}.error.json"
+
+    def _matching_error_file(
+        self,
+        day_dir: Path,
+        endpoint: str,
+        scope: dict[str, str | int],
+    ) -> Path | None:
+        explicit = day_dir / self._error_filename(endpoint, scope)
+        if explicit.exists():
+            return explicit
+
+        gear_uuid = scope.get("gearUuid")
+        if isinstance(gear_uuid, str):
+            legacy = day_dir / f"{endpoint}.error.json"
+            if legacy.exists():
+                return legacy
+
+        return None
 
     @staticmethod
     def _write_atomic(path: Path, data: bytes) -> None:

@@ -17,6 +17,9 @@ from agentlab.runners.garmin_fetcher import (
     _fetch_activity_details,
     _fetch_activity_download,
     _fetch_body_composition,
+    _fetch_gear,
+    _fetch_gear_activities,
+    _fetch_gear_stats,
     _fetch_progress_summary,
     GarminFetchContext,
 )
@@ -474,6 +477,121 @@ def test_activity_detail_handlers_emit_activity_id():
     assert client.activity_calls == ["101", "202"]
     assert client.activity_details_calls == ["101", "202"]
 
+
+def test_fetch_gear_uses_profile_id_when_only_id_present():
+    class GearClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.received: list[str] = []
+
+        def get_gear(self, user_profile_number: str) -> list[dict[str, str]]:
+            self.received.append(user_profile_number)
+            return [{"gearUuid": "g-1"}]
+
+    context = GarminFetchContext()
+    context.user_profile = {"id": 98765}
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+
+    results = _fetch_gear(GearClient(), request, context)
+
+    assert context.gear == [{"gearUuid": "g-1"}]
+    assert results == [
+        EndpointResult(endpoint="gear", scope={"userProfileNumber": "98765"}, payload=[{"gearUuid": "g-1"}])
+    ]
+
+
+def test_fetch_gear_stats_loads_catalog_on_demand():
+    class GearStatsClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.profile_calls = 0
+            self.gear_calls: list[str] = []
+            self.stats_calls: list[str] = []
+
+        def get_user_profile(self) -> dict[str, str]:
+            self.profile_calls += 1
+            return {"id": "123"}
+
+        def get_gear(self, user_profile_number: str) -> list[dict[str, str]]:
+            self.gear_calls.append(user_profile_number)
+            return [{"uuid": "gear-1"}]
+
+        def get_gear_stats(self, gear_uuid: str) -> dict[str, str]:
+            self.stats_calls.append(gear_uuid)
+            return {"uuid": gear_uuid, "distance": "42"}
+
+    context = GarminFetchContext()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+
+    client = GearStatsClient()
+    results = _fetch_gear_stats(client, request, context)
+
+    assert client.profile_calls == 1
+    assert client.gear_calls == ["123"]
+    assert client.stats_calls == ["gear-1"]
+    assert context.gear == [{"uuid": "gear-1"}]
+    assert context.gear_stats == {"gear-1": {"uuid": "gear-1", "distance": "42"}}
+    assert results == [
+        EndpointResult(
+            endpoint="gear-stats",
+            scope={"gearUuid": "gear-1"},
+            payload={"uuid": "gear-1", "distance": "42"},
+        )
+    ]
+
+
+def test_fetch_gear_activities_uses_cached_catalog():
+    class GearActivitiesClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.activities_calls: list[str] = []
+
+        def get_gear_activities(self, gear_uuid: str):
+            self.activities_calls.append(gear_uuid)
+            return [{"gearUuid": gear_uuid, "activityId": 99}]
+
+    context = GarminFetchContext()
+    context.gear = [{"uuid": "gear-1"}]
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+
+    client = GearActivitiesClient()
+    results = _fetch_gear_activities(client, request, context)
+
+    assert client.activities_calls == ["gear-1"]
+    assert results == [
+        EndpointResult(
+            endpoint="gear-activities",
+            scope={"gearUuid": "gear-1"},
+            payload=[{"gearUuid": "gear-1", "activityId": 99}],
+        )
+    ]
+
+
+def test_fetch_gear_activities_supports_legacy_method():
+    class LegacyGearActivitiesClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.activities_calls: list[str] = []
+
+        def get_gear_ativities(self, gear_uuid: str):
+            self.activities_calls.append(gear_uuid)
+            return [{"gearUuid": gear_uuid, "activityId": 123}]
+
+    context = GarminFetchContext()
+    context.gear = [{"gearUuid": "legacy-gear"}]
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+
+    client = LegacyGearActivitiesClient()
+    results = _fetch_gear_activities(client, request, context)
+
+    assert client.activities_calls == ["legacy-gear"]
+    assert results == [
+        EndpointResult(
+            endpoint="gear-activities",
+            scope={"gearUuid": "legacy-gear"},
+            payload=[{"gearUuid": "legacy-gear", "activityId": 123}],
+        )
+    ]
 
 
 def test_activity_download_fetches_tcx_and_original():
