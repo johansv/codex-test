@@ -777,7 +777,7 @@ def test_activity_download_fetches_tcx_and_original():
     assert formats == ["ORIGINAL", "TCX"]
     assert ActivityDownloadClient.captured == [("42", "TCX"), ("42", "ORIGINAL")]
 
-def test_body_composition_calls_single_day_ranges():
+def test_body_composition_respects_request_range():
     class BodyClient(DummyGarmin):
         def __init__(self, *args: object, **kwargs: object) -> None:
             super().__init__(*args, **kwargs)
@@ -793,20 +793,13 @@ def test_body_composition_calls_single_day_ranges():
 
     results = _fetch_body_composition(client, request, context)
 
-    assert client.calls == [
-        ("2024-01-01", "2024-01-01"),
-        ("2024-01-02", "2024-01-02"),
-        ("2024-01-03", "2024-01-03"),
-    ]
-    assert [result.scope["start"] for result in results] == [
-        "2024-01-01",
-        "2024-01-02",
-        "2024-01-03",
-    ]
+    assert client.calls == [("2024-01-01", "2024-01-03")]
+    assert [result.scope["start"] for result in results] == ["2024-01-01"]
+    assert [result.scope["end"] for result in results] == ["2024-01-03"]
     assert context.activities == []
 
 
-def test_progress_summary_calls_single_day_ranges():
+def test_progress_summary_respects_request_range():
     class ProgressClient(DummyGarmin):
         def __init__(self, *args: object, **kwargs: object) -> None:
             super().__init__(*args, **kwargs)
@@ -822,5 +815,6 @@ def test_progress_summary_calls_single_day_ranges():
 
     results = _fetch_progress_summary(client, request, context)
 
-    assert client.calls == [("2024-01-01", "2024-01-01"), ("2024-01-02", "2024-01-02")]
-    assert [result.scope["start"] for result in results] == ["2024-01-01", "2024-01-02"]
+    assert client.calls == [("2024-01-01", "2024-01-02")]
+    assert [result.scope["start"] for result in results] == ["2024-01-01"]
+    assert [result.scope["end"] for result in results] == ["2024-01-02"]
