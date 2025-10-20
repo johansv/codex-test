@@ -117,5 +117,53 @@ disabled = [
   "workout-download",
 ]
 
+[presets.timeseries]
+enabled = [
+  "user-summary",
+  "stats",
+  "stats-and-body",
+  "steps-data",
+  "daily-steps",
+  "heart-rates",
+  "resting-heart-rate",
+  "hrv",
+  "body-composition",
+  "weigh-ins",
+  "daily-weigh-ins",
+  "body-battery",
+  "body-battery-events",
+  "blood-pressure",
+  "hydration",
+  "respiration",
+  "sleep",
+  "stress",
+  "spo2",
+  "intensity-minutes",
+  "progress-summary",
+  "training-readiness",
+  "training-status",
+  "endurance-score-daily",
+  "endurance-score-stats",
+  "hill-score-daily",
+  "hill-score-stats",
+  "fitness-age",
+  "race-predictions-daily",
+  "race-predictions-monthly",
+  "activities-by-date",
+  "activities-for-date",
+  "activity-detail",
+  "activity-details",
+  "activity-splits",
+  "activity-typed-splits",
+  "activity-split-summaries",
+  "activity-hr-timezones",
+  "activity-gear",
+  "device-solar"
+]
+disabled = [
+  "activity-download",
+  "activities",
+]
+
 [defaults]
 preset = "coaching"

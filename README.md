@@ -59,7 +59,7 @@ The hosted runner must mount this repository and have dependencies installed so
 
 - **Environment:** export `GARMIN_EMAIL` and `GARMIN_PASSWORD` or place them in a local `.env` (see `.env.example`). TOTP codes can be supplied at runtime with `--mfa-code`.
 - **Defaults:** endpoint selections live in `assets/config/garmin-endpoints.toml`. Adjust `defaults.enabled`/`defaults.disabled` for long-term changes, or override per run with `--include`/`--exclude`.
-- **Presets:** the config file now supports named presets (see the `presets` table). Use `--preset <name>` to switch between bundles like `full` and the curated `coaching` set; the default preset is defined under `[defaults]`.
+- **Presets:** the config file now supports named presets (see the `presets` table). Use `--preset <name>` to switch between bundles like `full`, the curated `coaching` set, or the `timeseries` preset that focuses on date/range-driven metrics; the default preset is defined under `[defaults]`.
 - **Pacing controls:** tune rate limiting with `--delay-post-login`, `--delay-between-endpoints`, `--delay-pagination`, `--delay-jitter`, and `--retry-limit`. Jitter is expressed as a ratio (0.2 = ±20%).
 - **Observability:** runs stream JSON logs with correlation IDs and emit a JSON summary on stdout that lists successes, failures, and retry counts for each day.
 - **Storage:** responses and error files land under `./out/<YYYY-MM-DD>/` by default; switch destinations with `--output-dir`.

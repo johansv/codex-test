@@ -55,6 +55,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Configuration loader supports named presets (e.g., full, coaching)
   * All endpoints preset covers every registered handler
   * Coaching preset captures data needed for personalized AI coach
+  * Timeseries preset bundles all date- and range-driven endpoints for longitudinal analysis
 - Priority: medium
 - Status: done
 - Reason: Endpoint presets and CLI selection implemented
