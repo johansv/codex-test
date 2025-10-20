@@ -406,6 +406,63 @@ def test_fetch_logs_login_failure(caplog):
     assert failure_events[0]["method"] == "login"
 
 
+def test_fetch_reuses_session_across_calls(caplog):
+    class SessionClient(DummyGarmin):
+        created_count = 0
+        login_count = 0
+        last_instance: "SessionClient | None" = None
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            SessionClient.created_count += 1
+            SessionClient.last_instance = self
+
+        def login(self) -> None:
+            SessionClient.login_count += 1
+            super().login()
+
+    handlers = [
+        _dummy_handler("alpha", {"value": 1}),
+    ]
+    pacing = GarminPacingConfig(
+        post_login_delay=0.0,
+        between_endpoints_delay=0.0,
+        pagination_delay=0.0,
+        jitter_ratio=0.0,
+        retry_limit=0,
+    )
+    fetcher = GarminDataFetcher(
+        client_factory=SessionClient,
+        handlers=handlers,
+        pacing=pacing,
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    first = fetcher.fetch(credentials, request, correlation_id="reuse-1")
+    second = fetcher.fetch(credentials, request, correlation_id="reuse-2")
+
+    assert [result.endpoint for result in first.results] == ["alpha"]
+    assert [result.endpoint for result in second.results] == ["alpha"]
+
+    assert SessionClient.created_count == 1
+    assert SessionClient.login_count == 1
+    assert SessionClient.last_instance is not None
+    assert SessionClient.last_instance.calls == ["login", "alpha", "alpha"]
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    login_events = [event for event in events if event["event"] == "garmin.login.success"]
+    assert len(login_events) == 1
+
+
 def test_activity_detail_handlers_emit_activity_id():
     class ActivityClient(DummyGarmin):
         created: "ActivityClient | None" = None

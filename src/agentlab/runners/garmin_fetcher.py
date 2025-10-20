@@ -154,6 +154,8 @@ class GarminDataFetcher:
         self._pacing = pacing or GarminPacingConfig()
         self._sleep = sleep or time.sleep
         self._random = random_source or random.Random()
+        self._session_client: Garmin | None = None
+        self._session_credentials: tuple[str, str, str | None] | None = None
 
     @property
     def supported_endpoints(self) -> list[str]:
@@ -173,42 +175,54 @@ class GarminDataFetcher:
     ) -> FetchOutcome:
         """Authenticate and pull data for the requested endpoints."""
 
-        client = self._client_factory(
-            credentials.username,
-            credentials.password,
-            prompt_mfa=None,
-            return_on_mfa=False,
-        )
+        session_key = (credentials.username, credentials.password, credentials.mfa_code)
+        client = None
+        reused_session = False
 
-        login_payload = {
-            "username": credentials.username,
-            "method": "resume_login" if credentials.mfa_code else "login",
-            "mfa_provided": bool(credentials.mfa_code),
-        }
-        try:
-            if credentials.mfa_code:
-                client.resume_login(client_state=None, mfa_code=credentials.mfa_code)
-            else:
-                client.login()
-        except Exception as exc:  # pragma: no cover - reliance on API stability
-            _log_event(
-                logging.ERROR,
-                "garmin.login.failed",
-                correlation_id,
-                error_message=str(exc),
-                **login_payload,
-            )
-            raise
+        if self._session_client is not None and self._session_credentials == session_key:
+            client = self._session_client
+            reused_session = True
         else:
-            _log_event(
-                logging.INFO,
-                "garmin.login.success",
-                correlation_id,
-                **login_payload,
+            client = self._client_factory(
+                credentials.username,
+                credentials.password,
+                prompt_mfa=None,
+                return_on_mfa=False,
             )
+            login_payload = {
+                "username": credentials.username,
+                "method": "resume_login" if credentials.mfa_code else "login",
+                "mfa_provided": bool(credentials.mfa_code),
+            }
+            try:
+                if credentials.mfa_code:
+                    client.resume_login(client_state=None, mfa_code=credentials.mfa_code)
+                else:
+                    client.login()
+            except Exception as exc:  # pragma: no cover - reliance on API stability
+                _log_event(
+                    logging.ERROR,
+                    "garmin.login.failed",
+                    correlation_id,
+                    error_message=str(exc),
+                    **login_payload,
+                )
+                raise
+            else:
+                _log_event(
+                    logging.INFO,
+                    "garmin.login.success",
+                    correlation_id,
+                    **login_payload,
+                )
+                self._session_client = client
+                self._session_credentials = session_key
 
         controller = _PacingController(self._pacing, self._sleep, self._random)
-        controller.after_login()
+        if reused_session:
+            controller.reset_between_endpoints()
+        else:
+            controller.after_login()
         paced_client = _PacedGarminClient(client, controller)
 
         context = GarminFetchContext()

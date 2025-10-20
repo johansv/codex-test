@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=1, doing=1); Done: 29 (done=29); Retired: 0
+Todo: 1 (backlog=1); Done: 30 (done=30); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -32,20 +32,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
-### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
-- Owner: codex
-- Narrative: As an operator, I want the Garmin fetcher to expose the remaining Garmin data endpoints so that the CLI can mirror the full Garmin Connect dataset.
-- Acceptance Criteria:
-  * Handlers exist for remaining Garmin data endpoints (activity details, badges, goals, gear, lactate, solar, etc.)
-  * Endpoints integrate with per-day iteration and storage naming
-  * Tests validate each new handler calls the correct Garmin client method
-- Priority: high
-- Status: doing
-- Amends: REQ-F-20251018T215419-X1
-- Reason: Historic amendment in progress: Gear outputs missing stats/activities
-- Trace: prompts Complete Garmin data sync request, tests uv run pytest, commits none
----
-
 ### REQ-F-20251010T073818-5B: Batch review orchestration
 - Owner: codex
 - Narrative: As a maintainer, I want batch workflows to handle multiple requirements and persist summaries so that large refactors can be prepared in one automated pass.
@@ -61,6 +47,20 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
+- Owner: codex
+- Narrative: As an operator, I want the Garmin fetcher to expose the remaining Garmin data endpoints so that the CLI can mirror the full Garmin Connect dataset.
+- Acceptance Criteria:
+  * Handlers exist for remaining Garmin data endpoints (activity details, badges, goals, gear, lactate, solar, etc.)
+  * Endpoints integrate with per-day iteration and storage naming
+  * Tests validate each new handler calls the correct Garmin client method
+  * Multi-day runs reuse a single authenticated Garmin session so only one login occurs per CLI invocation
+- Priority: high
+- Status: done
+- Reason: Garmin fetcher outputs and session reuse verified
+- Trace: prompts Complete Garmin data sync request, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251020T113659-JF: Garmin FIT activity exports
 - Owner: codex

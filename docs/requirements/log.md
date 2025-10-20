@@ -117,3 +117,4 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-20 | REQ-F-20251020T113659-JF | Started implementation for REQ-F-20251020T113659-JF; non-functional: REQ-NF-20251010T151535-UV, REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-000, REQ-NF-20251010T151543-IE | codex | implementation |
 | 2025-10-20 | REQ-F-20251020T113659-JF | Marked REQ-F-20251020T113659-JF done: Activity downloader now emits both TCX and FIT files (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-20 | REQ-F-20251018T215419-X1 | Reopened REQ-F-20251018T215419-X1 for historic amendment: Gear outputs missing stats/activities | codex | implementation |
+| 2025-10-20 | REQ-F-20251018T215419-X1 | Garmin fetch full API coverage with session reuse (approval: SessionReuse) | codex | implementation |
