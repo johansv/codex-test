@@ -1181,16 +1181,19 @@ def _fetch_activity_download(
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
     for activity_id in _require_activity_ids(context):
-        fmt = Garmin.ActivityDownloadFormat.TCX
-        payload = client.download_activity(activity_id, fmt)
-        context.activity_downloads[activity_id] = payload
-        results.append(
-            _endpoint_result(
-                "activity-download",
-                {"activityId": activity_id, "format": fmt.name},
-                payload,
+        for fmt in (
+            Garmin.ActivityDownloadFormat.TCX,
+            Garmin.ActivityDownloadFormat.ORIGINAL,
+        ):
+            payload = client.download_activity(activity_id, fmt)
+            context.activity_downloads[f"{activity_id}:{fmt.name}"] = payload
+            results.append(
+                _endpoint_result(
+                    "activity-download",
+                    {"activityId": activity_id, "format": fmt.name},
+                    payload,
+                )
             )
-        )
     return results
 
 

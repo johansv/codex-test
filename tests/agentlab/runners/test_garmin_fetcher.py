@@ -15,6 +15,7 @@ from agentlab.runners.garmin_fetcher import (
     _fetch_activities,
     _fetch_activity_detail,
     _fetch_activity_details,
+    _fetch_activity_download,
     _fetch_body_composition,
     _fetch_progress_summary,
     GarminFetchContext,
@@ -473,6 +474,56 @@ def test_activity_detail_handlers_emit_activity_id():
     assert client.activity_calls == ["101", "202"]
     assert client.activity_details_calls == ["101", "202"]
 
+
+
+def test_activity_download_fetches_tcx_and_original():
+    class ActivityDownloadClient(DummyGarmin):
+        captured: list[tuple[str, str]] = []
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            ActivityDownloadClient.captured = []
+
+        def download_activity(self, activity_id: str, fmt: object) -> bytes:
+            ActivityDownloadClient.captured.append((activity_id, getattr(fmt, "name", str(fmt))))
+            if getattr(fmt, "name", "") == "TCX":
+                return b"tcx-bytes"
+            return b"fit-bytes"
+
+    def seed_activities(
+        client: ActivityDownloadClient,
+        request: GarminFetchRequest,
+        context: GarminFetchContext,
+    ) -> list[EndpointResult]:
+        context.activities = [{"activityId": "42"}]
+        return [EndpointResult(endpoint="activities", scope={}, payload={})]
+
+    handlers = [
+        EndpointHandler(name="activities", execute=seed_activities),
+        EndpointHandler(name="activity-download", execute=_fetch_activity_download),
+    ]
+    fetcher = GarminDataFetcher(
+        client_factory=ActivityDownloadClient,
+        handlers=handlers,
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    download_results = [r for r in outcome.results if r.endpoint == "activity-download"]
+    formats = sorted(result.scope["format"] for result in download_results)
+    assert formats == ["ORIGINAL", "TCX"]
+    assert ActivityDownloadClient.captured == [("42", "TCX"), ("42", "ORIGINAL")]
 
 def test_body_composition_calls_single_day_ranges():
     class BodyClient(DummyGarmin):

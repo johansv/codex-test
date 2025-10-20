@@ -74,7 +74,10 @@ class GarminStorageWriter:
         if isinstance(payload, bytes):
             fmt = result.scope.get("format")
             if isinstance(fmt, str):
-                return fmt.lower()
+                lowered = fmt.lower()
+                if lowered == "original":
+                    return "fit"
+                return lowered
             return "bin"
         if isinstance(payload, (dict, list)):
             return "json"

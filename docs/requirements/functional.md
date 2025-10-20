@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 29 (done=29); Retired: 0
+Todo: 1 (backlog=1); Done: 30 (done=30); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,18 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251020T113659-JF: Garmin FIT activity exports
+- Owner: codex
+- Narrative: As an operator, I want the Garmin downloader to save original .fit files alongside processed exports so that I retain raw data for advanced analysis and third-party tooling.
+- Acceptance Criteria:
+  * When activity downloads run, the original .fit payload is saved with a stable per-activity filename
+  * Presets and storage handle FIT outputs without overwriting existing exports
+- Priority: medium
+- Status: done
+- Reason: Activity downloader now emits both TCX and FIT files
+- Trace: prompts FIT export request, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251020T090147-ZS: Garmin endpoint presets
 - Owner: codex
