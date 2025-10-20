@@ -110,3 +110,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-18 | REQ-F-20251018T215419-X1 | Added functional requirement REQ-F-20251018T215419-X1: Garmin fetch full API coverage | codex | prompt |
 | 2025-10-18 | REQ-F-20251018T215419-X1 | Started implementation for REQ-F-20251018T215419-X1; non-functional: REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151535-UV, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151543-IE | codex | implementation |
 | 2025-10-18 | REQ-F-20251018T215419-X1 | Marked REQ-F-20251018T215419-X1 done: Activity detailed dataset handler added; remaining endpoints already covered or unavailable (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-20 | REQ-F-20251020T090147-ZS | Added functional requirement REQ-F-20251020T090147-ZS: Garmin endpoint presets | codex | prompt |
+| 2025-10-20 | REQ-F-20251020T090147-ZS | Started implementation for REQ-F-20251020T090147-ZS; non-functional: REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151535-UV, REQ-NF-20251010T151543-IE | codex | implementation |
+| 2025-10-20 | REQ-F-20251020T090147-ZS | Marked REQ-F-20251020T090147-ZS done: Endpoint presets and CLI selection implemented (approval: DEV-LOCAL) | codex | implementation |

@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 28 (done=28); Retired: 0
+Todo: 1 (backlog=1); Done: 29 (done=29); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251020T090147-ZS: Garmin endpoint presets
+- Owner: codex
+- Narrative: As an operator, I want selectable Garmin endpoint configurations so that I can run full exports or a curated daily coaching set without editing TOML each time.
+- Acceptance Criteria:
+  * Configuration loader supports named presets (e.g., full, coaching)
+  * All endpoints preset covers every registered handler
+  * Coaching preset captures data needed for personalized AI coach
+- Priority: medium
+- Status: done
+- Reason: Endpoint presets and CLI selection implemented
+- Trace: prompts Multiple Garmin configs request, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
 - Owner: codex

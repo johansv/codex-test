@@ -23,10 +23,11 @@ class StubFetcher:
     outcome: FetchOutcome
 
     def __init__(self, *args, **kwargs) -> None:
-        self.supported_endpoints = ["alpha"]
+        self.supported_endpoints = ["alpha", "beta"]
         self.correlations: list[str | None] = []
         self.outcome = getattr(self.__class__, "outcome")
         self.pacing = kwargs.get("pacing")
+        self.requests = []
 
     def fetch(
         self,
@@ -39,6 +40,7 @@ class StubFetcher:
         error_callback=None,
     ) -> FetchOutcome:
         self.correlations.append(correlation_id)
+        self.requests.append(request)
         results: list[EndpointResult] = []
         if result_callback:
             for result in self.outcome.results:
@@ -279,3 +281,46 @@ def test_main_loads_credentials_from_dotenv(tmp_path, monkeypatch, capsys):
     assert os.getenv("GARMIN_PASSWORD") == "from-dotenv"
     monkeypatch.delenv("GARMIN_EMAIL", raising=False)
     monkeypatch.delenv("GARMIN_PASSWORD", raising=False)
+
+
+def test_main_supports_named_preset(tmp_path, monkeypatch):
+    StubFetcher.outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="beta", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    instances: list[StubFetcher] = []
+    _install_stub_fetcher(monkeypatch, instances)
+
+    config_text = """
+[presets.one]
+enabled = ["alpha"]
+disabled = []
+
+[presets.two]
+enabled = ["beta"]
+disabled = []
+
+[defaults]
+preset = "one"
+"""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(config_text.strip(), encoding="utf-8")
+
+    exit_code = garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-06",
+            "--config",
+            str(config_path),
+            "--preset",
+            "two",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert exit_code == 0
+    fetcher_instance = instances[0]
+    assert fetcher_instance.requests
+    assert fetcher_instance.requests[0].endpoints == ["beta"]

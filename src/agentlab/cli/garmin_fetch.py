@@ -63,6 +63,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Endpoint configuration file (default: assets/config/garmin-endpoints.toml).",
     )
     parser.add_argument(
+        "--preset",
+        default=None,
+        help="Named endpoint preset defined in the configuration file.",
+    )
+    parser.add_argument(
         "--list-endpoints",
         action="store_true",
         help="Print the supported endpoint identifiers and exit.",
@@ -73,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="TOTP or MFA code when required for login (default: None).",
     )
     parser.add_argument(
-       "--output-dir",
+        "--output-dir",
         default="out",
         help="Directory where fetched data is stored (default: ./out).",
     )
@@ -104,7 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--delay-jitter",
         type=float,
         default=0.2,
-        help="Relative jitter applied to delays (0.2 => ±20%%; default: 0.2).",
+        help="Relative jitter applied to delays (0.2 => +/-20%%; default: 0.2).",
     )
     parser.add_argument(
         "--retry-limit",
@@ -120,7 +125,7 @@ def _parse_date(value: str | None, label: str) -> date | None:
         return None
     try:
         return date.fromisoformat(value)
-    except ValueError as exc:  # pragma: no cover - argparse validation
+    except ValueError as exc:
         raise argparse.ArgumentTypeError(f"{label} must be YYYY-MM-DD: {value}") from exc
 
 
@@ -165,7 +170,8 @@ def _default_config_path() -> Path:
 def _load_endpoint_defaults(
     fetcher: GarminDataFetcher,
     config_path: Path | None,
-) -> tuple[list[str], set[str], Path]:
+    preset_name: str | None,
+) -> tuple[list[str], set[str], Path, str | None]:
     path = config_path if config_path is not None else _default_config_path()
     if not path.exists():
         raise SystemExit(f"Endpoint config not found: {path}")
@@ -174,19 +180,41 @@ def _load_endpoint_defaults(
     with path.open("rb") as handle:
         data = tomllib.load(handle)
 
+    presets = data.get("presets")
     defaults_section = data.get("defaults", {})
-    enabled = defaults_section.get("enabled")
+    selected_preset: str | None = None
+
+    if presets:
+        if not isinstance(presets, dict):
+            raise SystemExit("Endpoint config presets must be a table of named configurations.")
+        selected_preset = preset_name or defaults_section.get("preset")
+        if not selected_preset:
+            raise SystemExit(
+                "Endpoint config defines presets but none was selected. Provide --preset or set defaults.preset."
+            )
+        preset_data = presets.get(selected_preset)
+        if preset_data is None:
+            available = ", ".join(sorted(presets.keys()))
+            raise SystemExit(
+                f"Unknown endpoint preset '{selected_preset}'. Available presets: {available}"
+            )
+        enabled = preset_data.get("enabled")
+        disabled = preset_data.get("disabled", [])
+    else:
+        enabled = defaults_section.get("enabled")
+        disabled = defaults_section.get("disabled", [])
+        if preset_name:
+            raise SystemExit("Config does not define presets but --preset was provided.")
+        selected_preset = None
+
     if not isinstance(enabled, list) or not all(isinstance(name, str) for name in enabled):
-        raise SystemExit("Endpoint config must define defaults.enabled as a list of strings.")
+        raise SystemExit("Endpoint configuration must provide an enabled list of strings.")
     if not enabled:
-        raise SystemExit("Endpoint config defaults.enabled must contain at least one entry.")
-    disabled = defaults_section.get("disabled", [])
+        raise SystemExit("Endpoint configuration enabled list must contain at least one entry.")
     if disabled and (
         not isinstance(disabled, list) or not all(isinstance(name, str) for name in disabled)
     ):
-        raise SystemExit(
-            "Endpoint config defaults.disabled must be a list of strings when provided."
-        )
+        raise SystemExit("Endpoint configuration disabled entries must be strings when provided.")
 
     duplicates = [name for name in enabled if enabled.count(name) > 1]
     if duplicates:
@@ -217,7 +245,7 @@ def _load_endpoint_defaults(
             f"{', '.join(sorted(overlap))}"
         )
 
-    return list(enabled), disabled_set, path
+    return list(enabled), disabled_set, path, selected_preset
 
 
 def _select_endpoints(
@@ -324,7 +352,9 @@ def main(argv: list[str] | None = None) -> int:
 
     start, end = _resolve_range(args)
     credentials = _load_credentials(args)
-    defaults, disabled, config_path_used = _load_endpoint_defaults(fetcher, args.config)
+    defaults, disabled, config_path_used, selected_preset = _load_endpoint_defaults(
+        fetcher, args.config, args.preset
+    )
     endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
     output_root = Path(args.output_dir)
     storage = GarminStorageWriter(output_root)
@@ -344,6 +374,7 @@ def main(argv: list[str] | None = None) -> int:
             "defaults_disabled": sorted(disabled),
             "config_path": str(config_path_used),
             "output_dir": str(output_root),
+            "preset": selected_preset,
             "pacing": {
                 "post_login_delay": pacing.post_login_delay,
                 "between_endpoints_delay": pacing.between_endpoints_delay,
