@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 27 (done=27); Retired: 0
+Todo: 1 (backlog=1); Done: 28 (done=28); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,19 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
+- Owner: codex
+- Narrative: As an operator, I want the Garmin fetcher to expose the remaining Garmin data endpoints so that the CLI can mirror the full Garmin Connect dataset.
+- Acceptance Criteria:
+  * Handlers exist for remaining Garmin data endpoints (activity details, badges, goals, gear, lactate, solar, etc.)
+  * Endpoints integrate with per-day iteration and storage naming
+  * Tests validate each new handler calls the correct Garmin client method
+- Priority: high
+- Status: done
+- Reason: Activity detailed dataset handler added; remaining endpoints already covered or unavailable
+- Trace: prompts Complete Garmin data sync request, tests uv run pytest, commits none
+---
 
 ### REQ-F-20251017T170307-45: Consistent per-day date range calls
 - Owner: codex

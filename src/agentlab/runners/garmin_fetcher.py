@@ -417,6 +417,7 @@ def _build_default_handlers() -> list[EndpointHandler]:
         EndpointHandler("last-activity", _fetch_last_activity),
         EndpointHandler("activity-types", _fetch_activity_types),
         EndpointHandler("activity-detail", _fetch_activity_detail),
+        EndpointHandler("activity-details", _fetch_activity_details),
         EndpointHandler("activity-splits", _fetch_activity_splits),
         EndpointHandler("activity-typed-splits", _fetch_activity_typed_splits),
         EndpointHandler("activity-split-summaries", _fetch_activity_split_summaries),
@@ -1078,6 +1079,18 @@ def _fetch_activity_detail(
     for activity_id in _require_activity_ids(context):
         payload = client.get_activity(activity_id)
         results.append(_endpoint_result("activity-detail", {"activityId": activity_id}, payload))
+    return results
+
+
+def _fetch_activity_details(
+    client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
+) -> list[EndpointResult]:
+    results: list[EndpointResult] = []
+    for activity_id in _require_activity_ids(context):
+        payload = client.get_activity_details(activity_id)
+        results.append(
+            _endpoint_result("activity-details", {"activityId": activity_id}, payload)
+        )
     return results
 
 

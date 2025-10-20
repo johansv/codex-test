@@ -14,6 +14,7 @@ from agentlab.runners.garmin_fetcher import (
     GarminPacingConfig,
     _fetch_activities,
     _fetch_activity_detail,
+    _fetch_activity_details,
     _fetch_body_composition,
     _fetch_progress_summary,
     GarminFetchContext,
@@ -75,6 +76,7 @@ def test_supported_endpoints_matches_registry():
         "last-activity",
         "activity-types",
         "activity-detail",
+        "activity-details",
         "activity-splits",
         "activity-typed-splits",
         "activity-split-summaries",
@@ -413,6 +415,7 @@ def test_activity_detail_handlers_emit_activity_id():
             self.activities_by_date_calls: list[tuple[str, str]] = []
             self.activities_for_date_calls: list[str] = []
             self.activity_calls: list[str] = []
+            self.activity_details_calls: list[str] = []
             ActivityClient.created = self
 
         def get_activities(self, *_args: object, **_kwargs: object) -> list[dict[str, str]]:
@@ -430,9 +433,14 @@ def test_activity_detail_handlers_emit_activity_id():
             self.activity_calls.append(activity_id)
             return {"activityId": activity_id, "detail": "ok"}
 
+        def get_activity_details(self, activity_id: str, *args: object, **kwargs: object) -> dict[str, str]:
+            self.activity_details_calls.append(activity_id)
+            return {"activityId": activity_id, "details": "chart"}
+
     handlers = [
         EndpointHandler(name="activities", execute=_fetch_activities),
         EndpointHandler(name="activity-detail", execute=_fetch_activity_detail),
+        EndpointHandler(name="activity-details", execute=_fetch_activity_details),
     ]
     fetcher = GarminDataFetcher(
         client_factory=ActivityClient,
@@ -452,15 +460,18 @@ def test_activity_detail_handlers_emit_activity_id():
 
     outcome = fetcher.fetch(credentials, request)
 
-    assert len(outcome.results) == 3  # 1 activities + 2 detail entries
+    assert len(outcome.results) == 5  # activities + detail + details for each activity
     detail_results = [result for result in outcome.results if result.endpoint == "activity-detail"]
     assert [result.scope["activityId"] for result in detail_results] == ["101", "202"]
+    detailed_results = [result for result in outcome.results if result.endpoint == "activity-details"]
+    assert [result.scope["activityId"] for result in detailed_results] == ["101", "202"]
 
     client = ActivityClient.created
     assert client is not None
     assert client.activities_by_date_calls == [("2024-01-01", "2024-01-01")]
     assert client.activities_for_date_calls == []
     assert client.activity_calls == ["101", "202"]
+    assert client.activity_details_calls == ["101", "202"]
 
 
 def test_body_composition_calls_single_day_ranges():
