@@ -184,5 +184,18 @@ disabled = [
   "activities",
 ]
 
+[presets.mini]
+enabled = [
+  "stats",
+  "user-summary",
+  "activities-by-date",
+  "activity-detail",
+]
+
+disabled = [
+  "activity-download",
+  "activities",
+]
+
 [defaults]
 preset = "coaching"

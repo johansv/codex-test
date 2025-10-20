@@ -365,17 +365,18 @@ def main(argv: list[str] | None = None) -> int:
         job_settings = {
             "username": credentials.username,
             "mfa_provided": bool(credentials.mfa_code),
-            "date": args.date,
-            "start_date": start.isoformat(),
-            "end_date": end.isoformat(),
-            "include": args.include or [],
-            "exclude": args.exclude or [],
-            "endpoints": endpoints,
-            "defaults_disabled": sorted(disabled),
-            "config_path": str(config_path_used),
-            "output_dir": str(output_root),
-            "preset": selected_preset,
-            "pacing": {
+        "date": args.date,
+        "start_date": start.isoformat(),
+        "end_date": end.isoformat(),
+        "include": args.include or [],
+        "exclude": args.exclude or [],
+        "endpoints": endpoints,
+        "endpoint_count": len(endpoints),
+        "defaults_disabled": sorted(disabled),
+        "config_path": str(config_path_used),
+        "output_dir": str(output_root),
+        "preset": selected_preset,
+        "pacing": {
                 "post_login_delay": pacing.post_login_delay,
                 "between_endpoints_delay": pacing.between_endpoints_delay,
                 "pagination_delay": pacing.pagination_delay,
@@ -397,7 +398,8 @@ def main(argv: list[str] | None = None) -> int:
         run_id,
         start_date=start.isoformat(),
         end_date=end.isoformat(),
-        endpoints=endpoints,
+        endpoint_count=len(endpoints),
+        preset=selected_preset,
     )
 
     summary: list[dict[str, object]] = []
@@ -414,7 +416,7 @@ def main(argv: list[str] | None = None) -> int:
             "garmin.cli.day.start",
             day_correlation_id,
             date=day.isoformat(),
-            endpoints=endpoints,
+            endpoint_count=len(endpoints),
         )
 
         observer = None

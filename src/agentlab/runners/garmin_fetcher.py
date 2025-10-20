@@ -221,7 +221,7 @@ class GarminDataFetcher:
             logging.INFO,
             "garmin.fetch.start",
             correlation_id,
-            request=request_metadata,
+            window=request_metadata,
         )
 
         def run_pass(pass_index: int, permitted: set[str] | None) -> tuple[list[EndpointResult], dict[str, EndpointError], list[str]]:
@@ -245,7 +245,6 @@ class GarminDataFetcher:
                     logging.INFO,
                     "garmin.endpoint.start",
                     correlation_id,
-                    request=request_metadata,
                     endpoint=handler.name,
                     attempt=pass_index,
                 )
@@ -267,9 +266,9 @@ class GarminDataFetcher:
                         logging.ERROR,
                         "garmin.endpoint.error",
                         correlation_id,
-                        request=request_metadata,
                         endpoint=handler.name,
                         error_message=error.message,
+                        scope=error.scope,
                         attempt=pass_index,
                     )
                 else:
@@ -290,7 +289,6 @@ class GarminDataFetcher:
                         logging.INFO,
                         "garmin.endpoint.success",
                         correlation_id,
-                        request=request_metadata,
                         endpoint=handler.name,
                         result_count=len(handler_results),
                         scopes=[result.scope for result in handler_results],
@@ -313,7 +311,7 @@ class GarminDataFetcher:
                 logging.INFO,
                 "garmin.fetch.retry.start",
                 correlation_id,
-                request=request_metadata,
+                window=request_metadata,
                 attempt=attempt_index,
                 endpoints=sorted(retry_targets),
             )
@@ -335,7 +333,6 @@ class GarminDataFetcher:
                 logging.INFO if failed_this_attempt == 0 else logging.WARNING,
                 "garmin.fetch.retry.completed",
                 correlation_id,
-                request=request_metadata,
                 attempt=attempt_index,
                 succeeded=len(pass_successes),
                 remaining=failed_this_attempt,
@@ -348,7 +345,8 @@ class GarminDataFetcher:
             logging.INFO,
             "garmin.fetch.completed",
             correlation_id,
-            request=request_metadata,
+            window=request_metadata,
+            completed_endpoints=sorted({result.endpoint for result in results}),
             result_count=len(results),
             error_count=len(error_map),
             retries=_retry_summary_payload(retry_summary),
@@ -455,13 +453,17 @@ def _endpoint_result(name: str, scope: dict[str, str | int], payload: Any) -> En
 
 
 def _request_metadata(request: GarminFetchRequest) -> dict[str, Any]:
-    """Return a serialisable snapshot of the request for logging."""
+    """Return a compact summary of the fetch request for logging."""
 
-    return {
-        "start_date": request.start_date.isoformat(),
-        "end_date": request.end_date.isoformat(),
-        "endpoints": sorted(request.endpoints) if request.endpoints is not None else None,
+    endpoints = list(request.endpoints) if request.endpoints is not None else None
+    summary: dict[str, Any] = {
+        "start": request.start_date.isoformat(),
+        "end": request.end_date.isoformat(),
+        "endpoint_count": len(endpoints) if endpoints is not None else None,
     }
+    if endpoints:
+        summary["first_endpoint"] = endpoints[0]
+    return summary
 
 
 def _log_event(
