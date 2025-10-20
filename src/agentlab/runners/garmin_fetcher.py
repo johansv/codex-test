@@ -25,6 +25,17 @@ from agentlab.core.garmin import (
 logger = logging.getLogger(__name__)
 
 
+class RateLimitExceeded(RuntimeError):
+    """Raised when Garmin rate limiting is detected."""
+
+    def __init__(self, message: str, *, wait_minutes: int) -> None:
+        super().__init__(message)
+        self.wait_minutes = wait_minutes
+
+
+_RATE_LIMIT_WAIT_MINUTES = 10
+
+
 @dataclass(slots=True)
 class GarminFetchContext:
     """Hold intermediate data reused across endpoint calls."""
@@ -200,6 +211,16 @@ class GarminDataFetcher:
                 else:
                     client.login()
             except Exception as exc:  # pragma: no cover - reliance on API stability
+                if _is_rate_limit_error(exc):
+                    _log_event(
+                        logging.WARNING,
+                        "garmin.rate-limit",
+                        correlation_id,
+                        phase="login",
+                        wait_minutes=_RATE_LIMIT_WAIT_MINUTES,
+                        message=str(exc),
+                    )
+                    raise RateLimitExceeded(str(exc), wait_minutes=_RATE_LIMIT_WAIT_MINUTES) from exc
                 _log_event(
                     logging.ERROR,
                     "garmin.login.failed",
@@ -265,6 +286,18 @@ class GarminDataFetcher:
                 try:
                     handler_results = handler.execute(paced_client, request, context)
                 except Exception as exc:  # pragma: no cover - reliance on API stability
+                    if _is_rate_limit_error(exc):
+                        _log_event(
+                            logging.WARNING,
+                            "garmin.rate-limit",
+                            correlation_id,
+                            phase="endpoint",
+                            endpoint=handler.name,
+                            wait_minutes=_RATE_LIMIT_WAIT_MINUTES,
+                            message=str(exc),
+                            attempt=pass_index,
+                        )
+                        raise RateLimitExceeded(str(exc), wait_minutes=_RATE_LIMIT_WAIT_MINUTES) from exc
                     error = EndpointError(
                         endpoint=handler.name,
                         scope={},
@@ -478,6 +511,18 @@ def _request_metadata(request: GarminFetchRequest) -> dict[str, Any]:
     if endpoints:
         summary["first_endpoint"] = endpoints[0]
     return summary
+
+
+def _is_rate_limit_error(exc: Exception) -> bool:
+    response = getattr(exc, "response", None)
+    status = getattr(response, "status_code", None)
+    if status == 429:
+        return True
+    status_attr = getattr(exc, "status", None)
+    if status_attr == 429:
+        return True
+    text = str(exc).lower()
+    return "429" in text or "too many requests" in text
 
 
 def _log_event(

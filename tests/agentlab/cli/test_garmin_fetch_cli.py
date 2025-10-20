@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from agentlab.cli import garmin_fetch
+from agentlab.runners.garmin_fetcher import RateLimitExceeded
 from agentlab.core.garmin import EndpointError, EndpointResult, FetchOutcome, RetrySummary
 
 
@@ -195,6 +196,73 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     ]
     failure_events = [event for event in events if event["event"] == "garmin.cli.run.failed"]
     assert failure_events, "Expected garmin.cli.run.failed log entry"
+
+
+def test_main_handles_rate_limit(tmp_path, monkeypatch, capsys, caplog):
+    class RateLimitFetcher:
+        def __init__(self, *args, **kwargs) -> None:
+            self.supported_endpoints = ["alpha"]
+            self.correlations: list[str | None] = []
+            self.requests = []
+            self.pacing = kwargs.get("pacing")
+
+        def fetch(
+            self,
+            credentials,
+            request,
+            observer=None,
+            *,
+            correlation_id=None,
+            result_callback=None,
+            error_callback=None,
+        ) -> FetchOutcome:
+            self.correlations.append(correlation_id)
+            self.requests.append(request)
+            raise RateLimitExceeded("429 Too Many Requests", wait_minutes=10)
+
+    def factory(*args, **kwargs) -> RateLimitFetcher:
+        return RateLimitFetcher(*args, **kwargs)
+
+    monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
+
+    config_path = tmp_path / "config.toml"
+    _write_config(config_path)
+
+    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+
+    exit_code = garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-03",
+            "--config",
+            str(config_path),
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    summary = json.loads(captured.out)
+    assert summary == [
+        {
+            "date": "2024-01-03",
+            "successes": [],
+            "failures": [{"endpoint": "rate-limit", "message": "429 Too Many Requests"}],
+            "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
+            "rate_limited": True,
+        }
+    ]
+    assert exit_code == 1
+    assert "Wait at least 10 minutes" in captured.err
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.cli.garmin_fetch"
+    ]
+    rate_events = [event for event in events if event["event"] == "garmin.cli.rate_limit"]
+    assert rate_events
+    assert rate_events[0]["wait_minutes"] == 10
 
 
 def test_main_debug_logs_configuration_snapshot(tmp_path, monkeypatch, capsys, caplog):

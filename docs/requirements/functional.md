@@ -56,6 +56,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Endpoints integrate with per-day iteration and storage naming
   * Tests validate each new handler calls the correct Garmin client method
   * Multi-day runs reuse a single authenticated Garmin session so only one login occurs per CLI invocation
+  * When login or any endpoint call raises an HTTP 429, the fetcher emits a `garmin.rate-limit` log naming the date in progress and recommending a 10-minute wait, then stops further work
 - Priority: high
 - Status: done
 - Reason: Garmin fetcher outputs and session reuse verified

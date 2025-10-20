@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover
 from dotenv import find_dotenv, load_dotenv
 
 from agentlab.core.garmin import EndpointError, EndpointResult, GarminCredentials, GarminFetchRequest
-from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig
+from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig, RateLimitExceeded
 from agentlab.utils.storage import GarminStorageWriter
 
 _DEFAULT_CONFIG_RELATIVE = Path("assets") / "config" / "garmin-endpoints.toml"
@@ -406,6 +406,7 @@ def main(argv: list[str] | None = None) -> int:
     days = list(GarminFetchRequest(start_date=start, end_date=end).iter_dates())
     retry_totals = {"scheduled": 0, "succeeded": 0, "failed": 0}
     any_success = False
+    rate_limit_exc: RateLimitExceeded | None = None
 
     for day in days:
         day_request = GarminFetchRequest(start_date=day, end_date=day, endpoints=endpoints)
@@ -434,14 +435,35 @@ def main(argv: list[str] | None = None) -> int:
         def _on_error(error: EndpointError, *, _day=day) -> None:
             storage.write_error(_day, error)
 
-        outcome = fetcher.fetch(
-            credentials,
-            day_request,
-            observer=observer,
-            correlation_id=day_correlation_id,
-            result_callback=_on_result,
-            error_callback=_on_error,
-        )
+        try:
+            outcome = fetcher.fetch(
+                credentials,
+                day_request,
+                observer=observer,
+                correlation_id=day_correlation_id,
+                result_callback=_on_result,
+                error_callback=_on_error,
+            )
+        except RateLimitExceeded as exc:
+            rate_limit_exc = exc
+            summary.append(
+                {
+                    "date": day.isoformat(),
+                    "successes": [],
+                    "failures": [
+                        {"endpoint": "rate-limit", "message": str(exc)}
+                    ],
+                    "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
+                    "rate_limited": True,
+                }
+            )
+            _log_cli_event(
+                logging.ERROR,
+                "garmin.cli.rate_limit",
+                day_correlation_id,
+                wait_minutes=exc.wait_minutes,
+            )
+            break
 
         successes = list(dict.fromkeys(result.endpoint for result in outcome.results))
         failures = [
@@ -473,27 +495,52 @@ def main(argv: list[str] | None = None) -> int:
             successes=len(successes),
             failures=len(failures),
             retry_outcomes=retry_summary,
-        )
+            )
 
     total_successes = sum(len(entry["successes"]) for entry in summary)
     total_failures = sum(len(entry["failures"]) for entry in summary)
-    exit_code = 0 if any_success else 1
+    exit_code = 0 if (rate_limit_exc is None and any_success) else 1
 
-    _log_cli_event(
-        logging.INFO if exit_code == 0 else logging.ERROR,
-        "garmin.cli.run.completed" if exit_code == 0 else "garmin.cli.run.failed",
-        run_id,
-        totals={
-            "days": len(summary),
-            "successes": total_successes,
-            "failures": total_failures,
-            "retry_outcomes": retry_totals,
-        },
-        exit_code=exit_code,
-    )
+    if rate_limit_exc is not None:
+        _log_cli_event(
+            logging.ERROR,
+            "garmin.cli.run.failed",
+            run_id,
+            totals={
+                "days": len(summary),
+                "successes": total_successes,
+                "failures": total_failures,
+                "retry_outcomes": retry_totals,
+            },
+            exit_code=1,
+            reason="rate_limit",
+            wait_minutes=rate_limit_exc.wait_minutes,
+        )
+    else:
+        _log_cli_event(
+            logging.INFO if exit_code == 0 else logging.ERROR,
+            "garmin.cli.run.completed" if exit_code == 0 else "garmin.cli.run.failed",
+            run_id,
+            totals={
+                "days": len(summary),
+                "successes": total_successes,
+                "failures": total_failures,
+                "retry_outcomes": retry_totals,
+            },
+            exit_code=exit_code,
+        )
 
     json.dump(summary, sys.stdout, indent=2)
     print()
+
+    if rate_limit_exc is not None:
+        wait_message = (
+            f"Rate limit encountered after {summary[-1]['date']}. "
+            f"Wait at least {rate_limit_exc.wait_minutes} minutes before retrying."
+        )
+        print(wait_message, file=sys.stderr)
+        return 1
+
     return exit_code
 
 

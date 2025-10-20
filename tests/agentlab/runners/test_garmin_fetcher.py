@@ -12,6 +12,7 @@ from agentlab.runners.garmin_fetcher import (
     EndpointHandler,
     GarminDataFetcher,
     GarminPacingConfig,
+    RateLimitExceeded,
     _fetch_activities,
     _fetch_activity_detail,
     _fetch_activity_details,
@@ -406,6 +407,43 @@ def test_fetch_logs_login_failure(caplog):
     assert failure_events[0]["method"] == "login"
 
 
+def test_fetch_raises_rate_limit_on_login(caplog):
+    class RateLimitedLogin(DummyGarmin):
+        def login(self) -> None:
+            raise RuntimeError("429 Too Many Requests")
+
+    fetcher = GarminDataFetcher(
+        client_factory=RateLimitedLogin,
+        handlers=[],
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    with pytest.raises(RateLimitExceeded):
+        fetcher.fetch(credentials, request, correlation_id="rate-limit-login")
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    rate_events = [event for event in events if event["event"] == "garmin.rate-limit"]
+    assert rate_events
+    assert rate_events[0]["phase"] == "login"
+    assert rate_events[0]["wait_minutes"] == 10
+
+
 def test_fetch_reuses_session_across_calls(caplog):
     class SessionClient(DummyGarmin):
         created_count = 0
@@ -461,6 +499,45 @@ def test_fetch_reuses_session_across_calls(caplog):
     ]
     login_events = [event for event in events if event["event"] == "garmin.login.success"]
     assert len(login_events) == 1
+
+
+def test_fetch_raises_rate_limit_during_endpoint(caplog):
+    def rate_limited_handler(client: DummyGarmin, request: GarminFetchRequest, _context):
+        raise RuntimeError("HTTP 429 Too Many Requests")
+
+    handlers = [
+        EndpointHandler(name="alpha", execute=rate_limited_handler),
+    ]
+    fetcher = GarminDataFetcher(
+        client_factory=DummyGarmin,
+        handlers=handlers,
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    caplog.set_level(logging.INFO, logger="agentlab.runners.garmin_fetcher")
+
+    with pytest.raises(RateLimitExceeded):
+        fetcher.fetch(credentials, request, correlation_id="rate-limit-endpoint")
+
+    events = [
+        json.loads(record.getMessage())
+        for record in caplog.records
+        if record.name == "agentlab.runners.garmin_fetcher"
+    ]
+    rate_events = [event for event in events if event["event"] == "garmin.rate-limit"]
+    assert rate_events
+    assert rate_events[0]["phase"] == "endpoint"
+    assert rate_events[0]["endpoint"] == "alpha"
 
 
 def test_activity_detail_handlers_emit_activity_id():
