@@ -37,6 +37,7 @@ enabled = [
   "progress-summary",
   "goals",
   "earned-badges",
+  "personal-records",
   "adhoc-challenges",
   "badge-challenges",
   "available-badge-challenges",
