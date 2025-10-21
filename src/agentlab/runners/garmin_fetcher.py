@@ -77,6 +77,19 @@ _RUN_DATE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "workout-download": ("workouts",),
 }
 
+_ENDPOINT_DEPENDENCIES: dict[str, tuple[str, ...]] = {
+    "activity-detail": ("activities-by-date", "activities-for-date"),
+    "activity-details": ("activities-by-date", "activities-for-date"),
+    "activity-splits": ("activities-by-date", "activities-for-date"),
+    "activity-typed-splits": ("activities-by-date", "activities-for-date"),
+    "activity-split-summaries": ("activities-by-date", "activities-for-date"),
+    "activity-weather": ("activities-by-date", "activities-for-date"),
+    "activity-hr-timezones": ("activities-by-date", "activities-for-date"),
+    "activity-exercise-sets": ("activities-by-date", "activities-for-date"),
+    "activity-gear": ("activities-by-date", "activities-for-date"),
+    "activity-download": ("activities-by-date", "activities-for-date"),
+}
+
 
 @dataclass(slots=True)
 class GarminFetchContext:
@@ -278,6 +291,19 @@ class GarminDataFetcher:
 
         return [handler.name for handler in self._handlers]
 
+    def _expand_endpoints(self, endpoints: Sequence[str]) -> list[str]:
+        selected = set(endpoints)
+        stack = list(endpoints)
+
+        while stack:
+            name = stack.pop()
+            for dependency in _ENDPOINT_DEPENDENCIES.get(name, ()):
+                if dependency not in selected:
+                    selected.add(dependency)
+                    stack.append(dependency)
+
+        return [handler.name for handler in self._handlers if handler.name in selected]
+
     def partition_endpoints(self, endpoints: Sequence[str]) -> tuple[list[str], list[str]]:
         """Split *endpoints* into run-date and per-day groups preserving handler order."""
 
@@ -299,6 +325,14 @@ class GarminDataFetcher:
         error_callback: Callable[[EndpointError], None] | None = None,
     ) -> FetchOutcome:
         """Authenticate and pull data for the requested endpoints."""
+
+        if request.endpoints is not None:
+            expanded = self._expand_endpoints(request.endpoints)
+            request = GarminFetchRequest(
+                start_date=request.start_date,
+                end_date=request.end_date,
+                endpoints=tuple(expanded),
+            )
 
         session_key = (credentials.username, credentials.password, credentials.mfa_code)
         client = None
@@ -1247,30 +1281,29 @@ def _fetch_activity_types(
 
 
 def _require_activity_ids(context: GarminFetchContext, request: GarminFetchRequest) -> list[str]:
+    def _append_ids(records: Sequence[dict[str, Any]]) -> None:
+        for activity in records:
+            if not isinstance(activity, dict):
+                continue
+            activity_id = activity.get("activityId") or activity.get("activityIdGps")
+            if activity_id is None:
+                continue
+            activity_id = str(activity_id)
+            if activity_id not in seen:
+                seen.add(activity_id)
+                ids.append(activity_id)
+
     ids: list[str] = []
     seen: set[str] = set()
     for day in request.iter_dates():
         day_iso = _iso(day)
         records = context.activities_by_date.get(day_iso)
         if not records:
-            records = context.activities_for_date.get(day_iso, [])
-        for activity in records:
-            activity_id = activity.get("activityId") or activity.get("activityIdGps")
-            if activity_id is None:
-                continue
-            activity_id = str(activity_id)
-            if activity_id not in seen:
-                seen.add(activity_id)
-                ids.append(activity_id)
-    if not ids:
-        for activity in context.activities:
-            activity_id = activity.get("activityId") or activity.get("activityIdGps")
-            if activity_id is None:
-                continue
-            activity_id = str(activity_id)
-            if activity_id not in seen:
-                seen.add(activity_id)
-                ids.append(activity_id)
+            records = context.activities_for_date.get(day_iso)
+        if records is None:
+            continue
+        if records:
+            _append_ids(records)
     return ids
 
 

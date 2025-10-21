@@ -880,7 +880,12 @@ def test_activity_download_fetches_tcx_and_original():
         request: GarminFetchRequest,
         context: GarminFetchContext,
     ) -> list[EndpointResult]:
-        context.activities = [{"activityId": "42"}]
+        day_iso = request.start_date.isoformat()
+        context.activities_by_date[day_iso] = [
+            {
+                "activityId": "42",
+            }
+        ]
         return [EndpointResult(endpoint="activities", scope={}, payload={})]
 
     handlers = [
@@ -963,6 +968,91 @@ def test_activity_detail_skips_when_no_activities():
     context = GarminFetchContext()
 
     assert _fetch_activity_detail(client, request, context) == []
+
+
+def test_activity_detail_skips_when_activities_are_for_other_days():
+    class GuardedClient(DummyGarmin):
+        def get_activity(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_activity should not be called for other-day activity")
+
+    client = GuardedClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 2), end_date=date(2024, 1, 2))
+    context = GarminFetchContext()
+    context.activities_by_date["2024-01-01"] = [{"activityId": 123}]
+
+    assert _fetch_activity_detail(client, request, context) == []
+
+
+def test_activity_detail_uses_context_activities_with_matching_day():
+    class RecordingClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.called_with: list[str] = []
+
+        def get_activity(self, activity_id: str) -> dict[str, str]:
+            self.called_with.append(activity_id)
+            return {"id": activity_id}
+
+    client = RecordingClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 2), end_date=date(2024, 1, 2))
+    context = GarminFetchContext()
+    context.activities_by_date["2024-01-02"] = [{"activityId": "123"}]
+
+    results = _fetch_activity_detail(client, request, context)
+
+    assert client.called_with == ["123"]
+    assert [result.scope["activityId"] for result in results] == ["123"]
+
+
+def test_activity_detail_skips_when_activity_lists_are_non_dict_entries():
+    class GuardedClient(DummyGarmin):
+        def get_activity(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_activity should not be called when records are non-dicts")
+
+    client = GuardedClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 3), end_date=date(2024, 1, 3))
+    context = GarminFetchContext()
+    context.activities_for_date["2024-01-03"] = ["ActivitiesForDay", "AllDayHR"]
+
+    assert _fetch_activity_detail(client, request, context) == []
+
+
+def test_activity_detail_requests_dependencies_when_only_detail_selected():
+    class DependencyClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.by_date_calls: list[tuple[str, str]] = []
+            self.for_date_calls: list[str] = []
+            self.activity_calls: list[str] = []
+
+        def get_activities_by_date(self, start: str, end: str) -> list[dict[str, object]]:
+            self.by_date_calls.append((start, end))
+            return []
+
+        def get_activities_fordate(self, day: str) -> list[object]:
+            self.for_date_calls.append(day)
+            return ["ActivitiesForDay"]
+
+        def get_activity(self, activity_id: str) -> dict[str, str]:
+            self.activity_calls.append(activity_id)
+            return {"activityId": activity_id}
+
+    fetcher = GarminDataFetcher(client_factory=DependencyClient)
+    request = GarminFetchRequest(
+        start_date=date(2024, 1, 4),
+        end_date=date(2024, 1, 4),
+        endpoints=("activity-detail",),
+    )
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    client = fetcher._session_client  # type: ignore[attr-defined]
+    assert client is not None
+    assert client.by_date_calls == [("2024-01-04", "2024-01-04")]
+    assert client.for_date_calls == ["2024-01-04"]
+    assert client.activity_calls == []
+    assert [result.endpoint for result in outcome.results] == ["activities-by-date", "activities-for-date"]
 
 
 def test_workout_detail_skips_when_no_workouts():

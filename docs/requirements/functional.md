@@ -48,6 +48,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
+### REQ-F-20251021T130040-QF: Skip detail endpoints when source items absent
+- Owner: product
+- Narrative: As a user, I want detail endpoints to run only when matching activities, workouts, or gear exist so that the fetcher avoids unnecessary API calls and sidecar noise.
+  - Acceptance Criteria:
+    * Activity detail endpoints (detail, details, splits, etc.) do not invoke Garmin APIs and produce no results when no activities are available for the requested day.
+    * Workout detail/download endpoints are skipped when the workouts list is empty for the run.
+    * Gear stats/activities endpoints are skipped when no gear entries are present for the run.
+    * Device detail endpoints (settings, last-used, solar, alarms, primary device) are skipped when no devices are cached for the run.
+    * Unit tests cover empty activity/workout/gear/device scenarios verifying that the corresponding Garmin client methods are not called.
+- Priority: medium
+- Status: done
+- Reason: Detail endpoints only execute when per-day activity lists supply IDs
+- Trace: prompts Skip detail endpoints for empty activity/workout/gear lists, tests tests/agentlab/runners/test_garmin_fetcher.py, commits none
+---
+
 ### REQ-F-20251021T141140-H9: Run-date scheduling for non-dated Garmin endpoints
 - Owner: product
 - Narrative: As a data operator, I want Garmin endpoints that lack date inputs to execute once per run so that current-state datasets aren't repeated for every historic day in the range.
@@ -75,20 +90,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Metadata sidecars published
 - Trace: prompts Add metadata sidecar files recording provenance alongside Garmin fetch outputs, tests tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits pending
----
-### REQ-F-20251021T130040-QF: Skip detail endpoints when source items absent
-- Owner: product
-- Narrative: As a user, I want detail endpoints to run only when matching activities, workouts, or gear exist so that the fetcher avoids unnecessary API calls and sidecar noise.
-  - Acceptance Criteria:
-    * Activity detail endpoints (detail, details, splits, etc.) do not invoke Garmin APIs and produce no results when no activities are available for the requested day.
-    * Workout detail/download endpoints are skipped when the workouts list is empty for the run.
-    * Gear stats/activities endpoints are skipped when no gear entries are present for the run.
-    * Device detail endpoints (settings, last-used, solar, alarms, primary device) are skipped when no devices are cached for the run.
-    * Unit tests cover empty activity/workout/gear/device scenarios verifying that the corresponding Garmin client methods are not called.
-- Priority: medium
-- Status: done
-- Reason: Detail endpoints gated by available items
-- Trace: prompts Skip detail endpoints for empty activity/workout/gear lists, tests tests/agentlab/runners/test_garmin_fetcher.py, commits pending
 ---
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage

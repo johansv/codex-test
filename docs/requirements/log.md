@@ -134,3 +134,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T141140-H9 | Implemented run-date endpoint scheduling, storage overrides, and regression tests | codex | implementation |
 
 | 2025-10-21 | REQ-F-20251021T141140-H9 | Marked REQ-F-20251021T141140-H9 done: Run-date endpoints execute once per run with storage overrides (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Reopened REQ-F-20251021T130040-QF for historic amendment: Detail endpoints still invoke when activities list empty | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Marked REQ-F-20251021T130040-QF done: Detail endpoints only execute when per-day activity lists supply IDs (approval: DEV-LOCAL) | codex | implementation |
