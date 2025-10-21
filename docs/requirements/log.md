@@ -136,3 +136,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T141140-H9 | Marked REQ-F-20251021T141140-H9 done: Run-date endpoints execute once per run with storage overrides (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T130040-QF | Reopened REQ-F-20251021T130040-QF for historic amendment: Detail endpoints still invoke when activities list empty | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T130040-QF | Marked REQ-F-20251021T130040-QF done: Detail endpoints only execute when per-day activity lists supply IDs (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T113857-26 | Reopened REQ-F-20251021T113857-26 for historic amendment: Add data_scope metadata to sidecars | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T113857-26 | Marked REQ-F-20251021T113857-26 done: Sidecars capture per-day vs run-date scope in metadata (approval: DEV-LOCAL) | codex | implementation |

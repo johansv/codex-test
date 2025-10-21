@@ -48,6 +48,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
+### REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs
+- Owner: product
+- Narrative: As a user, I want Garmin fetches to emit metadata sidecars so that every payload is provenance-traceable.
+  - Acceptance Criteria:
+    * Successful payload writes create a sibling `<endpoint>.<ext>.meta.json` capturing timestamp, Garmin Connect version, run identifier or correlation ID, endpoint name, scope, garmin_methods, payload type/size, MD5, and `status: success`.
+    * When an endpoint fails, the storage layer still writes the identically named `.meta.json` with `status: error`, linking to the `.error.json` file and recording the error message/traceback and expected payload filename even if absent.
+    * Metadata filenames remain consistent between success and error outcomes and continue to rely on atomic writes within the storage helper and retry flow.
+    * Tests cover both success and error scenarios, asserting sidecar content includes status, existence flag, MD5 (when present), and garmin method provenance.
+    * Sidecars record whether the endpoint ran for a specific date (`per-day`) or returned current run-state data, including the associated day context when applicable.
+- Priority: medium
+- Status: done
+- Reason: Sidecars capture per-day vs run-date scope in metadata
+- Trace: prompts Add metadata sidecar files recording provenance alongside Garmin fetch outputs, tests tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits none
+---
+
 ### REQ-F-20251021T130040-QF: Skip detail endpoints when source items absent
 - Owner: product
 - Narrative: As a user, I want detail endpoints to run only when matching activities, workouts, or gear exist so that the fetcher avoids unnecessary API calls and sidecar noise.
@@ -76,20 +91,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Run-date endpoints execute once per run with storage overrides
 - Trace: prompts prompt run-date scheduling guidance, tests tests/agentlab/cli/test_garmin_fetch_cli.py; tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits none
----
-
-### REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs
-- Owner: product
-- Narrative: As a user, I want Garmin fetches to emit metadata sidecars so that every payload is provenance-traceable.
-  - Acceptance Criteria:
-    * Successful payload writes create a sibling `<endpoint>.<ext>.meta.json` capturing timestamp, Garmin Connect version, run identifier or correlation ID, endpoint name, scope, garmin_methods, payload type/size, MD5, and `status: success`.
-    * When an endpoint fails, the storage layer still writes the identically named `.meta.json` with `status: error`, linking to the `.error.json` file and recording the error message/traceback and expected payload filename even if absent.
-    * Metadata filenames remain consistent between success and error outcomes and continue to rely on atomic writes within the storage helper and retry flow.
-    * Tests cover both success and error scenarios, asserting sidecar content includes status, existence flag, MD5 (when present), and garmin method provenance.
-- Priority: medium
-- Status: done
-- Reason: Metadata sidecars published
-- Trace: prompts Add metadata sidecar files recording provenance alongside Garmin fetch outputs, tests tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits pending
 ---
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage

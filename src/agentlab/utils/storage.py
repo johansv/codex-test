@@ -67,10 +67,24 @@ class GarminStorageWriter:
 
         run_correlation = correlation_id or (f"{self.run_id}:{day.isoformat()}" if self.run_id else None)
         garmin_methods: list[Any] = []
+        data_scope = "unknown"
+        day_context: str | None = None
         if result.metadata:
             calls = result.metadata.get("garmin_methods")
             if isinstance(calls, list):
                 garmin_methods = json.loads(json.dumps(calls))
+            scope_value = result.metadata.get("data_scope")
+            if isinstance(scope_value, str):
+                data_scope = scope_value
+            elif scope_value is not None:
+                data_scope = str(scope_value)
+            context_value = result.metadata.get("day_context")
+            if isinstance(context_value, date):
+                day_context = context_value.isoformat()
+            elif isinstance(context_value, str):
+                day_context = context_value
+            elif isinstance(context_value, (int, float)):
+                day_context = str(context_value)
 
         self._write_metadata(
             day=day,
@@ -82,6 +96,8 @@ class GarminStorageWriter:
             payload_bytes=payload_bytes,
             payload_type=self._payload_kind(result.payload),
             garmin_methods=garmin_methods,
+            data_scope=data_scope,
+            day_context=day_context,
         )
 
         error_path = self._matching_error_file(day_dir, result.endpoint, result.scope)
@@ -116,6 +132,8 @@ class GarminStorageWriter:
             payload_bytes=None,
             payload_type=payload_type,
             garmin_methods=[],
+            data_scope="unknown",
+            day_context=None,
             error=error,
             error_file=path,
         )
@@ -210,6 +228,8 @@ class GarminStorageWriter:
         payload_type: str,
         payload_bytes: bytes | None,
         garmin_methods: list[Any],
+        data_scope: str,
+        day_context: str | None,
         error: EndpointError | None = None,
         error_file: Path | None = None,
     ) -> None:
@@ -229,6 +249,8 @@ class GarminStorageWriter:
             "endpoint": endpoint,
             "scope": scope,
             "status": status,
+            "data_scope": data_scope,
+            "day_context": day_context,
             "payload": {
                 "file": payload_path.name,
                 "extension": payload_path.suffix.lstrip("."),

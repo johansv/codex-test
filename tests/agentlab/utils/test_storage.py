@@ -32,8 +32,27 @@ def test_storage_writes_json_payload(tmp_path: Path) -> None:
     assert meta["garmin_methods"] == []
     assert meta["run"]["id"] == "test-run"
     assert meta["status"] == "success"
+    assert meta["data_scope"] == "unknown"
+    assert meta["day_context"] is None
     assert meta["payload"]["exists"] is True
     assert meta["payload"]["md5"] == hashlib.md5(path.read_bytes()).hexdigest()
+
+
+def test_write_result_records_data_scope_metadata(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path, run_id="test-run")
+    writer.write_result(
+        date(2024, 1, 2),
+        EndpointResult(
+            endpoint="beta",
+            scope={},
+            payload={"value": 2},
+            metadata={"data_scope": "per-day", "day_context": "2024-01-02"},
+        ),
+    )
+
+    meta = _read_meta(tmp_path, "2024-01-02", "beta.json")
+    assert meta["data_scope"] == "per-day"
+    assert meta["day_context"] == "2024-01-02"
 
 
 def test_storage_overwrites_existing_file(tmp_path: Path) -> None:

@@ -90,6 +90,14 @@ _ENDPOINT_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "activity-download": ("activities-by-date", "activities-for-date"),
 }
 
+_DATA_SCOPE_RUN_DATE = "run-date"
+_DATA_SCOPE_PER_DAY = "per-day"
+
+def _data_scope_for_endpoint(endpoint: str) -> str:
+    if endpoint in _RUN_DATE_ENDPOINTS or endpoint in _RUN_DATE_DEPENDENCIES:
+        return _DATA_SCOPE_RUN_DATE
+    return _DATA_SCOPE_PER_DAY
+
 
 @dataclass(slots=True)
 class GarminFetchContext:
@@ -307,8 +315,7 @@ class GarminDataFetcher:
     def partition_endpoints(self, endpoints: Sequence[str]) -> tuple[list[str], list[str]]:
         """Split *endpoints* into run-date and per-day groups preserving handler order."""
 
-        selected = set(endpoints)
-        ordered = [handler.name for handler in self._handlers if handler.name in selected]
+        ordered = self._expand_endpoints(endpoints)
         run_date_names = set(_RUN_DATE_ENDPOINTS) | set(_RUN_DATE_DEPENDENCIES.keys())
         run_date_group = [name for name in ordered if name in run_date_names]
         per_day_group = [name for name in ordered if name not in run_date_names]
@@ -473,6 +480,22 @@ class GarminDataFetcher:
                         )
                         recorder.reset()
                         continue
+
+                    scope_kind = _data_scope_for_endpoint(handler.name)
+                    day_context_value: str | None = None
+                    if (
+                        scope_kind == _DATA_SCOPE_PER_DAY
+                        and request.start_date == request.end_date
+                    ):
+                        day_context_value = request.start_date.isoformat()
+                    for handler_result in handler_results:
+                        metadata = dict(handler_result.metadata or {})
+                        metadata.setdefault("data_scope", scope_kind)
+                        if scope_kind == _DATA_SCOPE_PER_DAY:
+                            metadata.setdefault("day_context", day_context_value)
+                        else:
+                            metadata.setdefault("day_context", None)
+                        handler_result.metadata = metadata
 
                     if result_callback:
                         for handler_result in handler_results:
