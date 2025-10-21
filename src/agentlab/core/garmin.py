@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
-from typing import Iterable, Sequence
+from typing import Any, Iterable, Sequence
 
 
 @dataclass(slots=True, frozen=True)
@@ -46,6 +46,7 @@ class EndpointResult:
     endpoint: str
     scope: dict[str, str | int]
     payload: object
+    metadata: dict[str, Any] | None = None
 
 
 @dataclass(slots=True)

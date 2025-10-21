@@ -357,9 +357,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
     output_root = Path(args.output_dir)
-    storage = GarminStorageWriter(output_root)
 
     run_id = uuid.uuid4().hex
+    storage = GarminStorageWriter(output_root, run_id=run_id)
 
     if args.debug:
         job_settings = {
@@ -430,7 +430,7 @@ def main(argv: list[str] | None = None) -> int:
             observer = _observer
 
         def _on_result(result: EndpointResult, *, _day=day) -> None:
-            storage.write_result(_day, result)
+            storage.write_result(_day, result, correlation_id=day_correlation_id)
 
         def _on_error(error: EndpointError, *, _day=day) -> None:
             storage.write_error(_day, error)

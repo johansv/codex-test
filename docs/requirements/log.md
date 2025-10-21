@@ -118,3 +118,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-20 | REQ-F-20251020T113659-JF | Marked REQ-F-20251020T113659-JF done: Activity downloader now emits both TCX and FIT files (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-20 | REQ-F-20251018T215419-X1 | Reopened REQ-F-20251018T215419-X1 for historic amendment: Gear outputs missing stats/activities | codex | implementation |
 | 2025-10-20 | REQ-F-20251018T215419-X1 | Garmin fetch full API coverage with session reuse (approval: SessionReuse) | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T113857-26 | Captured requirement REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs | codex | prompt |
+| 2025-10-21 | REQ-F-20251021T113857-26 | Implement Garmin metadata sidecars | codex | implementation |

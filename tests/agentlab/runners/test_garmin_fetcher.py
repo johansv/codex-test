@@ -560,9 +560,12 @@ def test_fetch_in_progress_virtual_challenges_uses_start_limit():
     results = _fetch_in_progress_virtual_challenges(client, request, context)
 
     assert client.calls == [(0, 100)]
-    assert results == [
-        EndpointResult(endpoint="in-progress-virtual-challenges", scope={}, payload=[{"challenge": "c1"}])
-    ]
+    assert len(results) == 1
+    challenge_result = results[0]
+    assert challenge_result.endpoint == "in-progress-virtual-challenges"
+    assert challenge_result.scope == {}
+    assert challenge_result.payload == [{"challenge": "c1"}]
+    assert challenge_result.metadata is not None
 
 
 
@@ -709,9 +712,12 @@ def test_fetch_gear_uses_profile_id_when_only_id_present():
     results = _fetch_gear(GearClient(), request, context)
 
     assert context.gear == [{"gearUuid": "g-1"}]
-    assert results == [
-        EndpointResult(endpoint="gear", scope={"userProfileNumber": "98765"}, payload=[{"gearUuid": "g-1"}])
-    ]
+    assert len(results) == 1
+    gear_result = results[0]
+    assert gear_result.endpoint == "gear"
+    assert gear_result.scope == {"userProfileNumber": "98765"}
+    assert gear_result.payload == [{"gearUuid": "g-1"}]
+    assert gear_result.metadata is not None
 
 
 def test_fetch_gear_stats_loads_catalog_on_demand():
@@ -745,13 +751,12 @@ def test_fetch_gear_stats_loads_catalog_on_demand():
     assert client.stats_calls == ["gear-1"]
     assert context.gear == [{"uuid": "gear-1"}]
     assert context.gear_stats == {"gear-1": {"uuid": "gear-1", "distance": "42"}}
-    assert results == [
-        EndpointResult(
-            endpoint="gear-stats",
-            scope={"gearUuid": "gear-1"},
-            payload={"uuid": "gear-1", "distance": "42"},
-        )
-    ]
+    assert len(results) == 1
+    stats_result = results[0]
+    assert stats_result.endpoint == "gear-stats"
+    assert stats_result.scope == {"gearUuid": "gear-1"}
+    assert stats_result.payload == {"uuid": "gear-1", "distance": "42"}
+    assert stats_result.metadata is not None
 
 
 def test_fetch_gear_activities_uses_cached_catalog():
@@ -772,13 +777,12 @@ def test_fetch_gear_activities_uses_cached_catalog():
     results = _fetch_gear_activities(client, request, context)
 
     assert client.activities_calls == ["gear-1"]
-    assert results == [
-        EndpointResult(
-            endpoint="gear-activities",
-            scope={"gearUuid": "gear-1"},
-            payload=[{"gearUuid": "gear-1", "activityId": 99}],
-        )
-    ]
+    assert len(results) == 1
+    activities_result = results[0]
+    assert activities_result.endpoint == "gear-activities"
+    assert activities_result.scope == {"gearUuid": "gear-1"}
+    assert activities_result.payload == [{"gearUuid": "gear-1", "activityId": 99}]
+    assert activities_result.metadata is not None
 
 
 def test_fetch_gear_activities_supports_legacy_method():
@@ -799,13 +803,12 @@ def test_fetch_gear_activities_supports_legacy_method():
     results = _fetch_gear_activities(client, request, context)
 
     assert client.activities_calls == ["legacy-gear"]
-    assert results == [
-        EndpointResult(
-            endpoint="gear-activities",
-            scope={"gearUuid": "legacy-gear"},
-            payload=[{"gearUuid": "legacy-gear", "activityId": 123}],
-        )
-    ]
+    assert len(results) == 1
+    legacy_result = results[0]
+    assert legacy_result.endpoint == "gear-activities"
+    assert legacy_result.scope == {"gearUuid": "legacy-gear"}
+    assert legacy_result.payload == [{"gearUuid": "legacy-gear", "activityId": 123}]
+    assert legacy_result.metadata is not None
 
 
 def test_activity_download_fetches_tcx_and_original():

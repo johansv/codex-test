@@ -1,6 +1,7 @@
 """Runtime helpers for collecting Garmin Connect data."""
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
 import random
@@ -9,6 +10,7 @@ import traceback
 from dataclasses import dataclass, field
 from datetime import date
 from functools import wraps
+from enum import Enum
 from typing import Any, Callable, Sequence
 
 from garminconnect import Garmin
@@ -131,12 +133,70 @@ class _PacingController:
             self._sleep(delay)
 
 
+_CALL_RECORDER: contextvars.ContextVar["_CallRecorder | None"] = contextvars.ContextVar(
+    "garmin_call_recorder",
+    default=None,
+)
+
+
+def _serialise_argument(value: Any) -> Any:
+    if isinstance(value, (str, int, float, bool)) or value is None:
+        return value
+    if isinstance(value, bytes):
+        return {"type": "bytes", "length": len(value)}
+    if isinstance(value, Enum):
+        return value.name
+    if isinstance(value, (list, tuple)):
+        return [_serialise_argument(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _serialise_argument(item) for key, item in value.items()}
+    isoformat = getattr(value, "isoformat", None)
+    if callable(isoformat):
+        try:
+            return isoformat()
+        except Exception:  # pragma: no cover - defensive
+            pass
+    return str(value)
+
+
+class _CallRecorder:
+    """Record Garmin client method invocations for metadata generation."""
+
+    def __init__(self) -> None:
+        self._buffer: list[dict[str, Any]] = []
+
+    def record(self, method: str, args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
+        self._buffer.append(
+            {
+                "name": method,
+                "args": [_serialise_argument(arg) for arg in args],
+                "kwargs": {key: _serialise_argument(value) for key, value in kwargs.items()},
+            }
+        )
+
+    def consume(self) -> list[dict[str, Any]]:
+        if not self._buffer:
+            return []
+        calls = self._buffer
+        self._buffer = []
+        return calls
+
+    def reset(self) -> None:
+        self._buffer.clear()
+
+
 class _PacedGarminClient:
     """Proxy that enforces pacing before Garmin API calls."""
 
-    def __init__(self, client: Garmin, controller: _PacingController) -> None:
+    def __init__(
+        self,
+        client: Garmin,
+        controller: _PacingController,
+        recorder: _CallRecorder | None = None,
+    ) -> None:
         self._client = client
         self._controller = controller
+        self._recorder = recorder
 
     def __getattr__(self, name: str) -> Any:
         attribute = getattr(self._client, name)
@@ -146,6 +206,8 @@ class _PacedGarminClient:
         @wraps(attribute)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             self._controller.before_api_call()
+            if self._recorder is not None:
+                self._recorder.record(name, args, kwargs)
             return attribute(*args, **kwargs)
 
         return wrapper
@@ -246,81 +308,88 @@ class GarminDataFetcher:
             controller.reset_between_endpoints()
         else:
             controller.after_login()
-        paced_client = _PacedGarminClient(client, controller)
 
-        context = GarminFetchContext()
-        results: list[EndpointResult] = []
-        retry_summary = RetrySummary()
-        error_map: dict[str, EndpointError] = {}
-        request_metadata = _request_metadata(request)
+        recorder = _CallRecorder()
+        token = _CALL_RECORDER.set(recorder)
+        paced_client = _PacedGarminClient(client, controller, recorder)
 
-        _log_event(
-            logging.INFO,
-            "garmin.fetch.start",
-            correlation_id,
-            window=request_metadata,
-        )
+        try:
+            context = GarminFetchContext()
+            results: list[EndpointResult] = []
+            retry_summary = RetrySummary()
+            error_map: dict[str, EndpointError] = {}
+            request_metadata = _request_metadata(request)
 
-        def run_pass(pass_index: int, permitted: set[str] | None) -> tuple[list[EndpointResult], dict[str, EndpointError], list[str]]:
-            controller.reset_between_endpoints()
-            pass_results: list[EndpointResult] = []
-            pass_errors: dict[str, EndpointError] = {}
-            pass_successes: list[str] = []
+            _log_event(
+                logging.INFO,
+                "garmin.fetch.start",
+                correlation_id,
+                window=request_metadata,
+            )
 
-            for handler in self._handlers:
-                if permitted is not None and handler.name not in permitted:
-                    continue
-                if not request.includes(handler.name):
-                    continue
+            def run_pass(pass_index: int, permitted: set[str] | None) -> tuple[list[EndpointResult], dict[str, EndpointError], list[str]]:
+                controller.reset_between_endpoints()
+                pass_results: list[EndpointResult] = []
+                pass_errors: dict[str, EndpointError] = {}
+                pass_successes: list[str] = []
 
-                controller.prepare_endpoint()
+                for handler in self._handlers:
+                    if permitted is not None and handler.name not in permitted:
+                        continue
+                    if not request.includes(handler.name):
+                        continue
 
-                if observer:
-                    observer(handler.name)
+                    recorder.reset()
+                    controller.prepare_endpoint()
 
-                _log_event(
-                    logging.INFO,
-                    "garmin.endpoint.start",
-                    correlation_id,
-                    endpoint=handler.name,
-                    attempt=pass_index,
-                )
-                try:
-                    handler_results = handler.execute(paced_client, request, context)
-                except Exception as exc:  # pragma: no cover - reliance on API stability
-                    if _is_rate_limit_error(exc):
-                        _log_event(
-                            logging.WARNING,
-                            "garmin.rate-limit",
-                            correlation_id,
-                            phase="endpoint",
-                            endpoint=handler.name,
-                            wait_minutes=_RATE_LIMIT_WAIT_MINUTES,
-                            message=str(exc),
-                            attempt=pass_index,
-                        )
-                        raise RateLimitExceeded(str(exc), wait_minutes=_RATE_LIMIT_WAIT_MINUTES) from exc
-                    error = EndpointError(
-                        endpoint=handler.name,
-                        scope={},
-                        message=str(exc),
-                        traceback="".join(
-                            traceback.format_exception(type(exc), exc, exc.__traceback__)
-                        ),
-                    )
-                    pass_errors[handler.name] = error
-                    if error_callback:
-                        error_callback(error)
+                    if observer:
+                        observer(handler.name)
+
                     _log_event(
-                        logging.ERROR,
-                        "garmin.endpoint.error",
+                        logging.INFO,
+                        "garmin.endpoint.start",
                         correlation_id,
                         endpoint=handler.name,
-                        error_message=error.message,
-                        scope=error.scope,
                         attempt=pass_index,
                     )
-                else:
+                    try:
+                        handler_results = handler.execute(paced_client, request, context)
+                    except Exception as exc:  # pragma: no cover - reliance on API stability
+                        if _is_rate_limit_error(exc):
+                            _log_event(
+                                logging.WARNING,
+                                "garmin.rate-limit",
+                                correlation_id,
+                                phase="endpoint",
+                                endpoint=handler.name,
+                                wait_minutes=_RATE_LIMIT_WAIT_MINUTES,
+                                message=str(exc),
+                                attempt=pass_index,
+                            )
+                            raise RateLimitExceeded(str(exc), wait_minutes=_RATE_LIMIT_WAIT_MINUTES) from exc
+                        error = EndpointError(
+                            endpoint=handler.name,
+                            scope={},
+                            message=str(exc),
+                            traceback="".join(
+                                traceback.format_exception(type(exc), exc, exc.__traceback__)
+                            ),
+                        )
+                        pass_errors[handler.name] = error
+                        if error_callback:
+                            error_callback(error)
+                        _log_event(
+                            logging.ERROR,
+                            "garmin.endpoint.error",
+                            correlation_id,
+                            endpoint=handler.name,
+                            error_message=error.message,
+                            scope=error.scope,
+                            attempt=pass_index,
+                        )
+                        recorder.reset()
+                        continue
+
                     if result_callback:
                         for handler_result in handler_results:
                             result_callback(handler_result)
@@ -329,6 +398,7 @@ class GarminDataFetcher:
                                 endpoint=handler_result.endpoint,
                                 scope=handler_result.scope,
                                 payload=None,
+                                metadata=handler_result.metadata,
                             )
                             for handler_result in handler_results
                         ]
@@ -344,68 +414,82 @@ class GarminDataFetcher:
                         attempt=pass_index,
                     )
 
-            return pass_results, pass_errors, pass_successes
+                return pass_results, pass_errors, pass_successes
 
-        initial_results, initial_errors, _ = run_pass(0, None)
-        results.extend(initial_results)
-        error_map.update(initial_errors)
-
-        remaining = set(error_map.keys())
-        attempt_index = 1
-
-        while remaining and attempt_index <= self._pacing.retry_limit:
-            retry_targets = set(remaining)
-            retry_summary.scheduled += len(retry_targets)
-            _log_event(
-                logging.INFO,
-                "garmin.fetch.retry.start",
-                correlation_id,
-                window=request_metadata,
-                attempt=attempt_index,
-                endpoints=sorted(retry_targets),
-            )
-
-            pass_results, pass_errors, pass_successes = run_pass(attempt_index, retry_targets)
-            results.extend(pass_results)
-
-            for endpoint in pass_successes:
-                if endpoint in error_map:
-                    del error_map[endpoint]
-            retry_summary.succeeded += len(pass_successes)
-
-            for endpoint, err in pass_errors.items():
-                error_map[endpoint] = err
+            initial_results, initial_errors, _ = run_pass(0, None)
+            results.extend(initial_results)
+            error_map.update(initial_errors)
 
             remaining = set(error_map.keys())
-            failed_this_attempt = len(remaining)
-            _log_event(
-                logging.INFO if failed_this_attempt == 0 else logging.WARNING,
-                "garmin.fetch.retry.completed",
-                correlation_id,
-                attempt=attempt_index,
-                succeeded=len(pass_successes),
-                remaining=failed_this_attempt,
+            attempt_index = 1
+
+            while remaining and attempt_index <= self._pacing.retry_limit:
+                retry_targets = set(remaining)
+                retry_summary.scheduled += len(retry_targets)
+                _log_event(
+                    logging.INFO,
+                    "garmin.fetch.retry.start",
+                    correlation_id,
+                    window=request_metadata,
+                    attempt=attempt_index,
+                    endpoints=sorted(retry_targets),
+                )
+
+                pass_results, pass_errors, pass_successes = run_pass(attempt_index, retry_targets)
+                results.extend(pass_results)
+
+                for endpoint in pass_successes:
+                    if endpoint in error_map:
+                        del error_map[endpoint]
+                retry_summary.succeeded += len(pass_successes)
+
+                for endpoint, err in pass_errors.items():
+                    error_map[endpoint] = err
+
+                remaining = set(error_map.keys())
+                failed_this_attempt = len(remaining)
+                retry_summary.failed += failed_this_attempt
+
+                _log_event(
+                    logging.INFO,
+                    "garmin.fetch.retry.complete",
+                    correlation_id,
+                    window=request_metadata,
+                    attempt=attempt_index,
+                    successes=len(pass_successes),
+                    failures=failed_this_attempt,
+                )
+                attempt_index += 1
+
+            if error_map:
+                _log_event(
+                    logging.WARNING,
+                    "garmin.fetch.incomplete",
+                    correlation_id,
+                    window=request_metadata,
+                    remaining=sorted(error_map.keys()),
+                )
+
+            outcome = FetchOutcome(
+                results=results,
+                errors=list(error_map.values()),
+                retries=retry_summary,
             )
-            attempt_index += 1
+            if result_callback is None:
+                return outcome
 
-        retry_summary.failed = len(error_map)
-
-        _log_event(
-            logging.INFO,
-            "garmin.fetch.completed",
-            correlation_id,
-            window=request_metadata,
-            completed_endpoints=sorted({result.endpoint for result in results}),
-            result_count=len(results),
-            error_count=len(error_map),
-            retries=_retry_summary_payload(retry_summary),
-        )
-
-        return FetchOutcome(
-            results=results,
-            errors=list(error_map.values()),
-            retries=retry_summary,
-        )
+            slim_results = [
+                EndpointResult(
+                    endpoint=result.endpoint,
+                    scope=result.scope,
+                    payload=None,
+                    metadata=result.metadata,
+                )
+                for result in results
+            ]
+            return FetchOutcome(results=slim_results, errors=outcome.errors, retries=retry_summary)
+        finally:
+            _CALL_RECORDER.reset(token)
 
 
 def _build_default_handlers() -> list[EndpointHandler]:
@@ -498,7 +582,10 @@ def _iso(day: date) -> str:
 def _endpoint_result(name: str, scope: dict[str, str | int], payload: Any) -> EndpointResult:
     """Helper to construct endpoint results with consistent typing."""
 
-    return EndpointResult(endpoint=name, scope=scope, payload=payload)
+    recorder = _CALL_RECORDER.get()
+    calls = recorder.consume() if recorder is not None else []
+    metadata = {"garmin_methods": calls}
+    return EndpointResult(endpoint=name, scope=scope, payload=payload, metadata=metadata)
 
 
 def _request_metadata(request: GarminFetchRequest) -> dict[str, Any]:
