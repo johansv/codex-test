@@ -151,6 +151,9 @@ class GarminStorageWriter:
         workout_id = scope.get("workoutId")
         if workout_id is not None:
             return f"{endpoint}_{workout_id}"
+        device_id = scope.get("deviceId")
+        if device_id is not None:
+            return f"{endpoint}_{device_id}"
         return endpoint
 
     def _error_filename(self, endpoint: str, scope: dict[str, str | int]) -> str:

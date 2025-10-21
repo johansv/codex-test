@@ -1005,3 +1005,35 @@ def test_gear_detail_skips_when_no_gear():
 
     assert _fetch_gear_stats(client, request, context) == []
     assert _fetch_gear_activities(client, request, context) == []
+
+
+def test_device_detail_iterates_per_device():
+    class DeviceClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.settings_calls: list[str] = []
+            self.solar_calls: list[str] = []
+
+        def get_devices(self) -> list[dict[str, str]]:
+            return [{"deviceId": "101"}, {"deviceId": "202"}]
+
+        def get_device_settings(self, device_id: str) -> dict[str, str]:
+            self.settings_calls.append(device_id)
+            return {"id": device_id}
+
+        def get_device_solar_data(self, device_id: str, *_: object) -> dict[str, str]:
+            self.solar_calls.append(device_id)
+            return {"deviceId": device_id}
+
+    client = DeviceClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+    context.devices = client.get_devices()
+
+    settings = _fetch_device_settings(client, request, context)
+    solar = _fetch_device_solar(client, request, context)
+
+    assert [result.scope["deviceId"] for result in settings] == ["101", "202"]
+    assert [result.scope["deviceId"] for result in solar] == ["101", "202"]
+    assert client.settings_calls == ["101", "202"]
+    assert client.solar_calls == ["101", "202"]

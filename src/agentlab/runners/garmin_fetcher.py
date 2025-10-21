@@ -1438,6 +1438,28 @@ def _resolve_gear_activities_method(client: Garmin) -> Callable[[str], Any]:
         return getattr(client, "get_gear_ativities")
 
 
+
+
+
+
+def _normalise_device_payload(payload: Any) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        return payload
+    if isinstance(payload, dict):
+        for key in ("devices", "userDevices", "deviceList"):
+            items = payload.get(key)
+            if isinstance(items, list):
+                return items
+    return []
+def _ensure_device_catalog(client: Garmin, context: GarminFetchContext) -> list[dict[str, Any]]:
+    devices = context.devices
+    if isinstance(devices, list):
+        return devices
+    if devices:
+        normalised = _normalise_device_payload(devices)
+        context.devices = normalised
+        return normalised
+    return []
 def _fetch_gear(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
@@ -1501,17 +1523,18 @@ def _fetch_devices(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     payload = client.get_devices()
-    context.devices = payload
+    context.devices = _normalise_device_payload(payload)
     return [_endpoint_result("devices", {}, payload)]
 
 
 def _fetch_device_settings(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    if not context.devices:
+    devices = _ensure_device_catalog(client, context)
+    if not devices:
         return []
     results: list[EndpointResult] = []
-    for device in context.devices:
+    for device in devices:
         device_id = device.get("deviceId")
         if device_id is None:
             continue
@@ -1524,7 +1547,8 @@ def _fetch_device_settings(
 def _fetch_device_last_used(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    if not context.devices:
+    devices = _ensure_device_catalog(client, context)
+    if not devices:
         return []
     payload = client.get_device_last_used()
     return [_endpoint_result("device-last-used", {}, payload)]
@@ -1533,10 +1557,11 @@ def _fetch_device_last_used(
 def _fetch_device_solar(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    if not context.devices:
+    devices = _ensure_device_catalog(client, context)
+    if not devices:
         return []
     results: list[EndpointResult] = []
-    for device in context.devices:
+    for device in devices:
         device_id = device.get("deviceId")
         if device_id is None:
             continue
@@ -1562,7 +1587,8 @@ def _fetch_device_solar(
 def _fetch_device_alarms(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    if not context.devices:
+    devices = _ensure_device_catalog(client, context)
+    if not devices:
         return []
     payload = client.get_device_alarms()
     return [_endpoint_result("device-alarms", {}, payload)]
@@ -1571,7 +1597,8 @@ def _fetch_device_alarms(
 def _fetch_primary_training_device(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    if not context.devices:
+    devices = _ensure_device_catalog(client, context)
+    if not devices:
         return []
     payload = client.get_primary_training_device()
     return [_endpoint_result("primary-training-device", {}, payload)]

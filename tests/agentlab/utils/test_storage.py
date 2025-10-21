@@ -306,3 +306,20 @@ def test_storage_clears_legacy_gear_error_on_success(tmp_path: Path) -> None:
     assert not legacy_error.exists()
     meta = _read_meta(tmp_path, "2024-01-01", "gear-activities_gear-1.json")
     assert meta["status"] == "success"
+
+
+def test_storage_includes_device_id_in_filenames(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path, run_id="test-run")
+    day = date(2024, 1, 1)
+    result = EndpointResult(
+        endpoint="device-settings",
+        scope={"deviceId": "abc"},
+        payload={"setting": 1},
+    )
+
+    writer.store(day, FetchOutcome(results=[result], errors=[]))
+
+    data_path = tmp_path / "2024-01-01" / "device-settings_abc.json"
+    assert json.loads(data_path.read_text(encoding="utf-8")) == {"setting": 1}
+    meta = _read_meta(tmp_path, "2024-01-01", "device-settings_abc.json")
+    assert meta["scope"]["deviceId"] == "abc"
