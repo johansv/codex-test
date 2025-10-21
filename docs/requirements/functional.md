@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=1, doing=1); Done: 30 (done=30); Retired: 0
+Todo: 1 (backlog=1, doing=0); Done: 31 (done=31); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -46,22 +46,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
+## Done Requirements
+
 ### REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs
 - Owner: product
-- Narrative: As a user, I want Add metadata sidecar files recording provenance alongside Garmin fe... so the capability is traceable.
+- Narrative: As a user, I want Garmin fetches to emit metadata sidecars so that every payload is provenance-traceable.
   - Acceptance Criteria:
-    * Payload writes are accompanied by a sibling `<endpoint>.<ext>.meta.json` file in the same directory.
-    * Metadata captures ISO-8601 timestamp, Garmin Connect library version, run identifier or correlation ID, endpoint name, client method, and serialized call parameters.
-    * Metadata generation uses the existing storage helpers so both payload and sidecar writes remain atomic and respect retry behaviour.
-    * Unit tests cover at least one Garmin endpoint handler and assert that both payload and metadata files are produced with populated fields.
+    * Successful payload writes create a sibling `<endpoint>.<ext>.meta.json` capturing timestamp, Garmin Connect version, run identifier or correlation ID, endpoint name, scope, garmin_methods, payload type/size, MD5, and `status: success`.
+    * When an endpoint fails, the storage layer still writes the identically named `.meta.json` with `status: error`, linking to the `.error.json` file and recording the error message/traceback and expected payload filename even if absent.
+    * Metadata filenames remain consistent between success and error outcomes and continue to rely on atomic writes within the storage helper and retry flow.
+    * Tests cover both success and error scenarios, asserting sidecar content includes status, existence flag, MD5 (when present), and garmin method provenance.
 - Priority: medium
-- Status: doing
-- Reason: Approved for implementation
+- Status: done
+- Reason: Metadata sidecars published
 - Trace: prompts Add metadata sidecar files recording provenance alongside Garmin fetch outputs, tests tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits pending
-- Notes: Auto-generated from prompt; refine narrative and acceptance criteria.
 ---
-
-## Done Requirements
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
 - Owner: codex
@@ -488,5 +487,4 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Retired Requirements
-
 

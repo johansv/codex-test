@@ -24,6 +24,7 @@ from agentlab.runners.garmin_fetcher import (
     _fetch_gear_activities,
     _fetch_gear_stats,
     _fetch_in_progress_virtual_challenges,
+    _fetch_race_predictions,
     _fetch_progress_summary,
     GarminFetchContext,
 )
@@ -695,6 +696,31 @@ def test_activity_details_fallback_to_for_date():
     assert client.by_date_calls == [("2024-01-01", "2024-01-01")]
     assert client.for_date_calls == ["2024-01-01"]
     assert client.activity_calls == ["999"]
+
+
+def test_race_predictions_single_day_calls_daily_with_range():
+    class RacePredictionClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+        def get_race_predictions(self, *args: object, **kwargs: object) -> dict[str, object]:
+            self.calls.append((args, kwargs))
+            if kwargs.get("_type") == "daily":
+                return {"daily": list(args)}
+            raise AssertionError(f"Unexpected call args={args} kwargs={kwargs}")
+
+    client = RacePredictionClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    results = _fetch_race_predictions(client, request, context)
+
+    assert [result.endpoint for result in results] == ["race-predictions"]
+    assert client.calls == [
+        (("2024-01-01", "2024-01-01"), {"_type": "daily"}),
+    ]
+    assert results[0].scope == {"start": "2024-01-01", "end": "2024-01-01"}
 def test_fetch_gear_uses_profile_id_when_only_id_present():
     class GearClient(DummyGarmin):
         def __init__(self, *args: object, **kwargs: object) -> None:

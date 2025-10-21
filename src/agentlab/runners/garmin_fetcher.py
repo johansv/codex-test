@@ -1008,35 +1008,18 @@ def _fetch_fitness_age(
 def _fetch_race_predictions(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    results: list[EndpointResult] = []
-    payload_latest = client.get_race_predictions()
-    results.append(_endpoint_result("race-predictions-latest", {}, payload_latest))
-    if request.start_date != request.end_date:
-        payload_daily = client.get_race_predictions(
-            _iso(request.start_date),
-            _iso(request.end_date),
-            _type="daily",
+    payload = client.get_race_predictions(
+        _iso(request.start_date),
+        _iso(request.end_date),
+        _type="daily",
+    )
+    return [
+        _endpoint_result(
+            "race-predictions",
+            {"start": _iso(request.start_date), "end": _iso(request.end_date)},
+            payload,
         )
-        results.append(
-            _endpoint_result(
-                "race-predictions-daily",
-                {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-                payload_daily,
-            )
-        )
-        payload_monthly = client.get_race_predictions(
-            _iso(request.start_date),
-            _iso(request.end_date),
-            _type="monthly",
-        )
-        results.append(
-            _endpoint_result(
-                "race-predictions-monthly",
-                {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-                payload_monthly,
-            )
-        )
-    return results
+    ]
 
 
 def _fetch_progress_summary(

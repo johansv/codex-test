@@ -49,9 +49,23 @@ class GarminStorageWriter:
         self._write_atomic(target_path, payload_bytes)
 
         run_correlation = correlation_id or (f"{self.run_id}:{day.isoformat()}" if self.run_id else None)
-        metadata = self._build_metadata(day, result, target_path, payload_bytes, run_correlation)
-        meta_path = self._metadata_path(target_path)
-        self._write_atomic(meta_path, json.dumps(metadata, indent=2).encode("utf-8"))
+        garmin_methods: list[Any] = []
+        if result.metadata:
+            calls = result.metadata.get("garmin_methods")
+            if isinstance(calls, list):
+                garmin_methods = json.loads(json.dumps(calls))
+
+        self._write_metadata(
+            day=day,
+            endpoint=result.endpoint,
+            scope=result.scope,
+            payload_path=target_path,
+            status="success",
+            correlation_id=run_correlation,
+            payload_bytes=payload_bytes,
+            payload_type=self._payload_kind(result.payload),
+            garmin_methods=garmin_methods,
+        )
 
         error_path = self._matching_error_file(day_dir, result.endpoint, result.scope)
         if error_path is not None and error_path.exists():
@@ -70,6 +84,24 @@ class GarminStorageWriter:
             indent=2,
         )
         self._write_atomic(path, content.encode("utf-8"))
+
+        expected_extension = self._expected_extension(error.endpoint, error.scope)
+        payload_path = day_dir / f"{self._compose_basename(error.endpoint, error.scope)}.{expected_extension}"
+        payload_type = self._payload_type_from_extension(expected_extension)
+
+        self._write_metadata(
+            day=day,
+            endpoint=error.endpoint,
+            scope=error.scope,
+            payload_path=payload_path,
+            status="error",
+            correlation_id=f"{self.run_id}:{day.isoformat()}" if self.run_id else None,
+            payload_bytes=None,
+            payload_type=payload_type,
+            garmin_methods=[],
+            error=error,
+            error_file=path,
+        )
 
     def _ensure_day_dir(self, day: date) -> Path:
         day_dir = self.root / day.isoformat()
@@ -146,47 +178,59 @@ class GarminStorageWriter:
     def _metadata_path(self, payload_path: Path) -> Path:
         return payload_path.with_name(f"{payload_path.name}.meta.json")
 
-    def _build_metadata(
+    def _write_metadata(
         self,
+        *,
         day: date,
-        result: EndpointResult,
+        endpoint: str,
+        scope: dict[str, str | int],
         payload_path: Path,
-        payload_bytes: bytes,
+        status: str,
         correlation_id: str | None,
-    ) -> dict[str, Any]:
-        raw_calls: list[Any] = []
-        if result.metadata:
-            calls = result.metadata.get("garmin_methods")
-            if isinstance(calls, list):
-                raw_calls = json.loads(json.dumps(calls))
-
+        payload_type: str,
+        payload_bytes: bytes | None,
+        garmin_methods: list[Any],
+        error: EndpointError | None = None,
+        error_file: Path | None = None,
+    ) -> None:
         run_info: dict[str, str] = {}
         if self.run_id is not None:
             run_info["id"] = self.run_id
         if correlation_id is not None:
             run_info["correlation"] = correlation_id
 
-        checksum = hashlib.md5(payload_bytes).hexdigest()
+        checksum = hashlib.md5(payload_bytes).hexdigest() if payload_bytes is not None else None
+        size_bytes = len(payload_bytes) if payload_bytes is not None else None
+        garmin_methods = garmin_methods or []
 
         metadata: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "day": day.isoformat(),
-            "endpoint": result.endpoint,
-            "scope": result.scope,
+            "endpoint": endpoint,
+            "scope": scope,
+            "status": status,
             "payload": {
                 "file": payload_path.name,
                 "extension": payload_path.suffix.lstrip("."),
-                "size_bytes": len(payload_bytes),
-                "type": self._payload_kind(result.payload),
+                "size_bytes": size_bytes,
+                "type": payload_type,
                 "md5": checksum,
+                "exists": payload_bytes is not None,
             },
             "garminconnect_version": self.garmin_version,
-            "garmin_methods": raw_calls,
-            "garmin_method_count": len(raw_calls),
+            "garmin_methods": garmin_methods,
+            "garmin_method_count": len(garmin_methods),
         }
         if run_info:
             metadata["run"] = run_info
-        return metadata
+        if error is not None:
+            metadata["error"] = {
+                "message": error.message,
+                "traceback": error.traceback,
+                "file": error_file.name if error_file is not None else None,
+            }
+        meta_path = self._metadata_path(payload_path)
+        self._write_atomic(meta_path, json.dumps(metadata, indent=2).encode("utf-8"))
 
     @staticmethod
     def _payload_kind(payload: object) -> str:
@@ -215,3 +259,23 @@ class GarminStorageWriter:
         finally:
             if tmp_path.exists():
                 tmp_path.unlink(missing_ok=True)
+
+    def _expected_extension(self, endpoint: str, scope: dict[str, str | int]) -> str:
+        fmt = scope.get("format")
+        if isinstance(fmt, str):
+            lowered = fmt.lower()
+            if lowered == "original":
+                return "zip"
+            return lowered
+        if endpoint == "workout-download":
+            return "fit"
+        return "json"
+
+    @staticmethod
+    def _payload_type_from_extension(extension: str) -> str:
+        lowered = extension.lower()
+        if lowered in {"json"}:
+            return "json"
+        if lowered in {"txt"}:
+            return "text"
+        return "bytes"

@@ -31,6 +31,8 @@ def test_storage_writes_json_payload(tmp_path: Path) -> None:
     assert meta["scope"] == {}
     assert meta["garmin_methods"] == []
     assert meta["run"]["id"] == "test-run"
+    assert meta["status"] == "success"
+    assert meta["payload"]["exists"] is True
     assert meta["payload"]["md5"] == hashlib.md5(path.read_bytes()).hexdigest()
 
 
@@ -59,6 +61,8 @@ def test_storage_overwrites_existing_file(tmp_path: Path) -> None:
     assert meta["run"]["id"] == "test-run"
     assert meta["garmin_methods"] == []
     assert meta["payload"]["type"] == "json"
+    assert meta["status"] == "success"
+    assert meta["payload"]["exists"] is True
     assert meta["payload"]["md5"] == hashlib.md5(path.read_bytes()).hexdigest()
 
 
@@ -92,10 +96,14 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
     assert tcx_meta["payload"]["extension"] == "tcx"
     assert tcx_meta["payload"]["type"] == "bytes"
     assert tcx_meta["run"]["id"] == "test-run"
+    assert tcx_meta["status"] == "success"
+    assert tcx_meta["payload"]["exists"] is True
     assert tcx_meta["payload"]["md5"] == hashlib.md5(tcx_path.read_bytes()).hexdigest()
     zip_meta = _read_meta(tmp_path, "2024-01-01", "activity-download_123.zip")
     assert zip_meta["payload"]["extension"] == "zip"
     assert zip_meta["payload"]["type"] == "bytes"
+    assert zip_meta["status"] == "success"
+    assert zip_meta["payload"]["exists"] is True
     assert zip_meta["payload"]["md5"] == hashlib.md5(zip_path.read_bytes()).hexdigest()
 
 
@@ -120,6 +128,9 @@ def test_storage_writes_workout_download_as_fit(tmp_path: Path) -> None:
     meta = _read_meta(tmp_path, "2024-01-01", "workout-download_42.fit")
     assert meta["payload"]["extension"] == "fit"
     assert meta["payload"]["type"] == "bytes"
+    assert meta["status"] == "success"
+    assert meta["payload"]["exists"] is True
+    assert meta["payload"]["md5"] == hashlib.md5(fit_path.read_bytes()).hexdigest()
 
 
 def test_storage_writes_error_files(tmp_path: Path) -> None:
@@ -144,6 +155,13 @@ def test_storage_writes_error_files(tmp_path: Path) -> None:
     assert "boom" in payload["message"]
     assert "traceback" in payload["traceback"]
 
+    meta = _read_meta(tmp_path, "2024-01-01", "alpha.json")
+    assert meta["payload"]["file"] == "alpha.json"
+    assert meta["status"] == "error"
+    assert meta["payload"]["exists"] is False
+    assert meta["payload"]["md5"] is None
+    assert meta["error"]["file"] == "alpha.error.json"
+
 
 def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
     writer = GarminStorageWriter(tmp_path, run_id="test-run")
@@ -166,6 +184,10 @@ def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
 
     error_path = tmp_path / "2024-01-01" / "alpha.error.json"
     assert error_path.exists()
+    meta_error = _read_meta(tmp_path, "2024-01-01", "alpha.json")
+    assert meta_error["payload"]["file"] == "alpha.json"
+    assert meta_error["status"] == "error"
+    assert meta_error["payload"]["exists"] is False
 
     writer.store(
         day,
@@ -183,7 +205,9 @@ def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
 
     assert not error_path.exists()
     meta = _read_meta(tmp_path, "2024-01-01", "alpha.json")
+    assert meta["status"] == "success"
     assert meta["payload"]["file"] == "alpha.json"
+    assert meta["payload"]["exists"] is True
 
 
 def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
@@ -204,6 +228,10 @@ def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
     writer.store(day, FetchOutcome(results=[], errors=[error]))
     error_path = tmp_path / "2024-01-01" / "activity-detail_456.error.json"
     assert error_path.exists()
+    meta_error = _read_meta(tmp_path, "2024-01-01", "activity-detail_456.json")
+    assert meta_error["payload"]["file"] == "activity-detail_456.json"
+    assert meta_error["status"] == "error"
+    assert meta_error["payload"]["exists"] is False
 
     writer.store(day, FetchOutcome(results=[result], errors=[]))
 
@@ -212,6 +240,8 @@ def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
     assert not error_path.exists()
     meta = _read_meta(tmp_path, "2024-01-01", "activity-detail_456.json")
     assert meta["scope"]["activityId"] == 456
+    assert meta["status"] == "success"
+    assert meta["payload"]["exists"] is True
     assert meta["payload"]["md5"] == hashlib.md5(data_path.read_bytes()).hexdigest()
 
 
@@ -254,6 +284,10 @@ def test_storage_clears_legacy_gear_error_on_success(tmp_path: Path) -> None:
 
     legacy_error = tmp_path / "2024-01-01" / "gear-activities.error.json"
     assert legacy_error.exists()
+    meta_error = _read_meta(tmp_path, "2024-01-01", "gear-activities.json")
+    assert meta_error["payload"]["file"] == "gear-activities.json"
+    assert meta_error["status"] == "error"
+    assert meta_error["payload"]["exists"] is False
 
     writer.store(
         day,
@@ -270,3 +304,5 @@ def test_storage_clears_legacy_gear_error_on_success(tmp_path: Path) -> None:
     )
 
     assert not legacy_error.exists()
+    meta = _read_meta(tmp_path, "2024-01-01", "gear-activities_gear-1.json")
+    assert meta["status"] == "success"
