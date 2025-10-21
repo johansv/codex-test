@@ -1037,3 +1037,45 @@ def test_device_detail_iterates_per_device():
     assert [result.scope["deviceId"] for result in solar] == ["101", "202"]
     assert client.settings_calls == ["101", "202"]
     assert client.solar_calls == ["101", "202"]
+
+
+def test_device_detail_fetches_when_devices_missing():
+    class FetchingDeviceClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.get_devices_calls = 0
+
+        def get_devices(self) -> list[dict[str, str]]:
+            self.get_devices_calls += 1
+            return []
+
+    client = FetchingDeviceClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    assert _fetch_device_settings(client, request, context) == []
+    assert client.get_devices_calls == 1
+
+
+def test_activity_detail_iterates_per_activity():
+    class MultiActivityClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.activity_calls: list[str] = []
+
+        def get_activity(self, activity_id: str) -> dict[str, str]:
+            self.activity_calls.append(activity_id)
+            return {"activityId": activity_id}
+
+    client = MultiActivityClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+    context.activities_by_date["2024-01-01"] = [
+        {"activityId": "111"},
+        {"activityId": "222"},
+    ]
+
+    results = _fetch_activity_detail(client, request, context)
+
+    assert client.activity_calls == ["111", "222"]
+    assert [result.scope["activityId"] for result in results] == ["111", "222"]

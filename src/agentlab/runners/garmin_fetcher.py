@@ -1454,12 +1454,18 @@ def _normalise_device_payload(payload: Any) -> list[dict[str, Any]]:
 def _ensure_device_catalog(client: Garmin, context: GarminFetchContext) -> list[dict[str, Any]]:
     devices = context.devices
     if isinstance(devices, list):
-        return devices
-    if devices:
+        if devices:
+            return devices
+    elif devices:
         normalised = _normalise_device_payload(devices)
         context.devices = normalised
         return normalised
-    return []
+    try:
+        payload = client.get_devices()
+    except AttributeError:
+        return []
+    context.devices = _normalise_device_payload(payload)
+    return context.devices
 def _fetch_gear(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:

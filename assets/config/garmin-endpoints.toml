@@ -39,10 +39,6 @@ enabled = [
   "earned-badges",
   "personal-records",
   "adhoc-challenges",
-  "badge-challenges",
-  "available-badge-challenges",
-  "non-completed-badge-challenges",
-  "in-progress-virtual-challenges",
   "menstrual-dayview",
   "menstrual-calendar",
   "pregnancy-summary",
@@ -160,8 +156,6 @@ enabled = [
   "hill-score-daily",
   "hill-score-stats",
   "fitness-age",
-  "race-predictions-daily",
-  "race-predictions-monthly",
   "activities-by-date",
   "activities-for-date",
   "activity-detail",
@@ -228,6 +222,22 @@ enabled = [
 disabled = [
   "activity-download",
   "activities",
+]
+
+[presets.test]
+enabled = [
+  "race-predictions",
+  "badge-challenges",
+  "activities-by-date",
+  "activity-detail",
+  "devices",
+  "device-settings",
+]
+
+disabled = [
+  "activity-download",
+  "activities",
+  
 ]
 
 [defaults]
