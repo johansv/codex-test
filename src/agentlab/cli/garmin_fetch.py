@@ -356,6 +356,12 @@ def main(argv: list[str] | None = None) -> int:
         fetcher, args.config, args.preset
     )
     endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
+    if hasattr(fetcher, "partition_endpoints"):
+        run_date_endpoints, per_day_endpoints = fetcher.partition_endpoints(endpoints)
+    else:
+        run_date_endpoints = []
+        per_day_endpoints = list(endpoints)
+    run_date = date.today()
     output_root = Path(args.output_dir)
 
     run_id = uuid.uuid4().hex
@@ -365,18 +371,23 @@ def main(argv: list[str] | None = None) -> int:
         job_settings = {
             "username": credentials.username,
             "mfa_provided": bool(credentials.mfa_code),
-        "date": args.date,
-        "start_date": start.isoformat(),
-        "end_date": end.isoformat(),
-        "include": args.include or [],
-        "exclude": args.exclude or [],
-        "endpoints": endpoints,
-        "endpoint_count": len(endpoints),
-        "defaults_disabled": sorted(disabled),
-        "config_path": str(config_path_used),
-        "output_dir": str(output_root),
-        "preset": selected_preset,
-        "pacing": {
+            "date": args.date,
+            "start_date": start.isoformat(),
+            "end_date": end.isoformat(),
+            "include": args.include or [],
+            "exclude": args.exclude or [],
+            "endpoints": endpoints,
+            "endpoint_count": len(endpoints),
+            "run_date": run_date.isoformat(),
+            "run_date_endpoints": run_date_endpoints,
+            "run_date_endpoint_count": len(run_date_endpoints),
+            "per_day_endpoints": per_day_endpoints,
+            "per_day_endpoint_count": len(per_day_endpoints),
+            "defaults_disabled": sorted(disabled),
+            "config_path": str(config_path_used),
+            "output_dir": str(output_root),
+            "preset": selected_preset,
+            "pacing": {
                 "post_login_delay": pacing.post_login_delay,
                 "between_endpoints_delay": pacing.between_endpoints_delay,
                 "pagination_delay": pacing.pagination_delay,
@@ -408,8 +419,120 @@ def main(argv: list[str] | None = None) -> int:
     any_success = False
     rate_limit_exc: RateLimitExceeded | None = None
 
+    if run_date_endpoints:
+        run_date_request = GarminFetchRequest(
+            start_date=run_date,
+            end_date=run_date,
+            endpoints=run_date_endpoints,
+        )
+        run_correlation_id = f"{run_id}:{run_date.isoformat()}"
+
+        _log_cli_event(
+            logging.INFO,
+            "garmin.cli.run_date.start",
+            run_correlation_id,
+            date=run_date.isoformat(),
+            endpoint_count=len(run_date_endpoints),
+        )
+
+        run_observer = None
+        if args.debug:
+            run_day_str = run_date.isoformat()
+
+            def _run_observer(endpoint: str, *, _day=run_day_str) -> None:
+                print(f"[garmin] {_day} (run-date) -> {endpoint}", file=sys.stderr)
+
+            run_observer = _run_observer
+
+        def _run_on_result(result: EndpointResult, *, _day=run_date) -> None:
+            storage.write_result(_day, result, correlation_id=run_correlation_id)
+
+        def _run_on_error(error: EndpointError, *, _day=run_date) -> None:
+            storage.write_error(_day, error)
+
+        try:
+            run_outcome = fetcher.fetch(
+                credentials,
+                run_date_request,
+                observer=run_observer,
+                correlation_id=run_correlation_id,
+                result_callback=_run_on_result,
+                error_callback=_run_on_error,
+            )
+        except RateLimitExceeded as exc:
+            rate_limit_exc = exc
+            summary.append(
+                {
+                    "date": run_date.isoformat(),
+                    "successes": [],
+                    "failures": [
+                        {"endpoint": "rate-limit", "message": str(exc)}
+                    ],
+                    "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
+                    "run_date": True,
+                    "rate_limited": True,
+                }
+            )
+            _log_cli_event(
+                logging.ERROR,
+                "garmin.cli.run_date.rate_limit",
+                run_correlation_id,
+                wait_minutes=exc.wait_minutes,
+            )
+        else:
+            successes = list(dict.fromkeys(result.endpoint for result in run_outcome.results))
+            failures = [
+                {"endpoint": error.endpoint, "message": error.message}
+                for error in run_outcome.errors
+            ]
+            retry_summary = {
+                "scheduled": run_outcome.retries.scheduled,
+                "succeeded": run_outcome.retries.succeeded,
+                "failed": run_outcome.retries.failed,
+            }
+            _accumulate_retry_totals(retry_totals, retry_summary)
+            any_success = any_success or bool(successes)
+
+            summary.append(
+                {
+                    "date": run_date.isoformat(),
+                    "successes": successes,
+                    "failures": failures,
+                    "retry_outcomes": retry_summary,
+                    "run_date": True,
+                }
+            )
+
+            _log_cli_event(
+                logging.INFO,
+                "garmin.cli.run_date.completed",
+                run_correlation_id,
+                date=run_date.isoformat(),
+                successes=len(successes),
+                failures=len(failures),
+                retry_outcomes=retry_summary,
+            )
+
     for day in days:
-        day_request = GarminFetchRequest(start_date=day, end_date=day, endpoints=endpoints)
+        if rate_limit_exc is not None:
+            break
+
+        if not per_day_endpoints:
+            summary.append(
+                {
+                    "date": day.isoformat(),
+                    "successes": [],
+                    "failures": [],
+                    "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
+                }
+            )
+            continue
+
+        day_request = GarminFetchRequest(
+            start_date=day,
+            end_date=day,
+            endpoints=per_day_endpoints,
+        )
         day_correlation_id = f"{run_id}:{day.isoformat()}"
 
         _log_cli_event(
@@ -417,7 +540,7 @@ def main(argv: list[str] | None = None) -> int:
             "garmin.cli.day.start",
             day_correlation_id,
             date=day.isoformat(),
-            endpoint_count=len(endpoints),
+            endpoint_count=len(per_day_endpoints),
         )
 
         observer = None

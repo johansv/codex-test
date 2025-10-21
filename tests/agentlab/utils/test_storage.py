@@ -323,3 +323,69 @@ def test_storage_includes_device_id_in_filenames(tmp_path: Path) -> None:
     assert json.loads(data_path.read_text(encoding="utf-8")) == {"setting": 1}
     meta = _read_meta(tmp_path, "2024-01-01", "device-settings_abc.json")
     assert meta["scope"]["deviceId"] == "abc"
+
+
+def test_store_applies_endpoint_day_overrides(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path, run_id="test-run")
+    base_day = date(2024, 1, 1)
+    override_day = date(2024, 1, 3)
+    outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="user-profile", scope={}, payload={"id": 1})],
+        errors=[
+            EndpointError(
+                endpoint="device-settings",
+                scope={},
+                message="failed",
+                traceback="stack",
+            )
+        ],
+    )
+
+    writer.store(
+        base_day,
+        outcome,
+        day_overrides={"user-profile": override_day, "device-settings": override_day},
+    )
+
+    override_dir = tmp_path / override_day.isoformat()
+    default_dir = tmp_path / base_day.isoformat()
+    assert override_dir.exists()
+    assert not default_dir.exists()
+
+    result_path = override_dir / "user-profile.json"
+    assert json.loads(result_path.read_text(encoding="utf-8")) == {"id": 1}
+
+    result_meta = _read_meta(tmp_path, override_day.isoformat(), "user-profile.json")
+    assert result_meta["day"] == override_day.isoformat()
+    assert result_meta["status"] == "success"
+
+    error_path = override_dir / "device-settings.error.json"
+    assert error_path.exists()
+    error_meta = _read_meta(tmp_path, override_day.isoformat(), "device-settings.json")
+    assert error_meta["status"] == "error"
+    assert error_meta["day"] == override_day.isoformat()
+
+
+def test_store_uses_default_override_for_remaining_endpoints(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path, run_id="test-run")
+    base_day = date(2024, 2, 1)
+    override_day = date(2024, 2, 5)
+    outcome = FetchOutcome(
+        results=[
+            EndpointResult(endpoint="alpha", scope={}, payload={"value": 1}),
+            EndpointResult(endpoint="beta", scope={}, payload={"value": 2}),
+        ],
+        errors=[],
+    )
+
+    writer.store(base_day, outcome, default_override=override_day)
+
+    override_dir = tmp_path / override_day.isoformat()
+    default_dir = tmp_path / base_day.isoformat()
+    assert override_dir.exists()
+    assert not default_dir.exists()
+
+    alpha_meta = _read_meta(tmp_path, override_day.isoformat(), "alpha.json")
+    beta_meta = _read_meta(tmp_path, override_day.isoformat(), "beta.json")
+    assert alpha_meta["day"] == override_day.isoformat()
+    assert beta_meta["day"] == override_day.isoformat()

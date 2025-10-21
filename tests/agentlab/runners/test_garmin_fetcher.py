@@ -118,6 +118,22 @@ def test_supported_endpoints_matches_registry():
     ]
 
 
+def test_partition_endpoints_groups_run_date_handlers():
+    fetcher = GarminDataFetcher()
+    run_group, per_day_group = fetcher.partition_endpoints(
+        ["devices", "daily-steps", "device-settings", "user-summary"]
+    )
+    assert run_group == ["devices", "device-settings"]
+    assert per_day_group == ["user-summary", "daily-steps"]
+
+
+def test_partition_endpoints_leaves_unknown_endpoints_per_day():
+    fetcher = GarminDataFetcher()
+    run_group, per_day_group = fetcher.partition_endpoints(["daily-steps", "alpha"])
+    assert run_group == []
+    assert per_day_group == ["daily-steps"]
+
+
 class DummyGarmin:
     def __init__(self, *args: object, **kwargs: object) -> None:
         self.calls: list[str] = []

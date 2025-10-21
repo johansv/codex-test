@@ -8,7 +8,7 @@ import tempfile
 from datetime import date, datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from agentlab.core.garmin import EndpointError, EndpointResult, FetchOutcome
 
@@ -32,14 +32,31 @@ class GarminStorageWriter:
                 garmin_version = "unknown"
         self.garmin_version = garmin_version
 
-    def store(self, day: date, outcome: FetchOutcome, *, correlation_id: str | None = None) -> None:
-        """Write results and errors for *day* to disk."""
+    def store(
+        self,
+        day: date,
+        outcome: FetchOutcome,
+        *,
+        correlation_id: str | None = None,
+        day_overrides: Mapping[str, date] | None = None,
+        default_override: date | None = None,
+    ) -> None:
+        """Write results and errors for *day* to disk.
+
+        When *day_overrides* is provided, endpoints listed in the mapping are stored
+        under the mapped day instead of *day*. When *default_override* is provided,
+        endpoints not listed in *day_overrides* default to that override day.
+        """
+
+        overrides = dict(day_overrides or {})
 
         for result in outcome.results:
-            self.write_result(day, result, correlation_id=correlation_id)
+            target_day = overrides.get(result.endpoint, default_override) or day
+            self.write_result(target_day, result, correlation_id=correlation_id)
 
         for error in outcome.errors:
-            self.write_error(day, error)
+            target_day = overrides.get(error.endpoint, default_override) or day
+            self.write_error(target_day, error)
 
     def write_result(self, day: date, result: EndpointResult, *, correlation_id: str | None = None) -> None:
         day_dir = self._ensure_day_dir(day)

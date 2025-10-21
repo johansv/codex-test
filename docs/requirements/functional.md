@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=2, doing=0); Done: 32 (done=32); Retired: 0
+Todo: 1 (backlog=1); Done: 33 (done=33); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -48,6 +48,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
+### REQ-F-20251021T141140-H9: Run-date scheduling for non-dated Garmin endpoints
+- Owner: product
+- Narrative: As a data operator, I want Garmin endpoints that lack date inputs to execute once per run so that current-state datasets aren't repeated for every historic day in the range.
+- Acceptance Criteria:
+  * Fetcher classifies endpoints without date parameters and runs them exactly once per execution before any per-day iterations.
+  * Run-date executions deliver results/errors to callbacks tagged with the run date used for storage.
+  * Per-day endpoints continue to execute per date in the requested range with unchanged ordering and behavior.
+  * Storage writer places run-date endpoint outputs and sidecars under <run-date>/... regardless of per-day loop state.
+  * Unit and CLI tests cover once-only execution, storage targeting, and metadata propagation for run-date endpoints.
+- Priority: medium
+- Status: done
+- Reason: Run-date endpoints execute once per run with storage overrides
+- Trace: prompts prompt run-date scheduling guidance, tests tests/agentlab/cli/test_garmin_fetch_cli.py; tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits none
+---
+
 ### REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs
 - Owner: product
 - Narrative: As a user, I want Garmin fetches to emit metadata sidecars so that every payload is provenance-traceable.
@@ -75,7 +90,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Reason: Detail endpoints gated by available items
 - Trace: prompts Skip detail endpoints for empty activity/workout/gear lists, tests tests/agentlab/runners/test_garmin_fetcher.py, commits pending
 ---
-
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
 - Owner: codex

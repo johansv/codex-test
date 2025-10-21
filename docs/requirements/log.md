@@ -128,3 +128,9 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T130040-QF | Implement detail endpoint gating | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T130040-QF | Marked done: Detail endpoints skipped when no source items (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T130040-QF | Added device endpoint gating to detail skip requirement | codex | refinement |
+| 2025-10-21 | REQ-F-20251021T141140-H9 | Added functional requirement REQ-F-20251021T141140-H9: Run-date scheduling for non-dated Garmin endpoints | codex | prompt |
+| 2025-10-21 | REQ-F-20251021T141140-H9 | Started implementation for REQ-F-20251021T141140-H9; non-functional: REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151543-IE, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151535-UV | codex | implementation |
+
+| 2025-10-21 | REQ-F-20251021T141140-H9 | Implemented run-date endpoint scheduling, storage overrides, and regression tests | codex | implementation |
+
+| 2025-10-21 | REQ-F-20251021T141140-H9 | Marked REQ-F-20251021T141140-H9 done: Run-date endpoints execute once per run with storage overrides (approval: DEV-LOCAL) | codex | implementation |

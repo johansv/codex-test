@@ -37,6 +37,46 @@ class RateLimitExceeded(RuntimeError):
 
 _RATE_LIMIT_WAIT_MINUTES = 10
 
+# Endpoints whose Garmin API methods do not accept date parameters and therefore
+# represent the current state at run time. These will be executed once per run in
+# a later scheduling step.
+_RUN_DATE_ENDPOINTS: tuple[str, ...] = (
+    "user-profile",
+    "user-profile-settings",
+    "full-name",
+    "unit-system",
+    "activity-types",
+    "last-activity",
+    "goals",
+    "earned-badges",
+    "personal-records",
+    "adhoc-challenges",
+    "badge-challenges",
+    "available-badge-challenges",
+    "non-completed-badge-challenges",
+    "in-progress-virtual-challenges",
+    "pregnancy-summary",
+    "devices",
+    "gear",
+    "workouts",
+)
+
+# Additional run-date endpoints that depend on other run-date data. The values
+# identify the prerequisite endpoint(s) whose results should be available
+# beforehand.
+_RUN_DATE_DEPENDENCIES: dict[str, tuple[str, ...]] = {
+    "device-settings": ("devices",),
+    "device-last-used": ("devices",),
+    "device-solar": ("devices",),
+    "device-alarms": ("devices",),
+    "primary-training-device": ("devices",),
+    "gear-stats": ("gear",),
+    "gear-defaults": ("gear",),
+    "gear-activities": ("gear",),
+    "workout-detail": ("workouts",),
+    "workout-download": ("workouts",),
+}
+
 
 @dataclass(slots=True)
 class GarminFetchContext:
@@ -237,6 +277,16 @@ class GarminDataFetcher:
         """Return the list of endpoint identifiers."""
 
         return [handler.name for handler in self._handlers]
+
+    def partition_endpoints(self, endpoints: Sequence[str]) -> tuple[list[str], list[str]]:
+        """Split *endpoints* into run-date and per-day groups preserving handler order."""
+
+        selected = set(endpoints)
+        ordered = [handler.name for handler in self._handlers if handler.name in selected]
+        run_date_names = set(_RUN_DATE_ENDPOINTS) | set(_RUN_DATE_DEPENDENCIES.keys())
+        run_date_group = [name for name in ordered if name in run_date_names]
+        per_day_group = [name for name in ordered if name not in run_date_names]
+        return run_date_group, per_day_group
 
     def fetch(
         self,
