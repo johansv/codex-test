@@ -1018,7 +1018,7 @@ def _fetch_non_completed_badge_challenges(
 def _fetch_in_progress_virtual_challenges(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = client.get_inprogress_virtual_challenges()
+    payload = client.get_inprogress_virtual_challenges(0, 100)
     return [_endpoint_result("in-progress-virtual-challenges", {}, payload)]
 
 
@@ -1474,3 +1474,4 @@ def _fetch_workout_download(
             )
         )
     return results
+

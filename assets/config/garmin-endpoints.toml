@@ -77,6 +77,10 @@ enabled = [
 
 disabled = [  
   "activities",
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
 ]
 
 [presets.coaching]
@@ -120,6 +124,10 @@ disabled = [
   "activities",
   "activities-for-date",
   "workout-download",
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
 ]
 
 [presets.timeseries]
@@ -169,6 +177,10 @@ enabled = [
 disabled = [
   "activity-download",
   "activities",
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
 ]
 
 [presets.gear]
@@ -182,6 +194,10 @@ enabled = [
 disabled = [
   "activity-download",
   "activities",
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
 ]
 
 [presets.mini]
@@ -190,6 +206,23 @@ enabled = [
   "user-summary",
   "activities-by-date",
   "activity-detail",
+]
+
+disabled = [
+  "activity-download",
+  "activities",
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
+]
+
+[presets.error]
+enabled = [
+  "badge-challenges",
+  "available-badge-challenges",
+  "non-completed-badge-challenges",
+  "in-progress-virtual-challenges",
 ]
 
 disabled = [

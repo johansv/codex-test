@@ -21,6 +21,7 @@ from agentlab.runners.garmin_fetcher import (
     _fetch_gear,
     _fetch_gear_activities,
     _fetch_gear_stats,
+    _fetch_in_progress_virtual_challenges,
     _fetch_progress_summary,
     GarminFetchContext,
 )
@@ -538,6 +539,29 @@ def test_fetch_raises_rate_limit_during_endpoint(caplog):
     assert rate_events
     assert rate_events[0]["phase"] == "endpoint"
     assert rate_events[0]["endpoint"] == "alpha"
+
+
+def test_fetch_in_progress_virtual_challenges_uses_start_limit():
+    class VirtualChallengeClient(DummyGarmin):
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.calls: list[tuple[int, int]] = []
+
+        def get_inprogress_virtual_challenges(self, start: int, limit: int) -> list[dict[str, str]]:
+            self.calls.append((start, limit))
+            return [{"challenge": "c1"}]
+
+    client = VirtualChallengeClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    results = _fetch_in_progress_virtual_challenges(client, request, context)
+
+    assert client.calls == [(0, 100)]
+    assert results == [
+        EndpointResult(endpoint="in-progress-virtual-challenges", scope={}, payload=[{"challenge": "c1"}])
+    ]
+
 
 
 def test_activity_detail_handlers_emit_activity_id():
