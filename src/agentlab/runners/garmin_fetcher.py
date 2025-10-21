@@ -41,6 +41,8 @@ class GarminFetchContext:
     """Hold intermediate data reused across endpoint calls."""
 
     activities: list[dict[str, Any]] = field(default_factory=list)
+    activities_by_date: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
+    activities_for_date: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     activity_downloads: dict[str, bytes] = field(default_factory=dict)
     devices: list[dict[str, Any]] = field(default_factory=list)
     device_settings: dict[str, dict[str, Any]] = field(default_factory=dict)
@@ -1055,22 +1057,37 @@ def _fetch_pregnancy_summary(
 def _fetch_activities(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = _load_activities_for_request(client, request)
-    context.activities = payload
-    return [_endpoint_result("activities", {}, payload)]
+    aggregated: list[dict[str, Any]] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        by_date_records = list(client.get_activities_by_date(day_iso, day_iso) or [])
+        context.activities_by_date[day_iso] = by_date_records
+        if by_date_records:
+            aggregated.extend(by_date_records)
+            continue
+        for_date_records = list(client.get_activities_fordate(day_iso) or [])
+        context.activities_for_date[day_iso] = for_date_records
+        aggregated.extend(for_date_records)
+    context.activities = list(aggregated)
+    return [_endpoint_result("activities", {}, aggregated)]
 
 
 def _fetch_activities_by_date(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
-    payload = _load_activities_for_request(client, request)
-    if payload:
-        context.activities = payload
+    aggregated: list[dict[str, Any]] = []
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        records = list(client.get_activities_by_date(day_iso, day_iso) or [])
+        context.activities_by_date[day_iso] = records
+        aggregated.extend(records)
+    if aggregated:
+        context.activities = list(aggregated)
     return [
         _endpoint_result(
             "activities-by-date",
             {"start": _iso(request.start_date), "end": _iso(request.end_date)},
-            payload,
+            aggregated,
         )
     ]
 
@@ -1079,9 +1096,19 @@ def _fetch_activities_for_date(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
+    aggregated_fallback: list[dict[str, Any]] = []
     for day in request.iter_dates():
-        payload = client.get_activities_fordate(_iso(day))
-        results.append(_endpoint_result("activities-for-date", {"date": _iso(day)}, payload))
+        day_iso = _iso(day)
+        records = list(client.get_activities_fordate(day_iso) or [])
+        context.activities_for_date[day_iso] = records
+        if not context.activities_by_date.get(day_iso) and records:
+            aggregated_fallback.extend(records)
+        results.append(_endpoint_result("activities-for-date", {"date": day_iso}, records))
+    if aggregated_fallback:
+        if context.activities:
+            context.activities.extend(aggregated_fallback)
+        else:
+            context.activities = list(aggregated_fallback)
     return results
 
 
@@ -1099,40 +1126,39 @@ def _fetch_activity_types(
     return [_endpoint_result("activity-types", {}, payload)]
 
 
-def _require_activity_ids(context: GarminFetchContext) -> list[str]:
+def _require_activity_ids(context: GarminFetchContext, request: GarminFetchRequest) -> list[str]:
     ids: list[str] = []
-    for activity in context.activities:
-        activity_id = activity.get("activityId")
-        if activity_id is None:
-            activity_id = activity.get("activityIdGps")
-        if activity_id is not None:
-            ids.append(str(activity_id))
+    seen: set[str] = set()
+    for day in request.iter_dates():
+        day_iso = _iso(day)
+        records = context.activities_by_date.get(day_iso)
+        if not records:
+            records = context.activities_for_date.get(day_iso, [])
+        for activity in records:
+            activity_id = activity.get("activityId") or activity.get("activityIdGps")
+            if activity_id is None:
+                continue
+            activity_id = str(activity_id)
+            if activity_id not in seen:
+                seen.add(activity_id)
+                ids.append(activity_id)
+    if not ids:
+        for activity in context.activities:
+            activity_id = activity.get("activityId") or activity.get("activityIdGps")
+            if activity_id is None:
+                continue
+            activity_id = str(activity_id)
+            if activity_id not in seen:
+                seen.add(activity_id)
+                ids.append(activity_id)
     return ids
-
-
-def _load_activities_for_request(
-    client: Garmin,
-    request: GarminFetchRequest,
-) -> list[dict[str, Any]]:
-    start_iso = _iso(request.start_date)
-    end_iso = _iso(request.end_date)
-    payload: list[dict[str, Any]] | None = None
-    if request.start_date == request.end_date:
-        payload = client.get_activities_by_date(start_iso, end_iso)
-        if not payload:
-            payload = client.get_activities_fordate(start_iso)
-    else:
-        payload = client.get_activities_by_date(start_iso, end_iso)
-    if not payload:
-        return []
-    return list(payload)
 
 
 def _fetch_activity_detail(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity(activity_id)
         results.append(_endpoint_result("activity-detail", {"activityId": activity_id}, payload))
     return results
@@ -1142,7 +1168,7 @@ def _fetch_activity_details(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_details(activity_id)
         results.append(
             _endpoint_result("activity-details", {"activityId": activity_id}, payload)
@@ -1154,7 +1180,7 @@ def _fetch_activity_splits(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_splits(activity_id)
         results.append(_endpoint_result("activity-splits", {"activityId": activity_id}, payload))
     return results
@@ -1164,7 +1190,7 @@ def _fetch_activity_typed_splits(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_typed_splits(activity_id)
         results.append(
             _endpoint_result(
@@ -1180,7 +1206,7 @@ def _fetch_activity_split_summaries(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_split_summaries(activity_id)
         results.append(
             _endpoint_result("activity-split-summaries", {"activityId": activity_id}, payload)
@@ -1192,7 +1218,7 @@ def _fetch_activity_weather(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_weather(activity_id)
         results.append(_endpoint_result("activity-weather", {"activityId": activity_id}, payload))
     return results
@@ -1202,7 +1228,7 @@ def _fetch_activity_hr_timezones(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_hr_in_timezones(activity_id)
         results.append(
             _endpoint_result("activity-hr-timezones", {"activityId": activity_id}, payload)
@@ -1214,7 +1240,7 @@ def _fetch_activity_exercise_sets(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_exercise_sets(activity_id)
         results.append(
             _endpoint_result("activity-exercise-sets", {"activityId": activity_id}, payload)
@@ -1226,7 +1252,7 @@ def _fetch_activity_gear(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         payload = client.get_activity_gear(activity_id)
         results.append(_endpoint_result("activity-gear", {"activityId": activity_id}, payload))
     return results
@@ -1236,7 +1262,7 @@ def _fetch_activity_download(
     client: Garmin, request: GarminFetchRequest, context: GarminFetchContext
 ) -> list[EndpointResult]:
     results: list[EndpointResult] = []
-    for activity_id in _require_activity_ids(context):
+    for activity_id in _require_activity_ids(context, request):
         for fmt in (
             Garmin.ActivityDownloadFormat.TCX,
             Garmin.ActivityDownloadFormat.ORIGINAL,
@@ -1474,4 +1500,5 @@ def _fetch_workout_download(
             )
         )
     return results
+
 

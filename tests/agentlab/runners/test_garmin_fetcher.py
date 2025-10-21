@@ -14,6 +14,8 @@ from agentlab.runners.garmin_fetcher import (
     GarminPacingConfig,
     RateLimitExceeded,
     _fetch_activities,
+    _fetch_activities_by_date,
+    _fetch_activities_for_date,
     _fetch_activity_detail,
     _fetch_activity_details,
     _fetch_activity_download,
@@ -636,6 +638,60 @@ def test_activity_detail_handlers_emit_activity_id():
     assert client.activity_details_calls == ["101", "202"]
 
 
+def test_activity_details_fallback_to_for_date():
+    class ActivityFallbackClient(DummyGarmin):
+        created: "ActivityFallbackClient | None" = None
+
+        def __init__(self, *args: object, **kwargs: object) -> None:
+            super().__init__(*args, **kwargs)
+            self.by_date_calls: list[tuple[str, str]] = []
+            self.for_date_calls: list[str] = []
+            self.activity_calls: list[str] = []
+            ActivityFallbackClient.created = self
+
+        def get_activities_by_date(self, start: str, end: str) -> list[dict[str, str]]:
+            self.by_date_calls.append((start, end))
+            return []
+
+        def get_activities_fordate(self, day: str) -> list[dict[str, str]]:
+            self.for_date_calls.append(day)
+            return [{"activityId": "999"}]
+
+        def get_activity(self, activity_id: str) -> dict[str, str]:
+            self.activity_calls.append(activity_id)
+            return {"activityId": activity_id}
+
+    handlers = [
+        EndpointHandler(name="activities-by-date", execute=_fetch_activities_by_date),
+        EndpointHandler(name="activities-for-date", execute=_fetch_activities_for_date),
+        EndpointHandler(name="activity-detail", execute=_fetch_activity_detail),
+    ]
+    fetcher = GarminDataFetcher(
+        client_factory=ActivityFallbackClient,
+        handlers=handlers,
+        pacing=GarminPacingConfig(
+            post_login_delay=0.0,
+            between_endpoints_delay=0.0,
+            pagination_delay=0.0,
+            jitter_ratio=0.0,
+            retry_limit=0,
+        ),
+        sleep=lambda _: None,
+        random_source=random.Random(0),
+    )
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    credentials = GarminCredentials(username="user", password="pass")
+
+    outcome = fetcher.fetch(credentials, request)
+
+    detail_results = [result for result in outcome.results if result.endpoint == "activity-detail"]
+    assert [result.scope["activityId"] for result in detail_results] == ["999"]
+
+    client = ActivityFallbackClient.created
+    assert client is not None
+    assert client.by_date_calls == [("2024-01-01", "2024-01-01")]
+    assert client.for_date_calls == ["2024-01-01"]
+    assert client.activity_calls == ["999"]
 def test_fetch_gear_uses_profile_id_when_only_id_present():
     class GearClient(DummyGarmin):
         def __init__(self, *args: object, **kwargs: object) -> None:
@@ -842,3 +898,4 @@ def test_progress_summary_respects_request_range():
     assert client.calls == [("2024-01-01", "2024-01-02")]
     assert [result.scope["start"] for result in results] == ["2024-01-01"]
     assert [result.scope["end"] for result in results] == ["2024-01-02"]
+
