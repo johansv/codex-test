@@ -78,6 +78,8 @@ class GarminStorageWriter:
                 if lowered == "original":
                     return "zip"
                 return lowered
+            if result.endpoint == "workout-download":
+                return "fit"
             return "bin"
         if isinstance(payload, (dict, list)):
             return "json"
@@ -92,6 +94,9 @@ class GarminStorageWriter:
         gear_uuid = scope.get("gearUuid")
         if gear_uuid is not None:
             return f"{endpoint}_{gear_uuid}"
+        workout_id = scope.get("workoutId")
+        if workout_id is not None:
+            return f"{endpoint}_{workout_id}"
         return endpoint
 
     def _error_filename(self, endpoint: str, scope: dict[str, str | int]) -> str:

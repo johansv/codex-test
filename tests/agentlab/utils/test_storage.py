@@ -72,6 +72,26 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
     assert zip_path.read_bytes() == zip_payload
 
 
+def test_storage_writes_workout_download_as_fit(tmp_path: Path) -> None:
+    writer = GarminStorageWriter(tmp_path)
+    payload = b"fit-bytes"
+    outcome = FetchOutcome(
+        results=[
+            EndpointResult(
+                endpoint="workout-download",
+                scope={"workoutId": 42},
+                payload=payload,
+            )
+        ],
+        errors=[],
+    )
+
+    writer.store(date(2024, 1, 1), outcome)
+
+    fit_path = tmp_path / "2024-01-01" / "workout-download_42.fit"
+    assert fit_path.read_bytes() == payload
+
+
 def test_storage_writes_error_files(tmp_path: Path) -> None:
     writer = GarminStorageWriter(tmp_path)
     outcome = FetchOutcome(
