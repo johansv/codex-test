@@ -224,6 +224,26 @@ disabled = [
   "activities",
 ]
 
+[presets.activities]
+enabled = [
+  "activities-by-date",
+  "activities-for-date",
+  "activity-detail",
+  "activity-details",
+  "activity-splits",
+  "activity-typed-splits",
+  "activity-split-summaries",
+  "activity-weather",
+  "activity-hr-timezones",
+  "activity-exercise-sets",
+  "activity-gear",
+  "activity-download",
+]
+
+disabled = [
+  "activities",  
+]
+
 [presets.test]
 enabled = [
   "race-predictions",
@@ -236,8 +256,7 @@ enabled = [
 
 disabled = [
   "activity-download",
-  "activities",
-  
+  "activities",  
 ]
 
 [defaults]
