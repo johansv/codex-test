@@ -122,3 +122,9 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T113857-26 | Implement Garmin metadata sidecars | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T113857-26 | Marked done: Garmin fetch writes metadata sidecars with success/error status (approval: DEV-LOCAL) | codex | implementation |
 
+| 2025-10-21 | REQ-F-20251021T130040-QF | Captured requirement REQ-F-20251021T130040-QF: Skip garmin detail endpoints for activities, workouts, and gear when no corre... | codex | prompt |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Implement detail endpoint gating | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Captured requirement REQ-F-20251021T130040-QF: Skip detail endpoints when source items absent | codex | prompt |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Implement detail endpoint gating | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Marked done: Detail endpoints skipped when no source items (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-21 | REQ-F-20251021T130040-QF | Added device endpoint gating to detail skip requirement | codex | refinement |

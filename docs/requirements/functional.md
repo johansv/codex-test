@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1, doing=0); Done: 31 (done=31); Retired: 0
+Todo: 2 (backlog=2, doing=0); Done: 32 (done=32); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -61,6 +61,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Reason: Metadata sidecars published
 - Trace: prompts Add metadata sidecar files recording provenance alongside Garmin fetch outputs, tests tests/agentlab/utils/test_storage.py; tests/agentlab/runners/test_garmin_fetcher.py, commits pending
 ---
+### REQ-F-20251021T130040-QF: Skip detail endpoints when source items absent
+- Owner: product
+- Narrative: As a user, I want detail endpoints to run only when matching activities, workouts, or gear exist so that the fetcher avoids unnecessary API calls and sidecar noise.
+  - Acceptance Criteria:
+    * Activity detail endpoints (detail, details, splits, etc.) do not invoke Garmin APIs and produce no results when no activities are available for the requested day.
+    * Workout detail/download endpoints are skipped when the workouts list is empty for the run.
+    * Gear stats/activities endpoints are skipped when no gear entries are present for the run.
+    * Device detail endpoints (settings, last-used, solar, alarms, primary device) are skipped when no devices are cached for the run.
+    * Unit tests cover empty activity/workout/gear/device scenarios verifying that the corresponding Garmin client methods are not called.
+- Priority: medium
+- Status: done
+- Reason: Detail endpoints gated by available items
+- Trace: prompts Skip detail endpoints for empty activity/workout/gear lists, tests tests/agentlab/runners/test_garmin_fetcher.py, commits pending
+---
+
 
 ### REQ-F-20251018T215419-X1: Garmin fetch full API coverage
 - Owner: codex

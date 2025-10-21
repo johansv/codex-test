@@ -26,6 +26,14 @@ from agentlab.runners.garmin_fetcher import (
     _fetch_in_progress_virtual_challenges,
     _fetch_race_predictions,
     _fetch_progress_summary,
+    _fetch_workout_detail,
+    _fetch_device_settings,
+    _fetch_device_last_used,
+    _fetch_device_solar,
+    _fetch_device_alarms,
+    _fetch_primary_training_device,
+
+    _fetch_workout_download,
     GarminFetchContext,
 )
 
@@ -928,3 +936,72 @@ def test_progress_summary_respects_request_range():
     assert [result.scope["start"] for result in results] == ["2024-01-01"]
     assert [result.scope["end"] for result in results] == ["2024-01-02"]
 
+
+def test_activity_detail_skips_when_no_activities():
+    class NoActivityClient(DummyGarmin):
+        def get_activity(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_activity should not be called")
+
+    client = NoActivityClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    assert _fetch_activity_detail(client, request, context) == []
+
+
+def test_workout_detail_skips_when_no_workouts():
+    class NoWorkoutClient(DummyGarmin):
+        def get_workout_by_id(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_workout_by_id should not be called")
+
+        def download_workout(self, *_: object, **__: object) -> None:
+            raise AssertionError("download_workout should not be called")
+
+    client = NoWorkoutClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    assert _fetch_workout_detail(client, request, context) == []
+    assert _fetch_workout_download(client, request, context) == []
+    assert _fetch_device_settings(client, request, context) == []
+    assert _fetch_device_last_used(client, request, context) == []
+    assert _fetch_device_solar(client, request, context) == []
+    assert _fetch_device_alarms(client, request, context) == []
+    assert _fetch_primary_training_device(client, request, context) == []
+
+
+def test_gear_detail_skips_when_no_gear():
+    class NoGearClient(DummyGarmin):
+        def get_user_profile(self, *_: object, **__: object) -> dict[str, str]:
+            return {}
+
+        def get_user_profile(self, *_: object, **__: object) -> dict[str, str]:
+            return {}
+
+        def get_gear(self, *_: object, **__: object) -> list[dict[str, str]]:
+            return []
+
+        def get_gear_stats(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_gear_stats should not be called")
+
+        def get_gear_activities(self, *_: object, **__: object):
+            raise AssertionError("get_gear_activities should not be called")
+
+        def get_device_last_used(self, *_: object, **__: object) -> None:
+            raise AssertionError("get_device_last_used should not be called")
+
+        def get_device_solar_data(self, *_: object, **__: object):
+            raise AssertionError("get_device_solar_data should not be called")
+
+        def get_device_alarms(self, *_: object, **__: object):
+            raise AssertionError("get_device_alarms should not be called")
+
+        def get_primary_training_device(self, *_: object, **__: object):
+            raise AssertionError("get_primary_training_device should not be called")
+
+    client = NoGearClient()
+    request = GarminFetchRequest(start_date=date(2024, 1, 1), end_date=date(2024, 1, 1))
+    context = GarminFetchContext()
+
+    assert _fetch_gear_stats(client, request, context) == []
+    assert _fetch_gear_activities(client, request, context) == []
