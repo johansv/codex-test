@@ -167,11 +167,37 @@ def _default_config_path() -> Path:
     )
 
 
+def _normalise_preset_names(value: str | Sequence[str] | None) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        candidates = value.split(",")
+    elif isinstance(value, Sequence) and not isinstance(value, (bytes, bytearray)):
+        candidates: list[str] = []
+        for item in value:
+            if not isinstance(item, str):
+                raise SystemExit("Preset selections must be strings when provided.")
+            candidates.extend(item.split(","))
+    else:
+        raise SystemExit("Preset selections must be provided as a comma separated string or list.")
+
+    seen: set[str] = set()
+    result: list[str] = []
+    for candidate in candidates:
+        name = candidate.strip()
+        if not name:
+            continue
+        if name not in seen:
+            seen.add(name)
+            result.append(name)
+    return result
+
+
 def _load_endpoint_defaults(
     fetcher: GarminDataFetcher,
     config_path: Path | None,
-    preset_name: str | None,
-) -> tuple[list[str], set[str], Path, str | None]:
+    preset_selection: str | None,
+) -> tuple[list[str], set[str], Path, list[str]]:
     path = config_path if config_path is not None else _default_config_path()
     if not path.exists():
         raise SystemExit(f"Endpoint config not found: {path}")
@@ -182,40 +208,91 @@ def _load_endpoint_defaults(
 
     presets = data.get("presets")
     defaults_section = data.get("defaults", {})
-    selected_preset: str | None = None
+    requested_presets = _normalise_preset_names(preset_selection)
+    selected_presets: list[str] = []
 
     if presets:
         if not isinstance(presets, dict):
             raise SystemExit("Endpoint config presets must be a table of named configurations.")
-        selected_preset = preset_name or defaults_section.get("preset")
-        if not selected_preset:
+        selected_presets = requested_presets or _normalise_preset_names(
+            defaults_section.get("preset")
+        )
+        if not selected_presets:
             raise SystemExit(
                 "Endpoint config defines presets but none was selected. Provide --preset or set defaults.preset."
             )
-        preset_data = presets.get(selected_preset)
-        if preset_data is None:
+        missing = [name for name in selected_presets if name not in presets]
+        if missing:
             available = ", ".join(sorted(presets.keys()))
             raise SystemExit(
-                f"Unknown endpoint preset '{selected_preset}'. Available presets: {available}"
+                f"Unknown endpoint preset(s) "
+                f"{', '.join(sorted(missing))}. Available presets: {available}"
             )
-        enabled = preset_data.get("enabled")
-        disabled = preset_data.get("disabled", [])
+        combined_enabled: list[str] = []
+        seen_enabled: set[str] = set()
+        combined_disabled: set[str] = set()
+
+        for preset_name in selected_presets:
+            preset_data = presets.get(preset_name)
+            if not isinstance(preset_data, dict):
+                raise SystemExit(f"Preset '{preset_name}' must be a table of named configuration values.")
+            enabled = preset_data.get("enabled")
+            if not isinstance(enabled, list) or not all(isinstance(name, str) for name in enabled):
+                raise SystemExit(f"Preset '{preset_name}' must define an enabled list of strings.")
+            if not enabled:
+                raise SystemExit(f"Preset '{preset_name}' enabled list must contain at least one entry.")
+            duplicate_entries = [name for name in enabled if enabled.count(name) > 1]
+            if duplicate_entries:
+                duplicate_labels = ", ".join(sorted(set(duplicate_entries)))
+                raise SystemExit(
+                    f"Preset '{preset_name}' enabled contains duplicates: {duplicate_labels}"
+                )
+            unknown_defaults = [name for name in enabled if name not in supported]
+            if unknown_defaults:
+                unknown_labels = ", ".join(sorted(unknown_defaults))
+                raise SystemExit(
+                    f"Preset '{preset_name}' references unsupported endpoint(s): {unknown_labels}"
+                )
+            for endpoint in enabled:
+                if endpoint not in seen_enabled:
+                    seen_enabled.add(endpoint)
+                    combined_enabled.append(endpoint)
+
+            disabled_entries = preset_data.get("disabled", [])
+            if disabled_entries and (
+                not isinstance(disabled_entries, list)
+                or not all(isinstance(name, str) for name in disabled_entries)
+            ):
+                raise SystemExit(
+                    f"Preset '{preset_name}' disabled entries must be strings when provided."
+                )
+            unknown_disabled = [
+                name for name in disabled_entries if name not in supported
+            ]
+            if unknown_disabled:
+                unknown_labels = ", ".join(sorted(unknown_disabled))
+                raise SystemExit(
+                    f"Preset '{preset_name}' disabled references unsupported endpoint(s): {unknown_labels}"
+                )
+            combined_disabled.update(disabled_entries)
+
+        enabled = combined_enabled
+        disabled_set = combined_disabled
     else:
+        if requested_presets:
+            raise SystemExit("Config does not define presets but --preset was provided.")
         enabled = defaults_section.get("enabled")
         disabled = defaults_section.get("disabled", [])
-        if preset_name:
-            raise SystemExit("Config does not define presets but --preset was provided.")
-        selected_preset = None
+        if disabled and (
+            not isinstance(disabled, list) or not all(isinstance(name, str) for name in disabled)
+        ):
+            raise SystemExit("Endpoint configuration disabled entries must be strings when provided.")
+        disabled_set = set(disabled)
 
     if not isinstance(enabled, list) or not all(isinstance(name, str) for name in enabled):
         raise SystemExit("Endpoint configuration must provide an enabled list of strings.")
     if not enabled:
         raise SystemExit("Endpoint configuration enabled list must contain at least one entry.")
-    if disabled and (
-        not isinstance(disabled, list) or not all(isinstance(name, str) for name in disabled)
-    ):
-        raise SystemExit("Endpoint configuration disabled entries must be strings when provided.")
-
     duplicates = [name for name in enabled if enabled.count(name) > 1]
     if duplicates:
         duplicate_labels = ", ".join(sorted(set(duplicates)))
@@ -230,7 +307,6 @@ def _load_endpoint_defaults(
             f"Endpoint config references unsupported endpoint(s): {unknown_labels}"
         )
 
-    disabled_set = set(disabled)
     unknown_disabled = [name for name in disabled_set if name not in supported]
     if unknown_disabled:
         raise SystemExit(
@@ -245,7 +321,7 @@ def _load_endpoint_defaults(
             f"{', '.join(sorted(overlap))}"
         )
 
-    return list(enabled), disabled_set, path, selected_preset
+    return list(enabled), disabled_set, path, selected_presets
 
 
 def _select_endpoints(
@@ -352,7 +428,7 @@ def main(argv: list[str] | None = None) -> int:
 
     start, end = _resolve_range(args)
     credentials = _load_credentials(args)
-    defaults, disabled, config_path_used, selected_preset = _load_endpoint_defaults(
+    defaults, disabled, config_path_used, selected_presets = _load_endpoint_defaults(
         fetcher, args.config, args.preset
     )
     endpoints = _select_endpoints(fetcher, defaults, disabled, args.include, args.exclude)
@@ -386,7 +462,7 @@ def main(argv: list[str] | None = None) -> int:
             "defaults_disabled": sorted(disabled),
             "config_path": str(config_path_used),
             "output_dir": str(output_root),
-            "preset": selected_preset,
+            "presets": selected_presets or None,
             "pacing": {
                 "post_login_delay": pacing.post_login_delay,
                 "between_endpoints_delay": pacing.between_endpoints_delay,
@@ -410,7 +486,7 @@ def main(argv: list[str] | None = None) -> int:
         start_date=start.isoformat(),
         end_date=end.isoformat(),
         endpoint_count=len(endpoints),
-        preset=selected_preset,
+        presets=selected_presets or None,
     )
 
     summary: list[dict[str, object]] = []

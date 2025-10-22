@@ -48,6 +48,21 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Done Requirements
 
+### REQ-F-20251020T090147-ZS: Garmin endpoint presets
+- Owner: codex
+- Narrative: As an operator, I want selectable Garmin endpoint configurations so that I can run full exports or a curated daily coaching set without editing TOML each time.
+- Acceptance Criteria:
+  * Configuration loader continues to expose named endpoint presets from the TOML file.
+  * CLI `--preset` and `defaults.preset` accept comma-separated preset names, trimming whitespace and deduplicating while preserving order.
+  * Selecting multiple presets unions enabled endpoints without duplicates and unions disabled endpoints so CLI includes cannot resurrect them.
+  * Runs fail fast when any requested preset is unknown, listing the missing names alongside available options.
+  * Automated tests cover single-preset execution, multi-preset unions, disabled enforcement, and unknown preset failures for the Garmin fetch CLI.
+- Priority: medium
+- Status: done
+- Reason: Multi-preset CLI unions implemented and verified
+- Trace: prompts Multiple Garmin configs request, tests tests/agentlab/cli/test_garmin_fetch_cli.py, commits none
+---
+
 ### REQ-F-20251021T113857-26: Add metadata sidecar files recording provenance alongside garmin fetch outputs
 - Owner: product
 - Narrative: As a user, I want Garmin fetches to emit metadata sidecars so that every payload is provenance-traceable.
@@ -118,20 +133,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Status: done
 - Reason: Activity downloader now emits both TCX and FIT files
 - Trace: prompts FIT export request, tests uv run pytest, commits none
----
-
-### REQ-F-20251020T090147-ZS: Garmin endpoint presets
-- Owner: codex
-- Narrative: As an operator, I want selectable Garmin endpoint configurations so that I can run full exports or a curated daily coaching set without editing TOML each time.
-- Acceptance Criteria:
-  * Configuration loader supports named presets (e.g., full, coaching)
-  * All endpoints preset covers every registered handler
-  * Coaching preset captures data needed for personalized AI coach
-  * Timeseries preset bundles all date- and range-driven endpoints for longitudinal analysis
-- Priority: medium
-- Status: done
-- Reason: Endpoint presets and CLI selection implemented
-- Trace: prompts Multiple Garmin configs request, tests uv run pytest, commits none
 ---
 
 ### REQ-F-20251017T170307-45: Consistent per-day date range calls

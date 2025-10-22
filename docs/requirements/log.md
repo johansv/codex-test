@@ -138,3 +138,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T130040-QF | Marked REQ-F-20251021T130040-QF done: Detail endpoints only execute when per-day activity lists supply IDs (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T113857-26 | Reopened REQ-F-20251021T113857-26 for historic amendment: Add data_scope metadata to sidecars | codex | implementation |
 | 2025-10-21 | REQ-F-20251021T113857-26 | Marked REQ-F-20251021T113857-26 done: Sidecars capture per-day vs run-date scope in metadata (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-22 | REQ-F-20251020T090147-ZS | Reopened REQ-F-20251020T090147-ZS for historic amendment: Add CLI support for multi-preset unions | codex | implementation |
+| 2025-10-22 | REQ-F-20251020T090147-ZS | Marked REQ-F-20251020T090147-ZS done: Multi-preset CLI unions implemented and verified (approval: DEV-LOCAL) | codex | implementation |

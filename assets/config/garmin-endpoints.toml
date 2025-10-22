@@ -255,7 +255,6 @@ enabled = [
 ]
 
 disabled = [
-  "activity-download",
   "activities",  
 ]
 

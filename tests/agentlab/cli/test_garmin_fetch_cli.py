@@ -504,3 +504,129 @@ preset = "one"
     fetcher_instance = instances[0]
     assert fetcher_instance.requests
     assert fetcher_instance.requests[0].endpoints == ["beta"]
+
+
+def test_main_supports_multiple_presets_union(tmp_path, monkeypatch):
+    StubFetcher.outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="beta", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    instances: list[StubFetcher] = []
+    _install_stub_fetcher(monkeypatch, instances)
+
+    config_text = """
+[presets.alpha]
+enabled = ["alpha"]
+disabled = []
+
+[presets.beta]
+enabled = ["beta"]
+disabled = []
+
+[defaults]
+preset = "alpha"
+"""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(config_text.strip(), encoding="utf-8")
+
+    exit_code = garmin_fetch.main(
+        [
+            "--date",
+            "2024-01-06",
+            "--config",
+            str(config_path),
+            "--preset",
+            "alpha,beta",
+            "--output-dir",
+            str(tmp_path / "out"),
+        ]
+    )
+
+    assert exit_code == 0
+    fetcher_instance = instances[0]
+    assert fetcher_instance.requests
+    assert fetcher_instance.requests[0].endpoints == ["alpha", "beta"]
+
+
+def test_main_multiple_presets_enforces_disabled_union(tmp_path, monkeypatch):
+    StubFetcher.outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    instances: list[StubFetcher] = []
+    _install_stub_fetcher(monkeypatch, instances)
+
+    config_text = """
+[presets.alpha]
+enabled = ["alpha"]
+disabled = ["beta"]
+
+[presets.extra]
+enabled = ["alpha"]
+disabled = []
+
+[defaults]
+preset = "alpha"
+"""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(config_text.strip(), encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        garmin_fetch.main(
+            [
+                "--date",
+                "2024-01-06",
+                "--config",
+                str(config_path),
+                "--preset",
+                "alpha,extra",
+                "--include",
+                "beta",
+                "--output-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+
+    assert str(excinfo.value) == "Endpoint(s) disabled via configuration: beta"
+
+
+def test_main_multiple_presets_rejects_unknown_name(tmp_path, monkeypatch):
+    StubFetcher.outcome = FetchOutcome(
+        results=[EndpointResult(endpoint="alpha", scope={}, payload={"value": 1})],
+        errors=[],
+        retries=RetrySummary(),
+    )
+    instances: list[StubFetcher] = []
+    _install_stub_fetcher(monkeypatch, instances)
+
+    config_text = """
+[presets.alpha]
+enabled = ["alpha"]
+disabled = []
+
+[defaults]
+preset = "alpha"
+"""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(config_text.strip(), encoding="utf-8")
+
+    with pytest.raises(SystemExit) as excinfo:
+        garmin_fetch.main(
+            [
+                "--date",
+                "2024-01-06",
+                "--config",
+                str(config_path),
+                "--preset",
+                "alpha,missing",
+                "--output-dir",
+                str(tmp_path / "out"),
+            ]
+        )
+
+    assert (
+        str(excinfo.value)
+        == "Unknown endpoint preset(s) missing. Available presets: alpha"
+    )
