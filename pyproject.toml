@@ -18,20 +18,33 @@ dev = [
 ]
 
 [project.scripts]
-agentlab-capture = "agentlab.cli.capture:main"
-agentlab-req = "agentlab.cli.requirements:main"
-agentlab-dev = "agentlab.cli.dev:main"
+agentlab-capture = "reqflow.cli.capture:main"
+agentlab-req = "reqflow.cli.requirements:main"
+agentlab-dev = "reqflow.cli.dev:main"
 agentlab-worker = "agentlab.cli.worker:main"
-agentlab-mark-done = "agentlab.cli.mark_done:main"
-agentlab-start = "agentlab.cli.start:main"
-agentlab-amend = "agentlab.cli.amend:main"
-agentlab-bulk-amend = "agentlab.cli.bulk_amend:main"
-agentlab-batch = "agentlab.cli.batch:main"
-agentlab-review = "agentlab.cli.review:main"
-agentlab-start-nf = "agentlab.cli.start_nonfunctional:main"
-agentlab-mark-done-nf = "agentlab.cli.mark_done_nonfunctional:main"
-agentlab-slice = "agentlab.cli.slice:main"
-agentlab-doc-refactor = "agentlab.cli.doc_refactor:main"
+agentlab-mark-done = "reqflow.cli.mark_done:main"
+agentlab-start = "reqflow.cli.start:main"
+agentlab-amend = "reqflow.cli.amend:main"
+agentlab-bulk-amend = "reqflow.cli.bulk_amend:main"
+agentlab-batch = "reqflow.cli.batch:main"
+agentlab-review = "reqflow.cli.review:main"
+agentlab-start-nf = "reqflow.cli.start_nonfunctional:main"
+agentlab-mark-done-nf = "reqflow.cli.mark_done_nonfunctional:main"
+agentlab-slice = "reqflow.cli.slice:main"
+agentlab-doc-refactor = "reqflow.cli.doc_refactor:main"
+reqflow-capture = "reqflow.cli.capture:main"
+reqflow-req = "reqflow.cli.requirements:main"
+reqflow-dev = "reqflow.cli.dev:main"
+reqflow-mark-done = "reqflow.cli.mark_done:main"
+reqflow-mark-done-nf = "reqflow.cli.mark_done_nonfunctional:main"
+reqflow-start = "reqflow.cli.start:main"
+reqflow-start-nf = "reqflow.cli.start_nonfunctional:main"
+reqflow-amend = "reqflow.cli.amend:main"
+reqflow-bulk-amend = "reqflow.cli.bulk_amend:main"
+reqflow-batch = "reqflow.cli.batch:main"
+reqflow-review = "reqflow.cli.review:main"
+reqflow-slice = "reqflow.cli.slice:main"
+reqflow-doc-refactor = "reqflow.cli.doc_refactor:main"
 agentlab-garmin-fetch = "agentlab.cli.garmin_fetch:main"
 
 [tool.uv]
@@ -39,6 +52,7 @@ package = true
 
 [tool.uv.sources]
 agentlab = { path = "src" }
+reqflow = { path = "src" }
 
 [tool.pytest.ini_options]
 addopts = "-ra"
@@ -47,7 +61,7 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 branch = true
-source = ["agentlab"]
+source = ["agentlab", "reqflow"]
 
 [tool.coverage.report]
 show_missing = true

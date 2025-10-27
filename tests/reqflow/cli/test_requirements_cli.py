@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 import re
 
-from agentlab.cli import requirements as cli
+from reqflow.cli import requirements as cli
 
 
 @pytest.fixture()
@@ -131,7 +131,7 @@ def test_cli_rejects_functional_without_structured_narrative(
                 "--acceptance",
                 "Given data when processed then it is stored",
                 "--trace-tests",
-                "tests/agentlab/cli/test_requirements_cli.py",
+                "tests/reqflow/cli/test_requirements_cli.py",
             ]
         )
     assert exc.value.code == 2
@@ -160,7 +160,7 @@ def test_cli_rejects_functional_without_acceptance(
                 "--acceptance",
                 "   ",
                 "--trace-tests",
-                "tests/agentlab/cli/test_requirements_cli.py",
+                "tests/reqflow/cli/test_requirements_cli.py",
             ]
         )
     assert exc.value.code == 2

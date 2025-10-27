@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import doc_refactor
+from reqflow.cli import doc_refactor
 
 
 @pytest.fixture()

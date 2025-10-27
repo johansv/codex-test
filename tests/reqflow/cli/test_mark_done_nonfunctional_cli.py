@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import mark_done_nonfunctional
+from reqflow.cli import mark_done_nonfunctional
 
 
 @pytest.fixture()

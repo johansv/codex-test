@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import start
+from reqflow.cli import start
 
 
 @pytest.fixture()

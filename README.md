@@ -32,7 +32,7 @@ updated.
 - When commits are created, include the trailer `Refs <requirement-id>` so the
   change can be traced back to its requirement.
 
-Manual capture (`uv run agentlab-capture --prompt "..."`) is still available,
+Manual capture (`uv run reqflow-capture --prompt "..."`) is still available,
 but the hook guarantees there are no gaps.
 
 ## Hosted / Web Usage
@@ -51,9 +51,9 @@ The hosted runner must mount this repository and have dependencies installed so
 - `uv run pytest` � execute the full test suite (requirement utilities and
   hooks are fully covered).
 - `uv run ruff check src tests` � lint the project.
-- `uv run python -m agentlab.cli.requirements ...` � manually add requirement
+- `uv run python -m reqflow.cli.requirements ...` � manually add requirement
   entries when needed.
-- `uv run agentlab-slice --help` � stream specific requirement entries by ID/tag with a compact summary.
+- `uv run reqflow-slice --help` � stream specific requirement entries by ID/tag with a compact summary.
 
 ## Garmin Fetch CLI
 

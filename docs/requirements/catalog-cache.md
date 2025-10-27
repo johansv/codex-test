@@ -6,7 +6,7 @@ keyed by each catalog's filesystem signature (size + nanosecond mtime) and are
 shared across:
 
 - `reqflow.RequirementPlanner` overlap detection
-- `agentlab.cli.review` validation runs
+- `reqflow.cli.review` validation runs
 
 ## Footprint
 
@@ -20,7 +20,7 @@ shared across:
 
 - All catalog-writing helpers in `reqflow.catalog` automatically invalidate the
   corresponding cache entry.
-- `agentlab.cli.review` offers `--refresh-cache` to force a reload the next time
+- `reqflow.cli.review` offers `--refresh-cache` to force a reload the next time
   the command runs.
 - `reqflow.catalog_cache.catalog_cache.clear()` is available for test fixtures
   and tooling that need to flush every cached entry explicitly.

@@ -72,7 +72,7 @@ def test_append_functional_requirement_appends_entry(functional_catalog: Path) -
             "Given multiple prompts when they refer to the same capability then duplicates are avoided",
         ],
         trace_prompts="prompt-123",
-        trace_tests="tests/agentlab/cli/test_requirements_cli.py",
+        trace_tests="tests/reqflow/cli/test_requirements_cli.py",
     )
 
     req_id = append_functional_requirement(functional_catalog, requirement)

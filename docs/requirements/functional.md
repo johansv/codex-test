@@ -358,7 +358,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Approval config enforces wait-for-approval guard
-- Trace: prompts R19, tests tests/agentlab/utils/test_approvals.py; tests/agentlab/cli/test_mark_done_cli.py; tests/agentlab/cli/test_mark_done_nonfunctional_cli.py, commits none
+- Trace: prompts R19, tests tests/agentlab/utils/test_approvals.py; tests/reqflow/cli/test_mark_done_cli.py; tests/reqflow/cli/test_mark_done_nonfunctional_cli.py, commits none
 ---
 
 ### REQ-F-20251010T073826-CD: Documentation and refactor requirement alignment
@@ -371,7 +371,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Documentation/refactor wrapper runs review and overlap checks with acknowledgement gating
-- Trace: prompts R17, tests tests/agentlab/cli/test_doc_refactor_cli.py, commits none
+- Trace: prompts R17, tests tests/reqflow/cli/test_doc_refactor_cli.py, commits none
 ---
 
 ### REQ-F-20251010T151527-BX: Functional auto-capture text compaction
@@ -397,7 +397,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Non-functional lifecycle helpers aligned with functional flow
-- Trace: prompts R15, tests tests/agentlab/cli/test_start_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_nonfunctional_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R15, tests tests/reqflow/cli/test_start_nonfunctional_cli.py; tests/reqflow/cli/test_mark_done_nonfunctional_cli.py; tests/reqflow/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251010T073931-RY: Requirement drift detection
@@ -410,7 +410,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Drift prune reuses catalog helpers for consistent resets
-- Trace: prompts R18, tests tests/agentlab/cli/test_review_cli.py, commits none
+- Trace: prompts R18, tests tests/reqflow/cli/test_review_cli.py, commits none
 ---
 
 ### REQ-F-20251010T073801-G1: Automated requirements review CLI
@@ -424,7 +424,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Automated requirements review CLI available
-- Trace: prompts R14, tests tests/agentlab/cli/test_review_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R14, tests tests/reqflow/cli/test_review_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251010T072114-M5: Batch workflow utilities
@@ -439,7 +439,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Batch workflow CLI automates collision, overlap, and reopen flows
-- Trace: prompts R13, tests tests/agentlab/cli/test_batch_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R13, tests tests/reqflow/cli/test_batch_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251010T065151-MG: Non-functional overlap heuristics
@@ -453,7 +453,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Start CLI surfaces non-functional overlaps with acknowledgment and amendment support
-- Trace: prompts R12, tests tests/agentlab/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R12, tests tests/reqflow/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251010T062944-EA: Bulk amendment reopen helper
@@ -467,7 +467,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Bulk amendment CLI and catalog helper implemented
-- Trace: prompts R11, tests tests/agentlab/cli/test_bulk_amend_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R11, tests tests/reqflow/cli/test_bulk_amend_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T182153-NN: Surface cross-cutting requirement candidates
@@ -481,7 +481,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Related requirement surfacing implemented
-- Trace: prompts R9, tests tests/agentlab/cli/test_start_cli.py, commits none
+- Trace: prompts R9, tests tests/reqflow/cli/test_start_cli.py, commits none
 ---
 
 ### REQ-F-20251009T204414-NU: Historic amendment workflow
@@ -495,7 +495,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Historic amendment CLI and catalog flow implemented
-- Trace: prompts R10, tests tests/agentlab/cli/test_amend_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R10, tests tests/reqflow/cli/test_amend_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T113439-GZ: Automate catalog alignment via linked amendments
@@ -509,7 +509,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Amendment automation implemented
-- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R8, tests tests/reqflow/cli/test_start_cli.py; tests/reqflow/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T113432-AM: Control doing status with WIP guard
@@ -524,7 +524,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Doing guard and amendment handling implemented
-- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R8, tests tests/reqflow/cli/test_start_cli.py; tests/reqflow/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T113425-NU: Enforce implementation gate with collision alerts
@@ -539,7 +539,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: high
 - Status: done
 - Reason: Implementation gate and collision alerts available
-- Trace: prompts R8, tests tests/agentlab/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R8, tests tests/reqflow/cli/test_start_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251009T095326-TT: Standardize requirement lifecycle terminology
@@ -567,7 +567,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Mark-done CLI implemented and tested
-- Trace: prompts R2, tests tests/agentlab/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
+- Trace: prompts R2, tests tests/reqflow/cli/test_mark_done_cli.py; tests/reqflow/test_catalog.py, commits none
 ---
 
 ### REQ-F-20251008T130931-G0: Validate requirement capture inputs
@@ -583,7 +583,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Capture validation guardrails implemented and tested
-- Trace: prompts R3, tests tests/agentlab/cli/test_requirements_cli.py, commits none
+- Trace: prompts R3, tests tests/reqflow/cli/test_requirements_cli.py, commits none
 ---
 
 ### REQ-F-20251008T134255-33: Format requirement entries with headings
@@ -599,7 +599,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Catalog headings applied and helpers updated
-- Trace: prompts R4, tests tests/agentlab/cli/test_requirements_cli.py; tests/agentlab/cli/test_mark_done_cli.py, commits none
+- Trace: prompts R4, tests tests/reqflow/cli/test_requirements_cli.py; tests/reqflow/cli/test_mark_done_cli.py, commits none
 ---
 
 ### REQ-F-20251008T141440-87: Format non-functional requirement entries with headings
@@ -615,7 +615,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Priority: medium
 - Status: done
 - Reason: Non-functional catalog headings implemented and tested
-- Trace: prompts R5, tests tests/agentlab/cli/test_requirements_cli.py, commits none
+- Trace: prompts R5, tests tests/reqflow/cli/test_requirements_cli.py, commits none
 ---
 
 ## Retired Requirements

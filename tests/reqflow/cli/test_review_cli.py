@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import review
+from reqflow.cli import review
 from reqflow.catalog_cache import catalog_cache
 
 

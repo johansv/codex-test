@@ -64,7 +64,7 @@ so the catalog retains history.
   - Priority: medium
 - Status: done
 - Reason: Scoped slice CLI streams selected entries with tag/id filters and compact summaries
-- Trace: prompts R24, tests tests/agentlab/cli/test_slice_cli.py, scripts none, monitors none
+- Trace: prompts R24, tests tests/reqflow/cli/test_slice_cli.py, scripts none, monitors none
 ---
 
 ### REQ-NF-20251010T151543-IE: Catalog digest caching for planner and review
@@ -75,7 +75,7 @@ so the catalog retains history.
 - Priority: medium
 - Status: done
 - Reason: Catalog digest cache accelerates planner and review with refresh controls
-- Trace: prompts R23, tests tests/reqflow/test_planner.py; tests/agentlab/cli/test_review_cli.py, scripts none, monitors none
+- Trace: prompts R23, tests tests/reqflow/test_planner.py; tests/reqflow/cli/test_review_cli.py, scripts none, monitors none
 ---
 
 ### REQ-NF-20251010T151535-UV: Non-functional capture summarisation

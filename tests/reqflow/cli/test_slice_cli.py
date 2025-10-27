@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import slice as slice_cli
+from reqflow.cli import slice as slice_cli
 
 
 def _write_catalog(path: Path, content: str) -> None:

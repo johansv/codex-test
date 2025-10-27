@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.cli import mark_done as cli
+from reqflow.cli import mark_done as cli
 
 
 @pytest.fixture()
@@ -62,7 +62,7 @@ def test_mark_done_cli_marks_requirement_done(
             "--reason",
             "Implementation merged",
             "--tests",
-            "tests/agentlab/cli/test_mark_done_cli.py",
+            "tests/reqflow/cli/test_mark_done_cli.py",
             "--commits",
             "abc123",
             "--approval-source",
@@ -77,7 +77,7 @@ def test_mark_done_cli_marks_requirement_done(
     assert "- Status: done" in catalog
     assert "- Reason: Implementation merged" in catalog
     expected_trace = (
-        "- Trace: prompts R2, tests tests/agentlab/cli/test_mark_done_cli.py, "
+        "- Trace: prompts R2, tests tests/reqflow/cli/test_mark_done_cli.py, "
         "commits abc123"
     )
     assert expected_trace in catalog
@@ -104,7 +104,7 @@ def test_mark_done_cli_errors_when_requirement_missing(catalog_dir: Path) -> Non
                 "--reason",
                 "Missing implementation",
                 "--tests",
-                "tests/agentlab/cli/test_mark_done_cli.py",
+                "tests/reqflow/cli/test_mark_done_cli.py",
                 "--approval-source",
                 "review",
             ]
@@ -160,7 +160,7 @@ def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
             "--reason",
             "Primary and amendments completed",
             "--tests",
-            "tests/agentlab/cli/test_mark_done_cli.py",
+            "tests/reqflow/cli/test_mark_done_cli.py",
             "--approval-source",
             "qa-approval",
         ]
@@ -171,7 +171,7 @@ def test_mark_done_cli_closes_amendments(catalog_dir: Path) -> None:
     assert "### REQ-F-200: Dependent cleanup" in catalog
     assert "- Amends:" not in catalog
     assert "Amendment completed under REQ-F-123" in catalog
-    assert "- Trace: prompts none, tests tests/agentlab/cli/test_mark_done_cli.py, commits none" in catalog
+    assert "- Trace: prompts none, tests tests/reqflow/cli/test_mark_done_cli.py, commits none" in catalog
     assert "Todo: 0" in catalog
     assert "Done: 2" in catalog
 
@@ -244,7 +244,7 @@ def test_mark_done_cli_enforces_approval_requirement(catalog_dir: Path) -> None:
                 "--reason",
                 "Missing approval metadata",
                 "--tests",
-                "tests/agentlab/cli/test_mark_done_cli.py",
+                "tests/reqflow/cli/test_mark_done_cli.py",
             ]
         )
     assert exc.value.code == 2
@@ -260,7 +260,7 @@ def test_mark_done_cli_allows_override_without_source(catalog_dir: Path) -> None
             "--reason",
             "Override approval granted",
             "--tests",
-            "tests/agentlab/cli/test_mark_done_cli.py",
+            "tests/reqflow/cli/test_mark_done_cli.py",
             "--override-wait-for-approval",
         ]
     )

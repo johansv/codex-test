@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from agentlab.utils import approvals
+from reqflow import approvals
 
 
 def _clear_env(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -4,19 +4,19 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
 
 ## Project Structure & Module Organization
 - Stage runtime code inside <code>src/agentlab/</code> by capability (e.g., <code>src/agentlab/parsers.py</code>, <code>src/agentlab/runners/</code>).
-- House contracts in <code>src/agentlab/core/</code>, shared helpers in <code>src/agentlab/utils/</code>, and CLI entrypoints in <code>src/agentlab/cli/</code> registered via <code>pyproject.toml</code>.
+- House contracts in <code>src/agentlab/core/</code>, shared helpers in <code>src/agentlab/utils/</code>, and requirements workflow CLIs in <code>src/reqflow/cli/</code> registered via <code>pyproject.toml</code>.
 - Mirror modules under <code>tests/</code>; keep fixtures in <code>tests/fixtures/</code>.
 - Store prompts, configs, and datasets in <code>assets/</code> with provenance tracked in <code>assets/METADATA.md</code>.
 
 ## Build, Test, and Development Commands
 - <code>uv sync</code> - install dependencies into the managed environment.
-- <code>uv run python -m agentlab.cli.review</code> - validate requirement catalogs for drift, missing files, and overlaps before implementation.
-- <code>uv run python -m agentlab.cli.dev</code> - start the interactive agent loop for manual testing.
-- <code>uv run python -m agentlab.cli.start --requirement REQ-F-...</code> - promote an approved functional requirement to doing after acknowledging collisions.
-- <code>uv run python -m agentlab.cli.start_nonfunctional --requirement REQ-NF-...</code> - promote an approved non-functional requirement while enforcing the WIP guard.
-- <code>uv run python -m agentlab.cli.mark_done --id REQ-F-... --approval-source <ticket></code> - mark functional requirements done with catalog/log updates and recorded approvals.
-- <code>uv run python -m agentlab.cli.mark_done_nonfunctional --id REQ-NF-... --approval-source <ticket></code> - mark non-functional requirements done while clearing linked amendments.
-- <code>uv run python -m agentlab.cli.doc_refactor --requirement REQ-F-...</code> - review catalogs and surface collisions for documentation/refactor changes.
+- <code>uv run python -m reqflow.cli.review</code> - validate requirement catalogs for drift, missing files, and overlaps before implementation.
+- <code>uv run python -m reqflow.cli.dev</code> - start the interactive agent loop for manual testing.
+- <code>uv run python -m reqflow.cli.start --requirement REQ-F-...</code> - promote an approved functional requirement to doing after acknowledging collisions.
+- <code>uv run python -m reqflow.cli.start_nonfunctional --requirement REQ-NF-...</code> - promote an approved non-functional requirement while enforcing the WIP guard.
+- <code>uv run python -m reqflow.cli.mark_done --id REQ-F-... --approval-source <ticket></code> - mark functional requirements done with catalog/log updates and recorded approvals.
+- <code>uv run python -m reqflow.cli.mark_done_nonfunctional --id REQ-NF-... --approval-source <ticket></code> - mark non-functional requirements done while clearing linked amendments.
+- <code>uv run python -m reqflow.cli.doc_refactor --requirement REQ-F-...</code> - review catalogs and surface collisions for documentation/refactor changes.
 - <code>uv run python -m agentlab.cli.worker</code> - run the background worker for CI or hosted runs.
 - <code>uv run pytest</code> - execute the automated suite; add <code>uv run coverage run -m pytest</code> before releases.
 - Expose wrappers in <code>scripts/dev.*</code>, <code>scripts/test.*</code>, and <code>scripts/setup.*</code>.
@@ -54,7 +54,7 @@ Adopt Python 3.11, uv, and pytest for consistent workflows.
    - Before coding, Codex promotes the approved requirement to doing (or otherwise records the in-progress start) and confirms the user is ready to proceed.
    - Confirm the user explicitly wants to proceed, then promote the chosen requirement to `doing` before making any code or catalog edits.
    - Codex writes code/tests only after the requirement phase (and, if used, the plan phase) is approved. All commits reference the requirement IDs.
-   - Run `uv run python -m agentlab.cli.review` (or the batch workflow) before starting implementation to surface collisions, overlaps, and drift automatically.
+   - Run `uv run python -m reqflow.cli.review` (or the batch workflow) before starting implementation to surface collisions, overlaps, and drift automatically.
 
 
 
