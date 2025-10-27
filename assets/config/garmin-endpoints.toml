@@ -126,7 +126,7 @@ disabled = [
   "in-progress-virtual-challenges",
 ]
 
-[presets.timeseries]
+[presets.timeseries.all]
 enabled = [
   "activities-by-date",
   "activities-for-date",
@@ -175,9 +175,95 @@ enabled = [
   "user-summary",
   "weigh-ins",
 ]
+disabled = [  
+ 
+]
+
+[presets.timeseries]
+enabled = [
+  "activities-by-date",
+  "activities-for-date",
+  "activity-detail",
+  "activity-details",
+  "activity-download",
+  "activity-exercise-sets",
+  "activity-gear",
+  "activity-hr-timezones",
+  "activity-splits",
+  "activity-split-summaries",
+  "activity-typed-splits",
+  "activity-weather",
+  "all-day-events",
+  "all-day-stress",
+  "blood-pressure",
+  "body-battery",
+  "body-battery-events",
+  "body-composition",
+  "daily-steps",
+  "daily-weigh-ins",
+  "device-solar",
+  "endurance-score",
+  "fitness-age",
+  "floors",
+  "heart-rates",
+  "hill-score",
+  "hrv",
+  "hydration",
+  "intensity-minutes",
+  "max-metrics",  
+  "progress-summary",
+  "race-predictions",
+  "respiration",
+  "resting-heart-rate",
+  "sleep",
+  "spo2",
+  "stats",
+  "stats-and-body",
+  "steps-data",
+  "stress",
+  "training-readiness",
+  "training-status",
+  "user-summary",  
+  "weigh-ins",
+]
+disabled = [  
+  "menstrual-calendar",
+  "menstrual-dayview",
+]
+
+[presets.current]
+enabled = [
+  "activity-types",
+  "adhoc-challenges",
+  "available-badge-challenges",
+  "badge-challenges",
+  "device-alarms",
+  "device-last-used",
+  "devices",
+  "device-settings",
+  "earned-badges",
+  "full-name",
+  "gear",
+  "gear-activities",
+  "gear-defaults",
+  "gear-stats",
+  "goals",
+  "in-progress-virtual-challenges",
+  "last-activity",
+  "non-completed-badge-challenges",
+  "personal-records",
+  "pregnancy-summary",
+  "primary-training-device",
+  "unit-system",
+  "user-profile",
+  "user-profile-settings",
+  "workout-detail",
+  "workout-download",
+  "workouts",
+]
 
 disabled = [  
-  "activities",  
+  "activities", 
 ]
 
 [presets.gear]
@@ -185,7 +271,7 @@ enabled = [
   "gear",
   "gear-stats",
   "gear-defaults",
-  "gear-activities",
+  "gear-activities",  
 ]
 
 disabled = [

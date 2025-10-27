@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 33 (done=33); Retired: 0
+Todo: 1 (backlog=1); Done: 35 (done=35); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,36 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251023T153759-EU: Sleep baseline smoothing
+- Owner: codex
+- Narrative: As a data-driven athlete, I want the sleep needs CLI to smooth baseline evolution and adjustments so that nightly targets stay stable and personalized.
+- Acceptance Criteria:
+  * Blend high-recovery nights with long-window averages (≥28 days) using weighted smoothing constants.
+  * Remove binary high-recovery filtering; use continuous weighting driven by HRV, resting HR, readiness, and body battery deltas.
+  * Cap nightly baseline changes (≤0.05 h) and introduce minimum history (≥21 valid nights) before baselines can move.
+  * Persist smoothing weights and history in summaries so future runs resume without recomputation.
+  * Update tests to cover smoothing behaviour and ensure baseline stays within realistic bounds across synthetic data.
+- Priority: medium
+- Status: done
+- Reason: Baseline smoothing uses continuous recovery weights and capped deltas
+- Trace: prompts Sleep baseline smoothing request, tests tests/agentlab/cli/test_sleep_needs_cli.py, commits none
+---
+
+### REQ-F-20251023T142327-YB: Sleep-needs CLI with historical carryover
+- Owner: codex
+- Narrative: As a data-driven athlete, I want a CLI that calculates nightly sleep needs from my Garmin per-day exports so I can generate accurate rolling recommendations without reprocessing the entire history.
+- Acceptance Criteria:
+  * CLI command uv run python -m agentlab.cli.sleep_needs --start YYYY-MM-DD --end YYYY-MM-DD processes out/<date> folders chronologically between the bounds.
+  * If out/<previous-date>/ai/sleep_summary.json exists, the CLI resumes from its cumulative metrics; otherwise it initializes from scratch using the configured history window.
+  * For each day processed the CLI computes nightly metrics from Garmin files, calculates recommended sleep duration/time-in-bed using load, recovery, debt, and stress adjustments, and writes out/<date>/ai/sleep_summary.json with nightly outputs, adjustments, rolling state, and source trace references.
+  * The CLI also writes out/<date>/ai/sleep_summary.meta.json mirroring Garmin metadata (timestamp, checksum, file size, data scope, correlation IDs).
+  * CLI supports --verbose, --debug, and --dry-run flags and includes tests covering fresh runs, resume from prior summaries, missing input handling, deterministic re-runs, and meta file generation.
+- Priority: medium
+- Status: done
+- Reason: Sleep-needs CLI generates nightly summaries with metadata and resume state
+- Trace: prompts Sleep-needs CLI request, tests tests/agentlab/cli/test_sleep_needs_cli.py, commits none
+---
 
 ### REQ-F-20251020T090147-ZS: Garmin endpoint presets
 - Owner: codex

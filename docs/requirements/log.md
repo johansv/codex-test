@@ -140,3 +140,9 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-21 | REQ-F-20251021T113857-26 | Marked REQ-F-20251021T113857-26 done: Sidecars capture per-day vs run-date scope in metadata (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-22 | REQ-F-20251020T090147-ZS | Reopened REQ-F-20251020T090147-ZS for historic amendment: Add CLI support for multi-preset unions | codex | implementation |
 | 2025-10-22 | REQ-F-20251020T090147-ZS | Marked REQ-F-20251020T090147-ZS done: Multi-preset CLI unions implemented and verified (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-23 | REQ-F-20251023T142327-YB | Added requirement for sleep needs CLI with historical carryover | codex | prompt |
+| 2025-10-23 | REQ-F-20251023T142327-YB | Started implementation for REQ-F-20251023T142327-YB; non-functional: REQ-NF-20251010T151552-8U, REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151535-UV, REQ-NF-20251010T151543-IE | codex | implementation |
+| 2025-10-23 | REQ-F-20251023T153759-EU | Added requirement for sleep baseline smoothing | codex | prompt |
+| 2025-10-23 | REQ-F-20251023T153759-EU | Started implementation for REQ-F-20251023T153759-EU; non-functional: REQ-NF-20251010T151535-UV, REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151543-IE | codex | implementation |
+| 2025-10-27 | REQ-F-20251023T142327-YB | Marked REQ-F-20251023T142327-YB done: Sleep-needs CLI generates nightly summaries with metadata and resume state (approval: DEV-LOCAL) | codex | implementation |
+| 2025-10-27 | REQ-F-20251023T153759-EU | Marked REQ-F-20251023T153759-EU done: Baseline smoothing uses continuous recovery weights and capped deltas (approval: DEV-LOCAL) | codex | implementation |
