@@ -146,3 +146,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-23 | REQ-F-20251023T153759-EU | Started implementation for REQ-F-20251023T153759-EU; non-functional: REQ-NF-20251010T151535-UV, REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151543-IE | codex | implementation |
 | 2025-10-27 | REQ-F-20251023T142327-YB | Marked REQ-F-20251023T142327-YB done: Sleep-needs CLI generates nightly summaries with metadata and resume state (approval: DEV-LOCAL) | codex | implementation |
 | 2025-10-27 | REQ-F-20251023T153759-EU | Marked REQ-F-20251023T153759-EU done: Baseline smoothing uses continuous recovery weights and capped deltas (approval: DEV-LOCAL) | codex | implementation |
+2025-10-27 16:45 (local) — Added REQ-F-20251023T161530-JM “Emit run metadata (manifest) for Garmin fetch runs” [status: todo, priority: high]
+2025-10-27 15:53 (local) — Finished REQ-F-20251023T161530-JM [status: done]

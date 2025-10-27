@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import sys
+import time
 import uuid
 from datetime import date
 from pathlib import Path
@@ -19,6 +20,7 @@ except ModuleNotFoundError:  # pragma: no cover
 from dotenv import find_dotenv, load_dotenv
 
 from agentlab.core.garmin import EndpointError, EndpointResult, GarminCredentials, GarminFetchRequest
+from agentlab.metadata import DayStats, RunError, RunMetaWriter, RunParams
 from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig, RateLimitExceeded
 from agentlab.utils.storage import GarminStorageWriter
 
@@ -442,6 +444,26 @@ def main(argv: list[str] | None = None) -> int:
 
     run_id = uuid.uuid4().hex
     storage = GarminStorageWriter(output_root, run_id=run_id)
+    writer = RunMetaWriter(
+        out_root=output_root,
+        timezone="Europe/Stockholm",
+        run_id=run_id,
+        garminconnect_version=storage.garmin_version,
+    )
+
+    skip_existing = bool(getattr(args, "skip_existing", False))
+    resume = bool(getattr(args, "resume", False))
+    preset_label = ", ".join(selected_presets) if selected_presets else (args.preset or "")
+    writer.start_run(
+        RunParams(
+            start_date=start,
+            end_date=end,
+            preset=preset_label,
+            skip_existing=skip_existing,
+            resume=resume,
+        )
+    )
+    run_aborted = False
 
     if args.debug:
         job_settings = {
@@ -593,6 +615,8 @@ def main(argv: list[str] | None = None) -> int:
         if rate_limit_exc is not None:
             break
 
+        writer.start_day(day)
+
         if not per_day_endpoints:
             summary.append(
                 {
@@ -602,6 +626,17 @@ def main(argv: list[str] | None = None) -> int:
                     "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
                 }
             )
+            writer.end_day(
+                day,
+                status="done",
+                stats=DayStats(
+                    endpoints_ok=0,
+                    endpoints_fail=0,
+                    endpoints_skipped=0,
+                    bytes_payload=0,
+                    duration_s=0,
+                ),
+            )
             continue
 
         day_request = GarminFetchRequest(
@@ -610,6 +645,21 @@ def main(argv: list[str] | None = None) -> int:
             endpoints=per_day_endpoints,
         )
         day_correlation_id = f"{run_id}:{day.isoformat()}"
+        day_str = day.isoformat()
+        day_start_time = time.perf_counter()
+        day_success_endpoints: set[str] = set()
+        day_error_keys: set[tuple[str, tuple[tuple[str, str | int], ...]]] = set()
+        day_payload_bytes = 0
+        day_skipped_count = 0
+        day_last_endpoint: str | None = None
+
+        def _scope_key(scope: dict[str, str | int] | None) -> tuple[tuple[str, str | int], ...]:
+            if not scope:
+                return ()
+            return tuple(sorted(scope.items()))
+
+        def _elapsed_seconds() -> int:
+            return max(0, int(round(time.perf_counter() - day_start_time)))
 
         _log_cli_event(
             logging.INFO,
@@ -619,32 +669,55 @@ def main(argv: list[str] | None = None) -> int:
             endpoint_count=len(per_day_endpoints),
         )
 
-        observer = None
-        if args.debug:
-            day_str = day.isoformat()
-
-            def _observer(endpoint: str, *, _day=day_str) -> None:
+        def _observer(endpoint: str, *, _day=day_str) -> None:
+            nonlocal day_last_endpoint
+            day_last_endpoint = endpoint
+            if args.debug:
                 print(f"[garmin] {_day} -> {endpoint}", file=sys.stderr)
 
-            observer = _observer
-
         def _on_result(result: EndpointResult, *, _day=day) -> None:
+            nonlocal day_payload_bytes, day_last_endpoint
+            day_last_endpoint = result.endpoint
             storage.write_result(_day, result, correlation_id=day_correlation_id)
+            metadata = result.metadata or {}
+            size_value = metadata.get("payload_size_bytes")
+            if isinstance(size_value, int):
+                day_payload_bytes += size_value
+            key = (result.endpoint, _scope_key(result.scope))
+            day_error_keys.discard(key)
+            day_success_endpoints.add(result.endpoint)
 
         def _on_error(error: EndpointError, *, _day=day) -> None:
+            nonlocal day_last_endpoint
+            day_last_endpoint = error.endpoint
             storage.write_error(_day, error)
+            key = (error.endpoint, _scope_key(error.scope))
+            day_error_keys.add(key)
 
         try:
             outcome = fetcher.fetch(
                 credentials,
                 day_request,
-                observer=observer,
+                observer=_observer,
                 correlation_id=day_correlation_id,
                 result_callback=_on_result,
                 error_callback=_on_error,
             )
         except RateLimitExceeded as exc:
             rate_limit_exc = exc
+            day_error_keys.add(("rate-limit", ()))
+            writer.end_day(
+                day,
+                status="partial",
+                stats=DayStats(
+                    endpoints_ok=len(day_success_endpoints),
+                    endpoints_fail=len(day_error_keys),
+                    endpoints_skipped=day_skipped_count,
+                    bytes_payload=day_payload_bytes,
+                    duration_s=_elapsed_seconds(),
+                ),
+                last_endpoint=day_last_endpoint or "rate-limit",
+            )
             summary.append(
                 {
                     "date": day.isoformat(),
@@ -663,6 +736,28 @@ def main(argv: list[str] | None = None) -> int:
                 wait_minutes=exc.wait_minutes,
             )
             break
+        except Exception as exc:
+            writer.end_day(
+                day,
+                status="partial",
+                stats=DayStats(
+                    endpoints_ok=len(day_success_endpoints),
+                    endpoints_fail=len(day_error_keys),
+                    endpoints_skipped=day_skipped_count,
+                    bytes_payload=day_payload_bytes,
+                    duration_s=_elapsed_seconds(),
+                ),
+                last_endpoint=day_last_endpoint or "unknown",
+            )
+            writer.abort(
+                RunError(
+                    code="exception",
+                    msg=str(exc),
+                    last_endpoint=day_last_endpoint,
+                )
+            )
+            run_aborted = True
+            raise
 
         successes = list(dict.fromkeys(result.endpoint for result in outcome.results))
         failures = [
@@ -686,6 +781,18 @@ def main(argv: list[str] | None = None) -> int:
             }
         )
 
+        writer.end_day(
+            day,
+            status="done",
+            stats=DayStats(
+                endpoints_ok=len(successes),
+                endpoints_fail=len(failures),
+                endpoints_skipped=day_skipped_count,
+                bytes_payload=day_payload_bytes,
+                duration_s=_elapsed_seconds(),
+            ),
+        )
+
         _log_cli_event(
             logging.INFO,
             "garmin.cli.day.completed",
@@ -694,11 +801,14 @@ def main(argv: list[str] | None = None) -> int:
             successes=len(successes),
             failures=len(failures),
             retry_outcomes=retry_summary,
-            )
+        )
 
     total_successes = sum(len(entry["successes"]) for entry in summary)
     total_failures = sum(len(entry["failures"]) for entry in summary)
     exit_code = 0 if (rate_limit_exc is None and any_success) else 1
+
+    if rate_limit_exc is None and not run_aborted:
+        writer.finish()
 
     if rate_limit_exc is not None:
         _log_cli_event(

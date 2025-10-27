@@ -220,6 +220,18 @@ def _serialise_argument(value: Any) -> Any:
     return str(value)
 
 
+def _payload_size(payload: Any) -> int:
+    if payload is None:
+        return 0
+    if isinstance(payload, bytes):
+        return len(payload)
+    if isinstance(payload, str):
+        return len(payload.encode("utf-8"))
+    if isinstance(payload, (dict, list)):
+        return len(json.dumps(payload, indent=2).encode("utf-8"))
+    return len(json.dumps(payload, default=str, indent=2).encode("utf-8"))
+
+
 class _CallRecorder:
     """Record Garmin client method invocations for metadata generation."""
 
@@ -691,7 +703,10 @@ def _endpoint_result(name: str, scope: dict[str, str | int], payload: Any) -> En
 
     recorder = _CALL_RECORDER.get()
     calls = recorder.consume() if recorder is not None else []
-    metadata = {"garmin_methods": calls}
+    metadata = {
+        "garmin_methods": calls,
+        "payload_size_bytes": _payload_size(payload),
+    }
     return EndpointResult(endpoint=name, scope=scope, payload=payload, metadata=metadata)
 
 

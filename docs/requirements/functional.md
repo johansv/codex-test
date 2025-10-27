@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1); Done: 35 (done=35); Retired: 0
+Todo: 1 (backlog=1, todo=0); Done: 36 (done=36); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -47,6 +47,76 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251023T161530-JM: Emit run metadata (manifest) for Garmin fetch runs
+- Owner: johan
+- Narrative: As a user, I want each Garmin fetch run to produce a single JSON manifest capturing parameters, environment, per-day progress, and totals so I can audit outcomes, verify completeness, and diagnose failures without scanning logs.
+- Interfaces & Artifacts:
+  * File pattern: <OUT_ROOT>/runs/run_<LOCAL_DATETIME>_<RUN_ID>.meta.json, where LOCAL_DATETIME is the Europe/Stockholm local time at run start formatted as YYYYMMDDhhmm
+  * Run ID: reuse the same run_id format already written in per-endpoint *.meta.json files (exact same value).
+  * Touched code (later implementation):
+    * src/agentlab/metadata.py (new): RunMetaWriter, RunMetaReader
+    * src/agentlab/cli/garmin_fetch.py: init writer; start/finish hooks
+    * src/agentlab/runners/garmin_fetcher.py: per-day start/end + error hooks
+  * CLI: no changes (feature is silent and always on).
+- Acceptance Criteria:
+  1) Manifest creation at start
+     - Create <OUT_ROOT>/runs/run_<LOCAL_DATETIME>_<RUN_ID>.meta.json at run start with:
+       run_id (string), started_at (ISO-8601 with timezone),
+       params {start_date, end_date, preset, skip_existing: bool, resume: bool},
+       env {garminconnect_version, python_version, timezone},
+       progress {},
+       totals {days_done:0, endpoints:{written:0, success:0, error:0, skipped:0}, bytes_payload:0, duration_s:0}.
+     - Verification: After a dry invocation, the file exists; keys/types match.
+
+  2) Per-day progress & totals
+     - After each completed day:
+       progress["YYYY-MM-DD"] = {status:"done", endpoints_ok:int, endpoints_fail:int, endpoints_skipped:int, bytes_payload:int, duration_s:int}.
+       totals.days_done increments; totals.endpoints.written = success+error (exclude skipped); maintain totals.endpoints.{success,error,skipped}; accumulate totals.bytes_payload and totals.duration_s.
+     - Verification: After simulating two days, both entries exist and totals reflect the sum.
+
+  3) Partial day & abort semantics
+     - If the run terminates early due to an unhandled exception:
+       progress["YYYY-MM-DD"] = {status:"partial", last_endpoint:"<name>", endpoints_ok:int, endpoints_fail:int, endpoints_skipped:int, bytes_payload:int, duration_s:int},
+       and top-level aborted = {code: str, msg: str, at: ISO-8601} is set once (immutable).
+     - If errors are handled and the run continues, do NOT set aborted; record the day as "done" when finished.
+     - Verification: Inject an exception that stops the run; check partial entry and aborted block.
+
+  4) Finish timestamp immutability
+     - On normal completion set ended_at (ISO-8601) and never change it afterwards.
+     - Verification: Re-writing after finish leaves ended_at unchanged.
+
+  5) Atomic, idempotent persistence
+     - Persist via temp file + atomic rename; re-writing identical day stats must not double-count totals.
+     - Verification: Two identical writes keep totals stable.
+- Edge Cases & Invariants:
+  * Timezone & day cutover: Europe/Stockholm calendar days (same as day folders); timestamps include timezone offset.
+  * Statuses: one of {done, partial, skipped}.
+  * Totals policy: totals.endpoints.written = success + error (excludes skipped) while also tracking the full breakdown in totals.endpoints.
+  * Privacy: no PII (no email/tokens/names) in the manifest.
+  * Immutability: aborted (if set) and ended_at never change once written.
+- Telemetry & Observability:
+  * Log INFO with manifest path at start; INFO with totals at finish.
+- Performance & Limits:
+  * File < 100 KB; writes at run start, per day, and finish.
+- Risks / Non-Goals:
+  * No per-endpoint histograms/durations in this increment.
+  * No cross-process locking or concurrent writers.
+- Test Plan (AI-owned; mirrors ACs):
+  * test_creates_manifest_with_headers
+  * test_updates_progress_and_totals_per_day
+  * test_records_partial_day_and_abort
+  * test_finish_sets_ended_at_once
+  * test_atomic_idempotent_writes
+- Priority: high
+- Updated: 2025-10-27 15:53
+- Status: done
+- Reason: Run metadata manifests generated with localized filenames and lifecycle tracking in production runs.
+- Trace: prompts Run metadata manifest request
+  - Finished: 2025-10-27 15:53
+  - Tests: tests/metadata/test_runmeta.py
+  - Commits: none
+---
 
 ### REQ-F-20251023T153759-EU: Sleep baseline smoothing
 - Owner: codex
