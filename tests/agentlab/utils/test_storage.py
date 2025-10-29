@@ -10,7 +10,7 @@ from agentlab.utils.storage import GarminStorageWriter
 
 
 def _read_meta(base: Path, day: str, filename: str) -> dict[str, object]:
-    meta_path = base / day / f"{filename}.meta.json"
+    meta_path = base / "l0" / "garmin" / day / f"{filename}.meta.json"
     assert meta_path.exists()
     return json.loads(meta_path.read_text(encoding="utf-8"))
 
@@ -24,7 +24,7 @@ def test_storage_writes_json_payload(tmp_path: Path) -> None:
 
     writer.store(date(2024, 1, 1), outcome)
 
-    path = tmp_path / "2024-01-01" / "alpha.json"
+    path = tmp_path / "l0" / "garmin" / "2024-01-01" / "alpha.json"
     assert json.loads(path.read_text(encoding="utf-8")) == {"value": 1}
     meta = _read_meta(tmp_path, "2024-01-01", "alpha.json")
     assert meta["endpoint"] == "alpha"
@@ -74,7 +74,7 @@ def test_storage_overwrites_existing_file(tmp_path: Path) -> None:
         ),
     )
 
-    path = tmp_path / "2024-01-01" / "alpha.json"
+    path = tmp_path / "l0" / "garmin" / "2024-01-01" / "alpha.json"
     assert json.loads(path.read_text(encoding="utf-8")) == {"value": 2}
     meta = _read_meta(tmp_path, "2024-01-01", "alpha.json")
     assert meta["run"]["id"] == "test-run"
@@ -107,8 +107,8 @@ def test_storage_respects_format_scope_for_bytes(tmp_path: Path) -> None:
 
     writer.store(date(2024, 1, 1), outcome)
 
-    tcx_path = tmp_path / "2024-01-01" / "activity-download_123.tcx"
-    zip_path = tmp_path / "2024-01-01" / "activity-download_123.zip"
+    tcx_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "activity-download_123.tcx"
+    zip_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "activity-download_123.zip"
     assert tcx_path.read_bytes() == tcx_payload
     assert zip_path.read_bytes() == zip_payload
     tcx_meta = _read_meta(tmp_path, "2024-01-01", "activity-download_123.tcx")
@@ -142,7 +142,7 @@ def test_storage_writes_workout_download_as_fit(tmp_path: Path) -> None:
 
     writer.store(date(2024, 1, 1), outcome)
 
-    fit_path = tmp_path / "2024-01-01" / "workout-download_42.fit"
+    fit_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "workout-download_42.fit"
     assert fit_path.read_bytes() == payload
     meta = _read_meta(tmp_path, "2024-01-01", "workout-download_42.fit")
     assert meta["payload"]["extension"] == "fit"
@@ -168,7 +168,7 @@ def test_storage_writes_error_files(tmp_path: Path) -> None:
 
     writer.store(date(2024, 1, 1), outcome)
 
-    path = tmp_path / "2024-01-01" / "alpha.error.json"
+    path = tmp_path / "l0" / "garmin" / "2024-01-01" / "alpha.error.json"
     payload = json.loads(path.read_text(encoding="utf-8"))
     assert payload["endpoint"] == "alpha"
     assert "boom" in payload["message"]
@@ -201,7 +201,7 @@ def test_storage_removes_error_file_on_success(tmp_path: Path) -> None:
         ),
     )
 
-    error_path = tmp_path / "2024-01-01" / "alpha.error.json"
+    error_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "alpha.error.json"
     assert error_path.exists()
     meta_error = _read_meta(tmp_path, "2024-01-01", "alpha.json")
     assert meta_error["payload"]["file"] == "alpha.json"
@@ -245,7 +245,7 @@ def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
     )
 
     writer.store(day, FetchOutcome(results=[], errors=[error]))
-    error_path = tmp_path / "2024-01-01" / "activity-detail_456.error.json"
+    error_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "activity-detail_456.error.json"
     assert error_path.exists()
     meta_error = _read_meta(tmp_path, "2024-01-01", "activity-detail_456.json")
     assert meta_error["payload"]["file"] == "activity-detail_456.json"
@@ -254,7 +254,7 @@ def test_storage_includes_activity_id_in_filenames(tmp_path: Path) -> None:
 
     writer.store(day, FetchOutcome(results=[result], errors=[]))
 
-    data_path = tmp_path / "2024-01-01" / "activity-detail_456.json"
+    data_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "activity-detail_456.json"
     assert json.loads(data_path.read_text(encoding="utf-8")) == {"detail": "value"}
     assert not error_path.exists()
     meta = _read_meta(tmp_path, "2024-01-01", "activity-detail_456.json")
@@ -275,7 +275,7 @@ def test_storage_includes_gear_uuid_in_filenames(tmp_path: Path) -> None:
 
     writer.store(day, FetchOutcome(results=[result], errors=[]))
 
-    data_path = tmp_path / "2024-01-01" / "gear-stats_gear-1.json"
+    data_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "gear-stats_gear-1.json"
     assert json.loads(data_path.read_text(encoding="utf-8")) == {"distance": 123}
     meta = _read_meta(tmp_path, "2024-01-01", "gear-stats_gear-1.json")
     assert meta["scope"]["gearUuid"] == "gear-1"
@@ -301,7 +301,7 @@ def test_storage_clears_legacy_gear_error_on_success(tmp_path: Path) -> None:
         ),
     )
 
-    legacy_error = tmp_path / "2024-01-01" / "gear-activities.error.json"
+    legacy_error = tmp_path / "l0" / "garmin" / "2024-01-01" / "gear-activities.error.json"
     assert legacy_error.exists()
     meta_error = _read_meta(tmp_path, "2024-01-01", "gear-activities.json")
     assert meta_error["payload"]["file"] == "gear-activities.json"
@@ -338,7 +338,7 @@ def test_storage_includes_device_id_in_filenames(tmp_path: Path) -> None:
 
     writer.store(day, FetchOutcome(results=[result], errors=[]))
 
-    data_path = tmp_path / "2024-01-01" / "device-settings_abc.json"
+    data_path = tmp_path / "l0" / "garmin" / "2024-01-01" / "device-settings_abc.json"
     assert json.loads(data_path.read_text(encoding="utf-8")) == {"setting": 1}
     meta = _read_meta(tmp_path, "2024-01-01", "device-settings_abc.json")
     assert meta["scope"]["deviceId"] == "abc"
@@ -366,8 +366,8 @@ def test_store_applies_endpoint_day_overrides(tmp_path: Path) -> None:
         day_overrides={"user-profile": override_day, "device-settings": override_day},
     )
 
-    override_dir = tmp_path / override_day.isoformat()
-    default_dir = tmp_path / base_day.isoformat()
+    override_dir = tmp_path / "l0" / "garmin" / override_day.isoformat()
+    default_dir = tmp_path / "l0" / "garmin" / base_day.isoformat()
     assert override_dir.exists()
     assert not default_dir.exists()
 
@@ -399,8 +399,8 @@ def test_store_uses_default_override_for_remaining_endpoints(tmp_path: Path) -> 
 
     writer.store(base_day, outcome, default_override=override_day)
 
-    override_dir = tmp_path / override_day.isoformat()
-    default_dir = tmp_path / base_day.isoformat()
+    override_dir = tmp_path / "l0" / "garmin" / override_day.isoformat()
+    default_dir = tmp_path / "l0" / "garmin" / base_day.isoformat()
     assert override_dir.exists()
     assert not default_dir.exists()
 

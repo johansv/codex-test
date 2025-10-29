@@ -414,8 +414,8 @@ enabled = ["alpha", "beta"]
     assert list(day_request.endpoints) == ["alpha"]
 
     out_dir = tmp_path / "out"
-    run_date_dir = out_dir / run_date.isoformat()
-    per_day_dir = out_dir / "2024-01-01"
+    run_date_dir = out_dir / "l0" / "garmin" / run_date.isoformat()
+    per_day_dir = out_dir / "l0" / "garmin" / "2024-01-01"
     assert (run_date_dir / "beta.json").exists()
     assert (per_day_dir / "alpha.json").exists()
 

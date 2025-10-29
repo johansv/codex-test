@@ -139,7 +139,7 @@ class GarminStorageWriter:
         )
 
     def _ensure_day_dir(self, day: date) -> Path:
-        day_dir = self.root / day.isoformat()
+        day_dir = self.root / "l0" / "garmin" / day.isoformat()
         day_dir.mkdir(parents=True, exist_ok=True)
         return day_dir
 

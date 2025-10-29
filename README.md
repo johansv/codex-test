@@ -62,7 +62,7 @@ The hosted runner must mount this repository and have dependencies installed so
 - **Presets:** the config file now supports named presets (see the `presets` table). Use `--preset <name>` to switch between bundles like `full`, the curated `coaching` set, or the `timeseries` preset that focuses on date/range-driven metrics; the default preset is defined under `[defaults]`.
 - **Pacing controls:** tune rate limiting with `--delay-post-login`, `--delay-between-endpoints`, `--delay-pagination`, `--delay-jitter`, and `--retry-limit`. Jitter is expressed as a ratio (0.2 = ±20%).
 - **Observability:** runs stream JSON logs with correlation IDs and emit a JSON summary on stdout that lists successes, failures, and retry counts for each day.
-- **Storage:** responses and error files land under `./out/<YYYY-MM-DD>/` by default; switch destinations with `--output-dir`.
+- **Storage:** responses and error files land under `./out/l0/garmin/<YYYY-MM-DD>/` by default; switch destinations with `--output-dir`.
 - **Examples:**
   - Default daily sync: `uv run agentlab-garmin-fetch --date 2024-10-15`
   - Long-range throttled sync:\

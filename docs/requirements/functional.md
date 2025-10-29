@@ -349,7 +349,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ### REQ-F-20251014T120032-GS: Date-partitioned storage layout
 - Owner: codex
-- Narrative: As an operator, I want responses saved under YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
+- Narrative: As an operator, I want responses saved under l0/garmin/YYYY-MM-DD folders with endpoint file names so that downstream jobs can locate daily Garmin data quickly.
 - Acceptance Criteria:
   * Data writes target <root>/<YYYY-MM-DD>/<endpoint>.<ext> preserving the original response format.
   * Writes are atomic via temp files and always overwrite prior content for the same endpoint and date.
