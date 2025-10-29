@@ -8,6 +8,7 @@ requires-python = ">=3.11"
 dependencies = [
     "python-dotenv>=1.0.0",
     "garminconnect==0.2.30",
+    "tzdata>=2023.3",
 ]
 
 [project.optional-dependencies]
@@ -46,6 +47,7 @@ reqflow-review = "reqflow.cli.review:main"
 reqflow-slice = "reqflow.cli.slice:main"
 reqflow-doc-refactor = "reqflow.cli.doc_refactor:main"
 agentlab-garmin-fetch = "agentlab.cli.garmin_fetch:main"
+agentlab-withings-fetch = "agentlab.cli.withings_fetch:main"
 
 [tool.uv]
 package = true

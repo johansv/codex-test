@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from dataclasses import dataclass
 from datetime import date, datetime, timezone as dt_timezone, tzinfo as dt_tzinfo
 from importlib.metadata import PackageNotFoundError, version as pkg_version
@@ -202,7 +203,14 @@ class RunMetaWriter:
         serialized = json.dumps(self._data, indent=2, sort_keys=True)
         temp_path = self._path.parent / f".tmp-{self._run_id}-{os.getpid()}.meta.json"
         temp_path.write_text(serialized, encoding="utf-8")
-        os.replace(temp_path, self._path)
+        for attempt in range(5):
+            try:
+                os.replace(temp_path, self._path)
+                break
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.05)
 
 
 class RunMetaReader:

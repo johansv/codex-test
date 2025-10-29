@@ -68,6 +68,15 @@ The hosted runner must mount this repository and have dependencies installed so
   - Long-range throttled sync:\
     `uv run agentlab-garmin-fetch --start-date 2024-10-01 --end-date 2024-10-07 --delay-post-login 8 --delay-between-endpoints 3 --delay-pagination 1.5 --delay-jitter 0.3 --retry-limit 2 --include sleep --debug`
 
+## Withings L0 (body metrics)
+- CLI: `uv run agentlab-withings-fetch --start-date 2025-10-25 --end-date 2025-10-27 --out-root ./data --skip-existing --resume [--debug] [--request-delay 1.0]`
+- Prereqs: install `tzdata` (required on Windows for Europe/Stockholm zoneinfo).
+- Auth: place an OAuth bundle at `secrets/withings_tokens.json` (override with `--auth-file`). The file must contain `access_token`, `refresh_token`, `expires_at` (UTC ISO-8601 or epoch seconds), `client_id`, and `client_secret`—see `docs/withings_tokens.example.json` for a template. Username/password flows are not supported; obtain tokens via Withings' OAuth app registration first.
+- Outputs land under `l0/withings/YYYY-MM-DD/` as `measures-YYYYMMDD.json` (plus `.meta.json`) alongside per-run manifests in `runs/`.
+- Meta sidecars include `run_id`, `vendor`, `endpoint`, `date`, `request.{from,to}`, `status`, `items`, and `bytes`, honoring the 04:00 Europe/Stockholm cutover for day assignment.
+- Privacy: fetcher and CLI redact tokens/PII, keeping artifacts and logs free of email, names, or credential values.
+- Logging starts with `Run manifest: {path}` and finishes with `Run totals: {totals}` for quick verification, `--debug` mirrors the Garmin CLI by streaming per-day progress to stderr, and `--request-delay` throttles successive API calls (default 1s) when pulling large ranges.
+
 ## Project Layout
 
 ```

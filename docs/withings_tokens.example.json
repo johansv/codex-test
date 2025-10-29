@@ -1,0 +1,7 @@
+{
+  "access_token": "<oauth-access-token>",
+  "refresh_token": "<oauth-refresh-token>",
+  "expires_at": "2025-10-27T00:00:00+00:00",
+  "client_id": "<withings-client-id>",
+  "client_secret": "<withings-client-secret>"
+}

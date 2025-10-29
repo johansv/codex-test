@@ -148,3 +148,6 @@ Each entry should land in the same branch or PR that introduces the requirement 
 | 2025-10-27 | REQ-F-20251023T153759-EU | Marked REQ-F-20251023T153759-EU done: Baseline smoothing uses continuous recovery weights and capped deltas (approval: DEV-LOCAL) | codex | implementation |
 2025-10-27 16:45 (local) — Added REQ-F-20251023T161530-JM “Emit run metadata (manifest) for Garmin fetch runs” [status: todo, priority: high]
 2025-10-27 15:53 (local) — Finished REQ-F-20251023T161530-JM [status: done]
+2025-10-27 18:28 (local) - Added REQ-F-20251027T182817-WL "Withings L0 ingest for body metrics (daily raw JSON + metadata) � aligned with Garmin L0" [status: todo, priority: high]
+2025-10-27 18:33 (local) - Started REQ-F-20251027T182817-WL [doing] (branch: feat/withings-l0)
+2025-10-28 18:45 (local) - Marked REQ-F-20251027T182817-WL done: Withings L0 ingest aligned with Garmin workflow [status: done]

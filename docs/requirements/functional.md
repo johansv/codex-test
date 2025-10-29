@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1, todo=0); Done: 36 (done=36); Retired: 0
+Todo: 1 (backlog=1, todo=0); Doing: 0 (doing=0); Done: 37 (done=37); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -32,6 +32,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
+
 ### REQ-F-20251010T073818-5B: Batch review orchestration
 - Owner: codex
 - Narrative: As a maintainer, I want batch workflows to handle multiple requirements and persist summaries so that large refactors can be prepared in one automated pass.
@@ -47,6 +48,50 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Done Requirements
+
+### REQ-F-20251027T182817-WL: Withings L0 ingest for body metrics (daily raw JSON + metadata) - aligned with Garmin L0
+- Owner: johan
+- Narrative:
+  Store vendor-raw Withings measures per local day under l0/withings/YYYY-MM-DD with a .meta.json companion, aligned with the existing Garmin L0 workflow (CLI flags, cutover, idempotency, manifest).
+- Interfaces & Artifacts:
+  - CLI: uv run agentlab-withings-fetch --start-date ... --end-date ... --out-root ... [--dry-run] [--skip-existing] [--resume] [--debug] [--request-delay ...]
+  - L0 path: <out_root>/l0/withings/<YYYY-MM-DD>/measures-<YYYYMMDD>.json
+  - Meta path: .../measures-<YYYYMMDD>.meta.json matching the Garmin meta format (timestamp, scope, payload block, run info, request metadata).
+  - Run manifest: update per day like Garmin (progress[day], totals.endpoints.{success,error,skipped,written}, bytes_payload, duration_s)
+  - Tokens: secrets/withings_tokens.json (OAuth2), no PII in logs/artifacts
+  - TZ & cutover: Europe/Stockholm, 04:00 local
+  - Debug: --debug mirrors Garmin CLI output, streaming per-day progress to stderr.
+  - Request pacing: default 1s delay between Withings API calls, configurable via --request-delay.
+  - Prerequisite: tzdata must be installed so Europe/Stockholm timezone is available on all platforms.
+- Acceptance Criteria (observable):
+  1) Per-day JSON+meta written with keys:
+     {timestamp,vendor:"withings",endpoint:"measures",day,scope:{date},status:"success|error|skipped",payload:{file,extension,size_bytes,type,md5,exists},run:{id,correlation},withings:{endpoint,request,measures_count},error?:{code,msg,retry_after_s}}
+  2) Cutover 04:00 policy routes 00:00-03:59 to previous day, >=04:00 to the same calendar day.
+  3) Idempotency: re-run does not duplicate; --skip-existing avoids overwriting success; may write status:"skipped" meta.
+  4) Error capture: write measures.error.json + measures.error.meta.json on failure; manifest error counters update.
+  5) Rate limits/backoff: honor Retry-After; else exponential backoff + jitter capped at 15 min; give up after 3 attempts for the day.
+  6) Privacy: no email/names/tokens in artifacts/logs.
+  7) --resume: start at first non-done day per run-manifest (same as Garmin).
+- Edge cases & invariants:
+  - File names unique per page/window.
+  - Single user.
+  - ISO-8601 timestamps with offset in meta.
+  - Days with zero measures still write empty JSON+meta entries marked success.
+  - Skip-existing and overwrite rules match Garmin: reruns overwrite unless --skip-existing, which records status:"skipped" without rewriting.
+  - Prerequisite: tzdata must be installed so Europe/Stockholm timezone is available on all platforms.
+- Test Plan (AI-owned):
+  - test_writes_day_folder_and_meta_success
+  - test_cutover_0400_routes_measurements_correctly
+  - test_skip_existing_is_idempotent
+  - test_error_artifacts_on_failure
+  - test_retry_after_and_backoff
+  - test_resume_starts_from_first_incomplete_day
+  - test_no_pii_in_artifacts_and_logs
+- Priority: high
+- Status: done
+- Reason: Withings ingestion aligns with Garmin L0 workflow and passes automated tests.
+- Trace: prompts none, tests tests/withings_l0, commits none; Started: 2025-10-27 18:33 (local), Branch: feat/withings-l0
+---
 
 ### REQ-F-20251023T161530-JM: Emit run metadata (manifest) for Garmin fetch runs
 - Owner: johan
@@ -619,4 +664,5 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 ---
 
 ## Retired Requirements
+
 
