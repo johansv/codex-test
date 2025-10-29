@@ -449,6 +449,7 @@ def main(argv: list[str] | None = None) -> int:
         timezone="Europe/Stockholm",
         run_id=run_id,
         garminconnect_version=storage.garmin_version,
+        vendor_label="garmin",
     )
 
     skip_existing = bool(getattr(args, "skip_existing", False))

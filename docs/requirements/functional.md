@@ -97,7 +97,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Owner: johan
 - Narrative: As a user, I want each Garmin fetch run to produce a single JSON manifest capturing parameters, environment, per-day progress, and totals so I can audit outcomes, verify completeness, and diagnose failures without scanning logs.
 - Interfaces & Artifacts:
-  * File pattern: <OUT_ROOT>/runs/run_<LOCAL_DATETIME>_<RUN_ID>.meta.json, where LOCAL_DATETIME is the Europe/Stockholm local time at run start formatted as YYYYMMDDhhmm
+  * File pattern: <OUT_ROOT>/runs/run_<LOCAL_DATETIME>_garmin_<RUN_ID>.meta.json, where LOCAL_DATETIME is the Europe/Stockholm local time at run start formatted as YYYYMMDDhhmm
   * Run ID: reuse the same run_id format already written in per-endpoint *.meta.json files (exact same value).
   * Touched code (later implementation):
     * src/agentlab/metadata.py (new): RunMetaWriter, RunMetaReader

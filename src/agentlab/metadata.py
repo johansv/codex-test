@@ -46,6 +46,7 @@ class RunMetaWriter:
         run_id: str,
         clock: Optional[Callable[[], datetime]] = None,
         garminconnect_version: Optional[str] = None,
+        vendor_label: Optional[str] = None,
     ) -> None:
         self._out_root = out_root
         self._timezone_name = timezone
@@ -56,6 +57,7 @@ class RunMetaWriter:
         self._data: Optional[dict] = None
         self._started = False
         self._garmin_version = _resolve_garmin_version(garminconnect_version)
+        self._vendor_label = vendor_label
 
     def start_run(self, params: RunParams) -> None:
         if self._started:
@@ -74,7 +76,7 @@ class RunMetaWriter:
         filename_stamp = local_dt.strftime("%Y%m%d%H%M")
         runs_dir = self._out_root / "runs"
         runs_dir.mkdir(parents=True, exist_ok=True)
-        self._path = runs_dir / f"run_{filename_stamp}_{self._run_id}.meta.json"
+        self._path = runs_dir / self._compose_filename(filename_stamp)
 
         self._data = {
             "run_id": self._run_id,
@@ -190,7 +192,11 @@ class RunMetaWriter:
         runs_dir = self._out_root / "runs"
         if not runs_dir.exists():
             return None
-        matches = sorted(runs_dir.glob(f"run_*_{self._run_id}.meta.json"))
+        if self._vendor_label:
+            pattern = f"run_*_{self._vendor_label}_{self._run_id}.meta.json"
+        else:
+            pattern = f"run_*_{self._run_id}.meta.json"
+        matches = sorted(runs_dir.glob(pattern))
         if not matches:
             return None
         return matches[-1]
@@ -211,6 +217,13 @@ class RunMetaWriter:
                 if attempt == 4:
                     raise
                 time.sleep(0.05)
+
+    def _compose_filename(self, local_stamp: str) -> str:
+        parts = ["run", local_stamp]
+        if self._vendor_label:
+            parts.append(self._vendor_label)
+        parts.append(self._run_id)
+        return "_".join(parts) + ".meta.json"
 
 
 class RunMetaReader:
