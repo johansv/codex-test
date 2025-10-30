@@ -235,8 +235,6 @@ disabled = [
 enabled = [
   "activity-types",
   "adhoc-challenges",
-  "available-badge-challenges",
-  "badge-challenges",
   "device-alarms",
   "device-last-used",
   "devices",
@@ -248,9 +246,7 @@ enabled = [
   "gear-defaults",
   "gear-stats",
   "goals",
-  "in-progress-virtual-challenges",
   "last-activity",
-  "non-completed-badge-challenges",
   "personal-records",
   "pregnancy-summary",
   "primary-training-device",
@@ -263,7 +259,11 @@ enabled = [
 ]
 
 disabled = [  
-  "activities", 
+  "activities",
+  "available-badge-challenges",
+  "badge-challenges",
+  "in-progress-virtual-challenges",
+  "non-completed-badge-challenges",
 ]
 
 [presets.gear]
@@ -330,7 +330,7 @@ enabled = [
 ]
 
 disabled = [
-  "activities",  
+  "activities",
 ]
 
 [presets.test]
@@ -348,4 +348,4 @@ disabled = [
 ]
 
 [defaults]
-preset = "coaching"
+preset = "timeseries"
