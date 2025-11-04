@@ -5,7 +5,7 @@
 - Namn: Garmin/Withings ingest + Coach
 - Branch: <fyll i>  |  HEAD: <short hash>  |  Python: <version>
 - Data-rot: `<path>`  (t.ex. `./data`)
-- Tidszon: Europe/Stockholm  |  Cutover: 04:00
+- Tidszon: Europe/Stockholm  |  Cutover: none (strict calendar)
 
 ## Aktivt krav
 - **ID:** <REQ-ID>

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import json
 import logging
 import os
@@ -10,7 +11,7 @@ import time
 import uuid
 from datetime import date
 from pathlib import Path
-from typing import Sequence
+from typing import Any, Sequence
 
 try:  # Python 3.11+
     import tomllib
@@ -20,7 +21,7 @@ except ModuleNotFoundError:  # pragma: no cover
 from dotenv import find_dotenv, load_dotenv
 
 from agentlab.core.garmin import EndpointError, EndpointResult, GarminCredentials, GarminFetchRequest
-from agentlab.metadata import DayStats, RunError, RunMetaWriter, RunParams
+from agentlab.metadata import DayStats, RunError, RunMetaReader, RunMetaWriter, RunParams
 from agentlab.runners.garmin_fetcher import GarminDataFetcher, GarminPacingConfig, RateLimitExceeded
 from agentlab.utils.storage import GarminStorageWriter
 
@@ -441,6 +442,7 @@ def main(argv: list[str] | None = None) -> int:
         per_day_endpoints = list(endpoints)
     run_date = date.today()
     output_root = Path(args.output_dir)
+    scheduled_days = max(1, (end - start).days + 1)
 
     run_id = uuid.uuid4().hex
     storage = GarminStorageWriter(output_root, run_id=run_id)
@@ -454,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
 
     skip_existing = bool(getattr(args, "skip_existing", False))
     resume = bool(getattr(args, "resume", False))
+    dry_run_flag = bool(getattr(args, "dry_run", False))
     preset_label = ", ".join(selected_presets) if selected_presets else (args.preset or "")
     writer.start_run(
         RunParams(
@@ -462,7 +465,11 @@ def main(argv: list[str] | None = None) -> int:
             preset=preset_label,
             skip_existing=skip_existing,
             resume=resume,
-        )
+        ),
+        vendor="garmin",
+        days_scheduled=scheduled_days,
+        dry_run=dry_run_flag,
+        out_root=output_root,
     )
     run_aborted = False
 
@@ -806,7 +813,8 @@ def main(argv: list[str] | None = None) -> int:
 
     total_successes = sum(len(entry["successes"]) for entry in summary)
     total_failures = sum(len(entry["failures"]) for entry in summary)
-    exit_code = 0 if (rate_limit_exc is None and any_success) else 1
+    run_failed = rate_limit_exc is not None or run_aborted or total_failures > 0
+    exit_code = 0 if not run_failed else 1
 
     if rate_limit_exc is None and not run_aborted:
         writer.finish()
@@ -840,8 +848,36 @@ def main(argv: list[str] | None = None) -> int:
             exit_code=exit_code,
         )
 
-    json.dump(summary, sys.stdout, indent=2)
-    print()
+    manifest_path = getattr(writer, "_path", None)
+    totals_summary: dict[str, Any] = {}
+    manifest_snapshot = getattr(writer, "_data", None)
+    if manifest_snapshot is None and manifest_path is not None:
+        try:
+            manifest_snapshot = RunMetaReader(output_root, run_id).load()
+        except FileNotFoundError:
+            manifest_snapshot = {}
+    manifest_snapshot = manifest_snapshot or {}
+    if isinstance(manifest_snapshot, dict):
+        totals_summary = manifest_snapshot.get("totals", {})
+    manifest_display = str(Path(manifest_path).resolve()) if manifest_path else ""
+    print(f"Run manifest: {manifest_display}", flush=True)
+    if hasattr(json, "dumps"):
+        totals_text = json.dumps(totals_summary, sort_keys=True)
+    else:  # pragma: no cover - test shim
+        buffer = io.StringIO()
+        json.dump(totals_summary, buffer, sort_keys=True)
+        totals_text = buffer.getvalue()
+    print(f"Run totals: {totals_text}", flush=True)
+
+    final_exit = exit_code
+    if isinstance(manifest_snapshot, dict):
+        aborted = bool(manifest_snapshot.get("aborted"))
+        endpoint_totals = totals_summary.get("endpoints", {}) if isinstance(totals_summary, dict) else {}
+        has_errors = endpoint_totals.get("error", 0) > 0
+        if aborted or has_errors:
+            final_exit = 1
+        elif totals_summary:
+            final_exit = 0
 
     if rate_limit_exc is not None:
         wait_message = (
@@ -851,7 +887,7 @@ def main(argv: list[str] | None = None) -> int:
         print(wait_message, file=sys.stderr)
         return 1
 
-    return exit_code
+    return final_exit
 
 
 if __name__ == "__main__":  # pragma: no cover

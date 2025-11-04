@@ -19,6 +19,7 @@ class RunParams:
     preset: str
     skip_existing: bool = False
     resume: bool = False
+    dry_run: bool = False
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ class RunMetaWriter:
         clock: Optional[Callable[[], datetime]] = None,
         garminconnect_version: Optional[str] = None,
         vendor_label: Optional[str] = None,
+        vendor: Optional[str] = None,
     ) -> None:
         self._out_root = out_root
         self._timezone_name = timezone
@@ -58,8 +60,17 @@ class RunMetaWriter:
         self._started = False
         self._garmin_version = _resolve_garmin_version(garminconnect_version)
         self._vendor_label = vendor_label
+        self._default_vendor = vendor or vendor_label
 
-    def start_run(self, params: RunParams) -> None:
+    def start_run(
+        self,
+        params: RunParams,
+        *,
+        vendor: Optional[str] = None,
+        days_scheduled: Optional[int] = None,
+        dry_run: Optional[bool] = None,
+        out_root: Optional[Path] = None,
+    ) -> None:
         if self._started:
             return
         self._started = True
@@ -78,15 +89,25 @@ class RunMetaWriter:
         runs_dir.mkdir(parents=True, exist_ok=True)
         self._path = runs_dir / self._compose_filename(filename_stamp)
 
+        scheduled_days = (
+            days_scheduled
+            if days_scheduled is not None
+            else max(1, (params.end_date - params.start_date).days + 1)
+        )
+        dry_run_flag = bool(dry_run) if dry_run is not None else bool(getattr(params, "dry_run", False))
+
         self._data = {
+            "schema_version": "runmeta/1.0",
             "run_id": self._run_id,
             "started_at": started_at,
             "params": {
                 "start_date": params.start_date.isoformat(),
                 "end_date": params.end_date.isoformat(),
                 "preset": params.preset,
+                "out_root": str(out_root or self._out_root),
                 "skip_existing": params.skip_existing,
                 "resume": params.resume,
+                "dry_run": dry_run_flag,
             },
             "env": {
                 "garminconnect_version": self._garmin_version or "unknown",
@@ -95,12 +116,20 @@ class RunMetaWriter:
             },
             "progress": {},
             "totals": {
+                "days_scheduled": scheduled_days,
                 "days_done": 0,
                 "endpoints": {"written": 0, "success": 0, "error": 0, "skipped": 0},
                 "bytes_payload": 0,
                 "duration_s": 0,
             },
+            "aborted": None,
+            "notes": [],
         }
+        if vendor:
+            self._data["vendor"] = vendor
+        elif self._default_vendor:
+            self._data["vendor"] = self._default_vendor
+        self._data["timezone"] = self._timezone_name
         self._save()
 
     def start_day(self, day: date) -> None:
@@ -146,7 +175,7 @@ class RunMetaWriter:
     def abort(self, err: RunError) -> None:
         if not self._data:
             raise RuntimeError("Run not started")
-        if "aborted" in self._data:
+        if "aborted" in self._data and self._data["aborted"] is not None:
             return
         at = err.at or self._clock().astimezone(self._timezone)
         self._data["aborted"] = {
@@ -168,7 +197,10 @@ class RunMetaWriter:
         self._save()
 
     def _recalculate_totals(self) -> None:
+        existing_totals = self._data.get("totals", {}) if self._data else {}
+        scheduled = existing_totals.get("days_scheduled", 0)
         totals = {
+            "days_scheduled": scheduled,
             "days_done": 0,
             "endpoints": {"written": 0, "success": 0, "error": 0, "skipped": 0},
             "bytes_payload": 0,
@@ -192,11 +224,11 @@ class RunMetaWriter:
         runs_dir = self._out_root / "runs"
         if not runs_dir.exists():
             return None
-        if self._vendor_label:
-            pattern = f"run_*_{self._vendor_label}_{self._run_id}.meta.json"
-        else:
-            pattern = f"run_*_{self._run_id}.meta.json"
+        pattern = f"run_*_{self._run_id}.meta.json"
         matches = sorted(runs_dir.glob(pattern))
+        if not matches and self._vendor_label:
+            legacy_pattern = f"run_*_{self._vendor_label}_{self._run_id}.meta.json"
+            matches = sorted(runs_dir.glob(legacy_pattern))
         if not matches:
             return None
         return matches[-1]
@@ -219,10 +251,7 @@ class RunMetaWriter:
                 time.sleep(0.05)
 
     def _compose_filename(self, local_stamp: str) -> str:
-        parts = ["run", local_stamp]
-        if self._vendor_label:
-            parts.append(self._vendor_label)
-        parts.append(self._run_id)
+        parts = ["run", local_stamp, self._run_id]
         return "_".join(parts) + ".meta.json"
 
 

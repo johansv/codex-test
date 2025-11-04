@@ -14,6 +14,14 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from agentlab.metadata import DayStats, RunError, RunMetaReader, RunMetaWriter, RunParams
 from agentlab.utils.storage import GarminStorageWriter
 
+_PII_TOKENS = (
+    "token",
+    "secret",
+    "password",
+    "client_id",
+    "client_secret",
+)
+
 __all__ = ["WithingsFetcher", "RetryAfter", "NetworkError"]
 
 
@@ -67,7 +75,7 @@ class ManifestReader:
         first_incomplete: date | None = None
         for day_key in sorted(progress):
             entry = progress.get(day_key) or {}
-            if entry.get("status") != "done":
+            if entry.get("status") not in {"done", "skipped"}:
                 first_incomplete = date.fromisoformat(day_key)
                 break
 
@@ -95,14 +103,13 @@ class WithingsFetcher:
         transport: Any,
         *,
         timezone: str = "Europe/Stockholm",
-        day_cutover: str = "04:00",
+        day_cutover: str = "00:00",
         run_id_provider: Callable[[], str] | None = None,
     ) -> None:
         self._transport = transport
         self._timezone_name = timezone
         self._timezone = self._resolve_timezone(timezone)
         self._cutover = self._parse_cutover(day_cutover)
-        self._cutover_str = day_cutover
         self._run_id_provider = run_id_provider or self._default_run_id
         self._random = random.Random(0)
         self._sleep = time.sleep
@@ -139,6 +146,7 @@ class WithingsFetcher:
         out_root = Path(out_root)
         out_root.mkdir(parents=True, exist_ok=True)
 
+        total_days = max(1, (end_date - start_date).days + 1)
         run_id = self._resolve_run_id()
         self._last_run_id = run_id
         resume_state = (
@@ -158,6 +166,7 @@ class WithingsFetcher:
             out_root=out_root,
             timezone=self._timezone_name,
             run_id=run_id,
+            vendor_label="withings",
         )
         writer.start_run(
             RunParams(
@@ -166,7 +175,11 @@ class WithingsFetcher:
                 preset="withings-l0",
                 skip_existing=skip_existing,
                 resume=resume,
-            )
+            ),
+            vendor="withings",
+            days_scheduled=total_days,
+            dry_run=dry_run,
+            out_root=out_root,
         )
 
         progress = resume_state.manifest.get("progress", {}) if resume_state.manifest else {}
@@ -175,7 +188,7 @@ class WithingsFetcher:
             days = [
                 day
                 for day in days
-                if progress.get(day.isoformat(), {}).get("status") != "done"
+                if progress.get(day.isoformat(), {}).get("status") not in {"done", "skipped"}
             ]
         if not days:
             self._record_manifest_snapshot(out_root, run_id)
@@ -300,23 +313,20 @@ class WithingsFetcher:
                 payload=payload,
             )
             payload_path = day_dir / f"measures-{slug}.json"
-            meta_path = day_dir / f"measures-{slug}.meta.json"
-            request_info = {"from": request.start_iso, "to": request.end_iso}
+            meta_path = payload_path.with_name(f"{payload_path.name}.meta.json")
 
             if skip_existing and payload_path.exists() and meta_path.exists():
-                existing_bytes = payload_path.read_bytes()
-                existing_size = len(existing_bytes)
-                existing_md5 = hashlib.md5(existing_bytes).hexdigest()
                 meta = self._build_meta(
                     run_id=run_id,
                     target_day=target_day,
                     request=request,
                     status="skipped",
                     payload_path=payload_path,
-                    payload_size=existing_size,
-                    payload_md5=existing_md5,
-                    items=len(payload),
-                    exists=True,
+                    payload_size=0,
+                    payload_md5="",
+                    items=0,
+                    exists=False,
+                    out_root=out_root,
                 )
                 self._write_meta(meta_path, meta)
                 if target_day == day:
@@ -339,6 +349,7 @@ class WithingsFetcher:
                 payload_md5=payload_md5,
                 items=len(payload),
                 exists=True,
+                out_root=out_root,
             )
             self._write_meta(meta_path, meta)
 
@@ -382,18 +393,19 @@ class WithingsFetcher:
         if retry_after is not None:
             error_payload["error"]["retry_after_s"] = retry_after
         error_json_path = day_dir / "measures.error.json"
-        error_meta_path = day_dir / "measures.error.meta.json"
-        error_bytes, error_md5 = self._write_json(error_json_path, error_payload)
+        error_meta_path = error_json_path.with_name(f"{error_json_path.name}.meta.json")
+        self._write_json(error_json_path, error_payload)
         meta = self._build_meta(
             run_id=run_id,
             target_day=day,
             request=request,
             status="error",
             payload_path=error_json_path,
-            payload_size=error_bytes,
-            payload_md5=error_md5,
+            payload_size=0,
+            payload_md5="",
             items=0,
-            exists=True,
+            exists=False,
+            out_root=out_root,
             error_info={
                 "code": error_code,
                 "msg": error_msg,
@@ -479,55 +491,95 @@ class WithingsFetcher:
         request: _RequestWindow,
         status: str,
         payload_path: Path,
-        payload_size: int | None,
-        payload_md5: str | None,
+        payload_size: int,
+        payload_md5: str,
         items: int,
         exists: bool,
+        out_root: Path,
         error_info: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        start_unix = int(request.start.astimezone(dt_timezone.utc).timestamp())
-        end_unix = int(request.end.astimezone(dt_timezone.utc).timestamp())
-        base_url = getattr(self._transport, "_base_url", "https://wbsapi.withings.net").rstrip("/")
-        endpoint_url = f"{base_url}/v2/measure"
-        metadata: dict[str, Any] = {
-            "timestamp": self._now().isoformat(),
-            "vendor": "withings",
-            "endpoint": "measures",
-            "day": target_day.isoformat(),
-            "scope": {"date": target_day.isoformat()},
-            "status": status,
-            "timezone": self._timezone_name,
-            "day_cutover": self._cutover_str,
-            "data_scope": "per-day",
-            "day_context": target_day.isoformat(),
-            "payload": {
-                "file": payload_path.name,
-                "extension": payload_path.suffix.lstrip("."),
-                "size_bytes": payload_size,
-                "type": "json",
-                "md5": payload_md5,
-                "exists": exists,
-            },
-            "run": {
-                "id": run_id,
-                "correlation": f"{run_id}:{target_day.isoformat()}",
-            },
-            "withings": {
-                "endpoint": endpoint_url,
-                "request": {
+        payload_exists = status == "success" and exists
+        payload_info = {
+            "file": self._relative_payload_path(out_root, payload_path),
+            "extension": self._normalise_extension(payload_path.suffix),
+            "size_bytes": payload_size if payload_exists else 0,
+            "md5": payload_md5 if payload_exists else "",
+            "type": "application/json",
+            "exists": payload_exists,
+        }
+        start_unix = int(request.start.timestamp())
+        end_unix = int(request.end.timestamp())
+        request_block = {
+            "method": "GET",
+            "endpoint_path": "withings.measure.getmeas",
+            "params": self._sanitize_params(
+                {
                     "action": "getmeas",
                     "category": 1,
                     "startdate": start_unix,
                     "enddate": end_unix,
-                },
-                "measures_count": max(0, int(items)),
-            },
+                }
+            ),
         }
-        if error_info:
-            trimmed = {key: value for key, value in error_info.items() if value is not None}
-            if trimmed:
-                metadata["error"] = trimmed
+        error_block = None
+        if status == "error":
+            code = (error_info or {}).get("code", "WITHINGS_ERROR")
+            message = (error_info or {}).get("msg", "")
+            error_block = {"code": str(code), "message": str(message)}
+        metadata: dict[str, Any] = {
+            "schema_version": "meta/1.0",
+            "vendor": "withings",
+            "endpoint": "measures",
+            "day": target_day.isoformat(),
+            "scope": {
+                "date_from": request.start_iso,
+                "date_to": request.end_iso,
+                "data_scope": "day",
+                "day_context": self._timezone_name,
+            },
+            "status": status,
+            "payload": payload_info,
+            "items": items if payload_exists else 0,
+            "request": request_block,
+            "error": error_block,
+            "run": {"id": run_id},
+        }
         return metadata
+
+    @staticmethod
+    def _relative_payload_path(out_root: Path, payload_path: Path) -> str:
+        try:
+            return payload_path.relative_to(out_root).as_posix()
+        except ValueError:
+            return payload_path.as_posix()
+
+    @staticmethod
+    def _normalise_extension(extension: str) -> str:
+        if not extension:
+            return ".json"
+        return extension if extension.startswith(".") else f".{extension}"
+
+    @staticmethod
+    def _sanitize_params(value: Any) -> Any:
+        if isinstance(value, dict):
+            sanitized: dict[Any, Any] = {}
+            for key, val in value.items():
+                key_lower = str(key).lower()
+                if any(token in key_lower for token in _PII_TOKENS):
+                    sanitized[key] = "***"
+                else:
+                    sanitized[key] = WithingsFetcher._sanitize_params(val)
+            return sanitized
+        if isinstance(value, list):
+            return [WithingsFetcher._sanitize_params(item) for item in value]
+        if isinstance(value, tuple):
+            return [WithingsFetcher._sanitize_params(item) for item in value]
+        if isinstance(value, str):
+            lowered = value.lower()
+            if any(token in lowered for token in _PII_TOKENS) or "@" in value:
+                return "***"
+            return value
+        return value
 
     def _request_window(self, day: date) -> _RequestWindow:
         start = datetime.combine(day, dt_time.min, tzinfo=self._timezone)

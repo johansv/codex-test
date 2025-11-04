@@ -10,6 +10,7 @@ from tests.withings_l0._utils import (
     load_json,
     new_fetcher,
     sample_measures,
+    sidecar_path,
 )
 
 
@@ -35,7 +36,7 @@ def test_skip_existing_is_idempotent(tmp_path: Path) -> None:
         if not path.name.endswith(".meta.json")
     )
     assert len(initial_json) == 1
-    meta_path = day_dir / initial_json[0].name.replace(".json", ".meta.json")
+    meta_path = sidecar_path(initial_json[0])
     initial_meta = load_json(meta_path)
     assert_meta_common(initial_meta, date="2025-10-25", status="success")
 
@@ -61,3 +62,4 @@ def test_skip_existing_is_idempotent(tmp_path: Path) -> None:
 
     final_meta = load_json(meta_path)
     assert_meta_common(final_meta, date="2025-10-25", status="skipped")
+    assert final_meta["payload"]["exists"] is False

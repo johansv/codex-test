@@ -704,7 +704,7 @@ def _endpoint_result(name: str, scope: dict[str, str | int], payload: Any) -> En
     recorder = _CALL_RECORDER.get()
     calls = recorder.consume() if recorder is not None else []
     metadata = {
-        "garmin_methods": calls,
+        "api_calls": calls,
         "payload_size_bytes": _payload_size(payload),
     }
     return EndpointResult(endpoint=name, scope=scope, payload=payload, metadata=metadata)

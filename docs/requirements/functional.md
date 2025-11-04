@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 1 (backlog=1, todo=0); Doing: 0 (doing=0); Done: 37 (done=37); Retired: 0
+Todo: 2 (backlog=1, doing=1); Done: 37 (done=37); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -32,7 +32,6 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 
 ## Todo Requirements
 
-
 ### REQ-F-20251010T073818-5B: Batch review orchestration
 - Owner: codex
 - Narrative: As a maintainer, I want batch workflows to handle multiple requirements and persist summaries so that large refactors can be prepared in one automated pass.
@@ -47,31 +46,49 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
+### REQ-F-20241124T152700-MS: Vendor-neutral L0 meta sidecars
+- Owner: johan
+- Narrative: As an L0 operator I need Garmin and Withings per-day sidecar .meta.json files to share a strict schema so auditing, resume logic, and privacy checks stay consistent.
+- Acceptance Criteria:
+  * Schema: .meta.json files advertise schema_version "meta/1.0" with the Priority #1 keyset.
+  * Garmin semantics: scope.day_context is "local" and day matches the vendor/device-local folder date.
+  * Withings semantics: scope.day_context is "Europe/Stockholm" and day matches the strict Europe/Stockholm calendar date (no 04:00 cutover).
+  * Payload block: success entries carry real size/MD5 and exists=true; error/skipped entries force zeros, empty MD5, and exists=false.
+  * PII guard: sidecars omit secrets, tokens, emails, and similar sensitive values; redact unsafe params.
+  * Backward compatibility: data JSON filenames and locations stay unchanged; only the sidecar schema updates.
+  * Tests: add Garmin/Withings meta schema tests covering success/error/skipped cases, required keys, payload rules, day context, and PII scans.
+- Priority: high
+- Status: doing
+- Reason: Approved Priority #1 scope
+- Trace: prompts prompt, tests planned, commits none
+---
+
 ## Done Requirements
 
 ### REQ-F-20251027T182817-WL: Withings L0 ingest for body metrics (daily raw JSON + metadata) - aligned with Garmin L0
 - Owner: johan
 - Narrative:
-  Store vendor-raw Withings measures per local day under l0/withings/YYYY-MM-DD with a .meta.json companion, aligned with the existing Garmin L0 workflow (CLI flags, cutover, idempotency, manifest).
+  Store vendor-raw Withings measures per local day under l0/withings/YYYY-MM-DD with a .meta.json companion, aligned with the existing Garmin L0 workflow (CLI flags, calendar semantics, idempotency, manifest).
 - Interfaces & Artifacts:
   - CLI: uv run agentlab-withings-fetch --start-date ... --end-date ... --out-root ... [--dry-run] [--skip-existing] [--resume] [--debug] [--request-delay ...]
   - L0 path: <out_root>/l0/withings/<YYYY-MM-DD>/measures-<YYYYMMDD>.json
   - Meta path: .../measures-<YYYYMMDD>.meta.json matching the Garmin meta format (timestamp, scope, payload block, run info, request metadata).
   - Run manifest: update per day like Garmin (progress[day], totals.endpoints.{success,error,skipped,written}, bytes_payload, duration_s)
   - Tokens: secrets/withings_tokens.json (OAuth2), no PII in logs/artifacts
-  - TZ & cutover: Europe/Stockholm, 04:00 local
+  - Time semantics: strict Europe/Stockholm calendar dates (no alternate cutover)
   - Debug: --debug mirrors Garmin CLI output, streaming per-day progress to stderr.
   - Request pacing: default 1s delay between Withings API calls, configurable via --request-delay.
   - Prerequisite: tzdata must be installed so Europe/Stockholm timezone is available on all platforms.
 - Acceptance Criteria (observable):
-  1) Per-day JSON+meta written with keys:
-     {timestamp,vendor:"withings",endpoint:"measures",day,scope:{date},status:"success|error|skipped",payload:{file,extension,size_bytes,type,md5,exists},run:{id,correlation},withings:{endpoint,request,measures_count},error?:{code,msg,retry_after_s}}
-  2) Cutover 04:00 policy routes 00:00-03:59 to previous day, >=04:00 to the same calendar day.
-  3) Idempotency: re-run does not duplicate; --skip-existing avoids overwriting success; may write status:"skipped" meta.
-  4) Error capture: write measures.error.json + measures.error.meta.json on failure; manifest error counters update.
-  5) Rate limits/backoff: honor Retry-After; else exponential backoff + jitter capped at 15 min; give up after 3 attempts for the day.
-  6) Privacy: no email/names/tokens in artifacts/logs.
-  7) --resume: start at first non-done day per run-manifest (same as Garmin).
+  * Manifest schema: Withings MUST use the unified, vendor-neutral run manifest v1.0 (see docs/runmeta/SCHEMA.md).
+  * Time semantics: Withings MUST bucket by strict Europe/Stockholm calendar dates (NO 04:00 cutover).
+  * Resume model: On resume, process ONLY days with status in {pending, partial, error}; do not reprocess done or skipped days.
+  * PII: Run manifest MUST be free from PII (no emails, usernames, tokens, secrets).
+  * CLI contract: The CLI MUST print exactly two lines once per run:
+       1) "Run manifest: <abs-path>"
+       2) "Run totals: {...}"
+     and MUST exit 0 on success, 1 on aborted/error.
+  * Existing idempotency, error-capture, and retry/backoff behaviors remain in force to match Garmin parity.
 - Edge cases & invariants:
   - File names unique per page/window.
   - Single user.
@@ -81,7 +98,7 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   - Prerequisite: tzdata must be installed so Europe/Stockholm timezone is available on all platforms.
 - Test Plan (AI-owned):
   - test_writes_day_folder_and_meta_success
-  - test_cutover_0400_routes_measurements_correctly
+  - test_strict_calendar_day_bucketing
   - test_skip_existing_is_idempotent
   - test_error_artifacts_on_failure
   - test_retry_after_and_backoff
@@ -105,43 +122,22 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
     * src/agentlab/runners/garmin_fetcher.py: per-day start/end + error hooks
   * CLI: no changes (feature is silent and always on).
 - Acceptance Criteria:
-  1) Manifest creation at start
-     - Create <OUT_ROOT>/runs/run_<LOCAL_DATETIME>_<RUN_ID>.meta.json at run start with:
-       run_id (string), started_at (ISO-8601 with timezone),
-       params {start_date, end_date, preset, skip_existing: bool, resume: bool},
-       env {garminconnect_version, python_version, timezone},
-       progress {},
-       totals {days_done:0, endpoints:{written:0, success:0, error:0, skipped:0}, bytes_payload:0, duration_s:0}.
-     - Verification: After a dry invocation, the file exists; keys/types match.
-
-  2) Per-day progress & totals
-     - After each completed day:
-       progress["YYYY-MM-DD"] = {status:"done", endpoints_ok:int, endpoints_fail:int, endpoints_skipped:int, bytes_payload:int, duration_s:int}.
-       totals.days_done increments; totals.endpoints.written = success+error (exclude skipped); maintain totals.endpoints.{success,error,skipped}; accumulate totals.bytes_payload and totals.duration_s.
-     - Verification: After simulating two days, both entries exist and totals reflect the sum.
-
-  3) Partial day & abort semantics
-     - If the run terminates early due to an unhandled exception:
-       progress["YYYY-MM-DD"] = {status:"partial", last_endpoint:"<name>", endpoints_ok:int, endpoints_fail:int, endpoints_skipped:int, bytes_payload:int, duration_s:int},
-       and top-level aborted = {code: str, msg: str, at: ISO-8601} is set once (immutable).
-     - If errors are handled and the run continues, do NOT set aborted; record the day as "done" when finished.
-     - Verification: Inject an exception that stops the run; check partial entry and aborted block.
-
-  4) Finish timestamp immutability
-     - On normal completion set ended_at (ISO-8601) and never change it afterwards.
-     - Verification: Re-writing after finish leaves ended_at unchanged.
-
-  5) Atomic, idempotent persistence
-     - Persist via temp file + atomic rename; re-writing identical day stats must not double-count totals.
-     - Verification: Two identical writes keep totals stable.
+  * Manifest schema: Garmin MUST use the unified, vendor-neutral run manifest v1.0 with identical fields for totals, progress entries, and aborted metadata.
+  * CLI contract: The CLI MUST print exactly two lines once per run:
+       1) "Run manifest: <abs-path>"
+       2) "Run totals: {...}"
+     and MUST exit 0 on success, 1 on aborted/error. (Supersedes prior INFO-only logging.)
+  * Resume model: On resume, process ONLY days with status in {pending, partial, error}; do not reprocess done or skipped days.
+  * PII: Run manifest MUST be free from PII (no emails, usernames, tokens, secrets).
+  * Existing lifecycle guarantees (atomic writes, per-day progress updates, immutable ended_at/aborted fields, accurate totals) remain mandatory.
 - Edge Cases & Invariants:
-  * Timezone & day cutover: Europe/Stockholm calendar days (same as day folders); timestamps include timezone offset.
-  * Statuses: one of {done, partial, skipped}.
+  * Timezone policy: Europe/Stockholm calendar days (same as day folders); timestamps include timezone offset.
+  * Statuses: one of {pending, done, partial, skipped, error}.
   * Totals policy: totals.endpoints.written = success + error (excludes skipped) while also tracking the full breakdown in totals.endpoints.
   * Privacy: no PII (no email/tokens/names) in the manifest.
   * Immutability: aborted (if set) and ended_at never change once written.
 - Telemetry & Observability:
-  * Log INFO with manifest path at start; INFO with totals at finish.
+  * CLI prints the manifest path and totals lines exactly once per run, matching the contract above (logging may duplicate but is secondary).
 - Performance & Limits:
   * File < 100 KB; writes at run start, per day, and finish.
 - Risks / Non-Goals:
@@ -339,7 +335,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Acceptance Criteria:
   * Each endpoint call is wrapped to log errors, write the matching <endpoint>.error.json, and continue.
   * CLI emits a success and failure summary at completion including retry outcomes.
-  * Process exits with success when at least one endpoint succeeds and non-zero only when all fail.
+  * Success path MUST call manifest finish, print the two mandatory lines ("Run manifest: ...", "Run totals: {...}"), and exit 0.
+  * Failure/abort MUST record manifest aborted, print the two mandatory lines with safe totals, and exit 1.
   * Structured logs capture request context and correlation IDs for debugging.
 - Priority: high
 - Status: done

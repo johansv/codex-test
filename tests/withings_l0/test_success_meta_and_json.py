@@ -10,6 +10,7 @@ from tests.withings_l0._utils import (
     load_json,
     manifest_path,
     new_fetcher,
+    sidecar_path,
 )
 
 
@@ -34,7 +35,7 @@ def test_writes_day_folder_and_meta_success(
 
     data_path = next(day_dir.glob("measures-*.json"))
     assert data_path.name == "measures-20251025.json"
-    meta_path = day_dir / data_path.name.replace(".json", ".meta.json")
+    meta_path = sidecar_path(data_path)
 
     payload = load_json(data_path)
     meta = load_json(meta_path)

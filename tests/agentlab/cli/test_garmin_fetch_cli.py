@@ -113,6 +113,22 @@ def _install_stub_fetcher(monkeypatch, instances: list[StubFetcher]) -> None:
     monkeypatch.setattr(garmin_fetch, "GarminDataFetcher", factory)
 
 
+LOGGER_NAME = garmin_fetch.logger.name
+
+
+def _parse_cli_output(stdout: str) -> tuple[str, dict[str, object]]:
+    lines = [line for line in stdout.splitlines() if line.strip()]
+    assert len(lines) == 2, f"Unexpected CLI output: {stdout!r}"
+    manifest_line, totals_line = lines
+    assert manifest_line.startswith("Run manifest: ")
+    assert totals_line.startswith("Run totals: ")
+    manifest_path = manifest_line.split("Run manifest: ", 1)[1]
+    totals_json = totals_line.split("Run totals: ", 1)[1]
+    totals_payload = json.loads(totals_json or "{}")
+    assert isinstance(totals_payload, dict)
+    return manifest_path, totals_payload
+
+
 def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     outcome = FetchOutcome(
         results=[
@@ -128,7 +144,7 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
 
-    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+    caplog.set_level(logging.INFO, logger=LOGGER_NAME)
 
     exit_code = garmin_fetch.main(
         [
@@ -142,15 +158,13 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     )
 
     captured = capsys.readouterr()
-    summary = json.loads(captured.out)
-    assert summary == [
-        {
-            "date": "2024-01-01",
-            "successes": ["alpha"],
-            "failures": [],
-            "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
-        }
-    ]
+    manifest_path, totals = _parse_cli_output(captured.out)
+    assert manifest_path
+    assert Path(manifest_path).exists()
+    assert totals.get("days_done") == 1
+    endpoints = totals.get("endpoints", {})
+    assert endpoints.get("success") == 1
+    assert endpoints.get("error") == 0
     assert exit_code == 0
 
     fetcher_instance = instances[0]
@@ -165,7 +179,7 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     events = [
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "agentlab.cli.garmin_fetch"
+        if record.name == LOGGER_NAME
     ]
     assert any(event["event"] == "garmin.cli.run.completed" for event in events)
     assert not any(event["event"] == "garmin.cli.config" for event in events)
@@ -191,7 +205,7 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
 
-    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+    caplog.set_level(logging.INFO, logger=LOGGER_NAME)
 
     exit_code = garmin_fetch.main(
         [
@@ -205,15 +219,11 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     )
 
     captured = capsys.readouterr()
-    summary = json.loads(captured.out)
-    assert summary == [
-        {
-            "date": "2024-01-02",
-            "successes": [],
-            "failures": [{"endpoint": "alpha", "message": "boom"}],
-            "retry_outcomes": {"scheduled": 1, "succeeded": 0, "failed": 1},
-        }
-    ]
+    manifest_path, totals = _parse_cli_output(captured.out)
+    assert manifest_path
+    assert Path(manifest_path).exists()
+    endpoints = totals.get("endpoints", {})
+    assert endpoints.get("error") >= 1
     assert exit_code == 1
 
     fetcher_instance = instances[0]
@@ -222,7 +232,7 @@ def test_main_reports_failures_and_non_zero_exit(tmp_path, monkeypatch, capsys, 
     events = [
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "agentlab.cli.garmin_fetch"
+        if record.name == LOGGER_NAME
     ]
     failure_events = [event for event in events if event["event"] == "garmin.cli.run.failed"]
     assert failure_events, "Expected garmin.cli.run.failed log entry"
@@ -258,7 +268,7 @@ def test_main_handles_rate_limit(tmp_path, monkeypatch, capsys, caplog):
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
 
-    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+    caplog.set_level(logging.INFO, logger=LOGGER_NAME)
 
     exit_code = garmin_fetch.main(
         [
@@ -272,23 +282,18 @@ def test_main_handles_rate_limit(tmp_path, monkeypatch, capsys, caplog):
     )
 
     captured = capsys.readouterr()
-    summary = json.loads(captured.out)
-    assert summary == [
-        {
-            "date": "2024-01-03",
-            "successes": [],
-            "failures": [{"endpoint": "rate-limit", "message": "429 Too Many Requests"}],
-            "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
-            "rate_limited": True,
-        }
-    ]
+    manifest_path, totals = _parse_cli_output(captured.out)
+    assert manifest_path
+    assert Path(manifest_path).exists()
+    endpoints = totals.get("endpoints", {})
+    assert endpoints.get("success", 0) == 0
     assert exit_code == 1
     assert "Wait at least 10 minutes" in captured.err
 
     events = [
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "agentlab.cli.garmin_fetch"
+        if record.name == LOGGER_NAME
     ]
     rate_events = [event for event in events if event["event"] == "garmin.cli.rate_limit"]
     assert rate_events
@@ -308,7 +313,7 @@ def test_main_debug_logs_configuration_snapshot(tmp_path, monkeypatch, capsys, c
     config_path = tmp_path / "config.toml"
     _write_config(config_path)
 
-    caplog.set_level(logging.INFO, logger="agentlab.cli.garmin_fetch")
+    caplog.set_level(logging.INFO, logger=LOGGER_NAME)
 
     exit_code = garmin_fetch.main(
         [
@@ -327,7 +332,7 @@ def test_main_debug_logs_configuration_snapshot(tmp_path, monkeypatch, capsys, c
     events = [
         json.loads(record.getMessage())
         for record in caplog.records
-        if record.name == "agentlab.cli.garmin_fetch"
+        if record.name == LOGGER_NAME
     ]
     config_events = [event for event in events if event["event"] == "garmin.cli.config"]
     assert config_events, "Expected configuration snapshot event when debug is enabled"
@@ -385,23 +390,9 @@ enabled = ["alpha", "beta"]
         ]
     )
 
-    captured = capsys.readouterr()
-    summary = json.loads(captured.out)
-    assert summary == [
-        {
-            "date": run_date.isoformat(),
-            "successes": ["beta"],
-            "failures": [],
-            "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
-            "run_date": True,
-        },
-        {
-            "date": "2024-01-01",
-            "successes": ["alpha"],
-            "failures": [],
-            "retry_outcomes": {"scheduled": 0, "succeeded": 0, "failed": 0},
-        },
-    ]
+    manifest_path, totals = _parse_cli_output(capsys.readouterr().out)
+    assert manifest_path
+    assert Path(manifest_path).exists()
     assert exit_code == 0
 
     fetcher_instance = instances[0]
@@ -453,9 +444,11 @@ def test_main_loads_credentials_from_dotenv(tmp_path, monkeypatch, capsys):
         ]
     )
 
-    captured = capsys.readouterr()
-    summary = json.loads(captured.out)
-    assert summary[0]["successes"] == ["alpha"]
+    manifest_path, totals = _parse_cli_output(capsys.readouterr().out)
+    assert manifest_path
+    assert Path(manifest_path).exists()
+    endpoints = totals.get("endpoints", {})
+    assert endpoints.get("success") == 1
     assert exit_code == 0
     assert os.getenv("GARMIN_EMAIL") == "dotenv@example.com"
     assert os.getenv("GARMIN_PASSWORD") == "from-dotenv"

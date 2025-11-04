@@ -151,3 +151,5 @@ Each entry should land in the same branch or PR that introduces the requirement 
 2025-10-27 18:28 (local) - Added REQ-F-20251027T182817-WL "Withings L0 ingest for body metrics (daily raw JSON + metadata) – aligned with Garmin L0" [status: todo, priority: high]
 2025-10-27 18:33 (local) - Started REQ-F-20251027T182817-WL [doing] (branch: feat/withings-l0)
 2025-10-28 18:45 (local) - Marked REQ-F-20251027T182817-WL done: Withings L0 ingest aligned with Garmin workflow [status: done]
+| 2025-11-03 | REQ-F-20241124T152700-MS | Recorded vendor-neutral L0 meta sidecars requirement (todo) | codex | prompt |
+| 2025-11-03 | REQ-F-20241124T152700-MS | Started implementation for REQ-F-20241124T152700-MS; non-functional: REQ-NF-20251010T151535-UV, REQ-NF-20251017T154134-DZ, REQ-NF-20251010T151552-8U, REQ-NF-20251010T151543-IE, REQ-NF-000 | codex | implementation |

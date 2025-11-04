@@ -48,41 +48,141 @@ The hosted runner must mount this repository and have dependencies installed so
 
 ## Additional Commands
 
-- `uv run pytest` � execute the full test suite (requirement utilities and
+- `uv run pytest` - execute the full test suite (requirement utilities and
   hooks are fully covered).
-- `uv run ruff check src tests` � lint the project.
-- `uv run python -m reqflow.cli.requirements ...` � manually add requirement
+- `uv run ruff check src tests` - lint the project.
+- `uv run python -m reqflow.cli.requirements ...` - manually add requirement
   entries when needed.
-- `uv run reqflow-slice --help` � stream specific requirement entries by ID/tag with a compact summary.
+- `uv run reqflow-slice --help` - stream specific requirement entries by ID/tag with a compact summary.
 
-## Garmin Fetch CLI
+## Run manifest v1.0
 
-- **Environment:** export `GARMIN_EMAIL` and `GARMIN_PASSWORD` or place them in a local `.env` (see `.env.example`). TOTP codes can be supplied at runtime with `--mfa-code`.
-- **Defaults:** endpoint selections live in `assets/config/garmin-endpoints.toml`. Adjust `defaults.enabled`/`defaults.disabled` for long-term changes, or override per run with `--include`/`--exclude`.
-- **Presets:** the config file now supports named presets (see the `presets` table). Use `--preset <name>` to switch between bundles like `full`, the curated `coaching` set, or the `timeseries` preset that focuses on date/range-driven metrics; the default preset is defined under `[defaults]`.
-- **Pacing controls:** tune rate limiting with `--delay-post-login`, `--delay-between-endpoints`, `--delay-pagination`, `--delay-jitter`, and `--retry-limit`. Jitter is expressed as a ratio (0.2 = ±20%).
-- **Observability:** runs stream JSON logs with correlation IDs and emit a JSON summary on stdout that lists successes, failures, and retry counts for each day.
-- **Storage:** responses and error files land under `./out/l0/garmin/<YYYY-MM-DD>/` by default; switch destinations with `--output-dir`.
-- **Examples:**
-  - Default daily sync: `uv run agentlab-garmin-fetch --date 2024-10-15`
-  - Long-range throttled sync:\
-    `uv run agentlab-garmin-fetch --start-date 2024-10-01 --end-date 2024-10-07 --delay-post-login 8 --delay-between-endpoints 3 --delay-pagination 1.5 --delay-jitter 0.3 --retry-limit 2 --include sleep --debug`
+The L0 “run manifest” records run-level lineage, totals, and per-day status to support resume and observability.
+See the schema: **[`docs/runmeta/SCHEMA.md`](docs/runmeta/SCHEMA.md)**.
 
-## Withings L0 (body metrics)
-- CLI: `uv run agentlab-withings-fetch --start-date 2025-10-25 --end-date 2025-10-27 --out-root ./data --skip-existing --resume [--debug] [--request-delay 1.0]`
-- Prereqs: install `tzdata` (required on Windows for Europe/Stockholm zoneinfo).
-- Auth: place an OAuth bundle at `secrets/withings_tokens.json` (override with `--auth-file`). The file must contain `access_token`, `refresh_token`, `expires_at` (UTC ISO-8601 or epoch seconds), `client_id`, and `client_secret`—see `docs/withings_tokens.example.json` for a template. Username/password flows are not supported; obtain tokens via Withings' OAuth app registration first.
-- Outputs land under `l0/withings/YYYY-MM-DD/` as `measures-YYYYMMDD.json` (plus `.meta.json`) alongside per-run manifests in `runs/`.
-- Meta sidecars include `run_id`, `vendor`, `endpoint`, `date`, `request.{from,to}`, `status`, `items`, and `bytes`, honoring the 04:00 Europe/Stockholm cutover for day assignment.
-- Privacy: fetcher and CLI redact tokens/PII, keeping artifacts and logs free of email, names, or credential values.
-- Logging starts with `Run manifest: {path}` and finishes with `Run totals: {totals}` for quick verification, `--debug` mirrors the Garmin CLI by streaming per-day progress to stderr, and `--request-delay` throttles successive API calls (default 1s) when pulling large ranges.
+**CLI operator signals (stdout):**
+
+1. `Run manifest: <abs-path>`  
+2. `Run totals: {...}`
+
+Exit codes: **0** on success, **1** if the run was aborted/errored. Logs and progress details are written to stderr or log files; stdout is reserved for the two lines above.
+
+---
+
+# Harmonized CLI Usage
+
+The two CLIs follow the same conventions:
+
+- **Stdout** prints exactly two lines at the end of a run (see *Run manifest v1.0* above).
+- **Exit codes:** `0` on success, `1` if the run was aborted/errored.
+- **Outputs:** L0 payloads under `out/l0/<vendor>/<YYYY-MM-DD>/` (or `--output-dir` / `--out-root`) and a per-run manifest under `<OUT_ROOT>/runs/run_<STAMP>_<RUN_ID>.meta.json`.
+- **Privacy:** No PII (emails, tokens, secrets) is written to manifests or logs.
+
+## Garmin Fetch CLI (`agentlab-garmin-fetch`)
+
+### Overview
+Fetches daily data from Garmin Connect for a date or date range, with selectable endpoint bundles and pacing controls.
+
+### Authentication
+- Provide credentials via environment or `.env` file in repo root:
+  - `GARMIN_EMAIL` - your Garmin account email
+  - `GARMIN_PASSWORD` - your Garmin account password
+- Optionally pass `--mfa-code` if your account requires TOTP/MFA at login.
+
+### Time semantics
+- Garmin uses **device-/vendor-local** day semantics. If you travel, the calendar day reflects the device's local timezone for that period.
+
+### Storage layout
+- Default output directory is `./out` (override with `--output-dir`).
+- Day folders: `out/l0/garmin/<YYYY-MM-DD>/`
+- Run manifests: `out/runs/run_<YYYYMMDDHHMM>_<RUN_ID>.meta.json`
+
+### CLI reference
+| Flag | Type / Default | Description |
+|---|---|---|
+| `--date` | `YYYY-MM-DD` | Fetch a single calendar day. Mutually exclusive with `--start-date/--end-date`. |
+| `--start-date` | `YYYY-MM-DD` | Start of range (inclusive). |
+| `--end-date` | `YYYY-MM-DD` | End of range (inclusive). Required if `--start-date` is set. |
+| `--include` | repeatable string | Explicitly include endpoint(s) for this run (overrides preset/defaults). |
+| `--exclude` | repeatable string | Exclude endpoint(s) for this run. |
+| `--config` | path; default `assets/config/garmin-endpoints.toml` | Endpoint config file. |
+| `--preset` | string | Named preset in the config (`full`, `coaching`, `timeseries`, etc.). |
+| `--list-endpoints` | flag | Print supported endpoint IDs and exit. |
+| `--mfa-code` | string | TOTP/MFA code when prompted. |
+| `--output-dir` | path; default `out` | Root directory for outputs and run manifests. |
+| `--debug` | flag | Verbose per-endpoint logs to stderr. |
+| `--delay-post-login` | float; default `5.0` | Seconds to wait after login before first endpoint. |
+| `--delay-between-endpoints` | float; default `2.0` | Seconds between successive endpoints. |
+| `--delay-pagination` | float; default `1.0` | Seconds between paginated API calls. |
+| `--delay-jitter` | float; default `0.2` | Relative jitter applied to all delays (0.2 = ±20%). |
+| `--retry-limit` | int; default `1` | Retry passes for failed endpoints. |
+
+### Examples
+```bash
+# Single day (yesterday)
+uv run agentlab-garmin-fetch --date 2025-10-30
+
+# One week with pacing and a preset
+uv run agentlab-garmin-fetch   --start-date 2025-10-24 --end-date 2025-10-30   --preset timeseries   --delay-post-login 8 --delay-between-endpoints 3 --delay-pagination 1.5   --delay-jitter 0.3 --retry-limit 2 --debug
+
+# Curate endpoints explicitly
+uv run agentlab-garmin-fetch   --date 2025-10-30   --include sleep --include hrv --exclude activities
+```
+
+---
+
+## Withings L0 CLI (`agentlab-withings-fetch`)
+
+### Overview
+Fetches daily **body metrics** from Withings and writes vendor-raw JSON per calendar day with metadata and a unified run manifest.
+
+### Authentication
+- Place OAuth tokens in a JSON file (default `secrets/withings_tokens.json`), or specify with `--auth-file`.
+- File must contain: `access_token`, `refresh_token`, `expires_at` (ISO-8601 UTC or epoch seconds), `client_id`, `client_secret`.
+- Username/password flows are **not** supported; obtain tokens via Withings app registration.
+
+### Time semantics
+- Withings uses **strict Europe/Stockholm calendar dates** (no 04:00 cutover). Records between 00:00-23:59 are written to that same date.
+
+### Storage layout
+- Default output root is `./out` (override with `--out-root`).
+- Day folders: `<OUT_ROOT>/l0/withings/<YYYY-MM-DD>/` with `measures-YYYYMMDD.json` and `measures-YYYYMMDD.meta.json`.
+- Run manifests: `<OUT_ROOT>/runs/run_<YYYYMMDDHHMM>_<RUN_ID>.meta.json`.
+
+### CLI reference
+| Flag | Type / Default | Description |
+|---|---|---|
+| `--start-date` | `YYYY-MM-DD` | Start of range (inclusive). |
+| `--end-date` | `YYYY-MM-DD` | End of range (inclusive). |
+| `--out-root` | path; default `./out` | Root directory for outputs and run manifests. |
+| `--auth-file` | path; default `secrets/withings_tokens.json` | Path to OAuth token bundle. |
+| `--skip-existing` | flag | Do not overwrite successful day outputs; mark as skipped. |
+| `--resume` | flag | Resume only days with status in `{pending, partial, error}` from the latest run manifest. |
+| `--dry-run` | flag | Reserved for parity; currently still writes outputs (see `--debug`). |
+| `--request-delay` | float; default `1.0` | Seconds between Withings API calls. |
+| `--debug` | flag | Verbose per-day progress to stderr. |
+| `--transport` | module:factory | Override transport factory (advanced/testing). |
+
+### Examples
+```bash
+# 3-day sync to the default data root
+uv run agentlab-withings-fetch --start-date 2025-10-25 --end-date 2025-10-27
+
+# Idempotent resume run, throttled
+uv run agentlab-withings-fetch   --start-date 2025-10-20 --end-date 2025-10-31   --out-root ./out --skip-existing --resume --request-delay 1.0 --debug
+
+# Custom auth file
+uv run agentlab-withings-fetch   --start-date 2025-10-29 --end-date 2025-10-29   --auth-file ./secrets/prod-withings.json
+```
+
+---
 
 ## Project Layout
 
 ```
 +-- docs/
-�   +-- requirements/        # Functional & non-functional catalogs
-�   +-- adr/                 # Architecture decision drafts
+|   +-- requirements/        # Functional & non-functional catalogs
+|   +-- adr/                 # Architecture decision drafts
 +-- scripts/                 # Codex launchers, test helpers
 +-- src/agentlab/            # Runtime code
 +-- tests/                   # Mirrored test suite
@@ -90,7 +190,6 @@ The hosted runner must mount this repository and have dependencies installed so
 
 For more detailed guidance, see `AGENTS.md`, which Codex consumes directly when
 planning tasks.
-
 
 ## Approval Enforcement
 

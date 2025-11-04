@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
-from typing import Any, Callable, Iterable, Iterator, Sequence
+from typing import Any, Callable, Iterable
 
 import pytest
 
@@ -15,7 +15,7 @@ RetryAfter = withings_module.RetryAfter
 NetworkError = withings_module.NetworkError
 
 
-DAY_CUTOVER = "04:00"
+DAY_CUTOVER = "00:00"
 TIMEZONE_ID = "Europe/Stockholm"
 
 
@@ -79,6 +79,11 @@ def load_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def sidecar_path(payload_path: Path) -> Path:
+    """Return the metadata sidecar path for a payload file."""
+    return payload_path.with_name(f"{payload_path.name}.meta.json")
+
+
 def unix_measure_group(moment: datetime) -> dict[str, Any]:
     """Simulate a Withings measure group using Unix timestamps."""
 
@@ -112,32 +117,47 @@ def assert_meta_common(meta: dict[str, Any], *, date: str, status: str) -> None:
     assert meta["endpoint"] == "measures"
     assert meta["status"] == status
     assert meta["vendor"] == "withings"
-    assert meta["timezone"] == TIMEZONE_ID
-    assert meta["day_cutover"] == DAY_CUTOVER
     assert meta["day"] == date
-    assert meta["scope"]["date"] == date
+    scope = meta["scope"]
+    assert scope["day_context"] == TIMEZONE_ID
+    assert scope["data_scope"] == "day"
+    assert scope["date_from"].startswith(date)
+    start_day = datetime.fromisoformat(scope["date_from"]).date()
+    expected_end = (start_day + timedelta(days=1)).isoformat()
+    assert scope["date_to"].startswith(date) or scope["date_to"].startswith(expected_end)
     payload = meta["payload"]
+    prefix = f"l0/withings/{date}/"
+    assert payload["file"].startswith(prefix)
+    assert payload["extension"] == ".json"
     if status == "error":
-        assert payload["file"] == "measures.error.json"
+        assert payload["exists"] is False
+        assert payload["size_bytes"] == 0
+        assert payload["md5"] == ""
+        assert meta["error"]["code"]
     else:
-        assert payload["file"].startswith("measures-")
-    assert payload["extension"] == "json"
-    assert payload["size_bytes"] is None or payload["size_bytes"] >= 0
-    assert payload["md5"] is None or len(payload["md5"]) == 32
+        assert payload["exists"] is True or payload["exists"] is False
+        if payload["exists"]:
+            assert payload["size_bytes"] > 0
+            assert payload["md5"]
+        else:
+            assert payload["size_bytes"] == 0
+            assert payload["md5"] == ""
+        assert meta["error"] is None
     run_info = meta["run"]
     assert run_info["id"] == "test-run-123"
-    assert run_info["correlation"].endswith(f":{date}")
-    request = meta["withings"]["request"]
-    assert request["action"] == "getmeas"
-    assert request["category"] == 1
-    assert request["startdate"] <= request["enddate"]
-    endpoint = meta["withings"]["endpoint"]
-    assert endpoint.endswith("/v2/measure")
-    assert meta["withings"]["measures_count"] >= 0
+    request = meta["request"]
+    assert request["method"] == "GET"
+    assert request["endpoint_path"] == "withings.measure.getmeas"
+    params = request["params"]
+    assert params["action"] == "getmeas"
+    assert params["category"] == 1
+    assert isinstance(params["startdate"], int)
+    assert isinstance(params["enddate"], int)
+    assert params["startdate"] <= params["enddate"]
 
 
-def assert_no_pii(payload: dict[str, Any]) -> None:
-    serialized = json.dumps(payload)
+def assert_no_pii(data: dict[str, Any]) -> None:
+    serialized = json.dumps(data)
     forbidden = ["@", "access_token", "refresh_token", "secret", "password"]
     for token in forbidden:
         assert token not in serialized
@@ -150,4 +170,3 @@ def success_transport() -> FakeTransport:
         "2025-10-25T07:10:00+02:00",
     )
     return FakeTransport(responses=[sample_measures(*timestamps)])
-

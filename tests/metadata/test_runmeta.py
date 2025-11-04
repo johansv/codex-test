@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -45,6 +46,7 @@ def new_writer(
         run_id=run_id,
         clock=clock.now if clock else None,
         garminconnect_version=garmin_version,
+        vendor_label="garmin",
     )
 
 
@@ -56,7 +58,7 @@ def sample_params(**overrides: object) -> RunParams:
         skip_existing=False,
         resume=False,
     )
-    return params._replace(**overrides) if overrides else params
+    return replace(params, **overrides) if overrides else params
 
 
 def sample_stats(success: int, error: int = 0, skipped: int = 0, bytes_payload: int = 0, duration_s: int = 0) -> DayStats:
@@ -75,11 +77,13 @@ def test_creates_manifest_with_headers(tmp_path: Path) -> None:
     writer = new_writer(tmp_path, run_id)
     params = sample_params()
 
-    writer.start_run(params)
+    writer.start_run(params, vendor="garmin", out_root=tmp_path)
 
     manifest = manifest_path(tmp_path, run_id)
     data = load_json(manifest)
     assert data["run_id"] == run_id
+    assert data["schema_version"] == "runmeta/1.0"
+    assert data.get("vendor") == "garmin"
     assert "started_at" in data
     name_parts = manifest.name.split("_")
     assert manifest.name.endswith(f"_{run_id}.meta.json")
@@ -88,27 +92,30 @@ def test_creates_manifest_with_headers(tmp_path: Path) -> None:
     assert len(timestamp_part) == len("202510271200")
     expected_date_prefix = data["started_at"][:10].replace("-", "")
     assert timestamp_part.startswith(expected_date_prefix)
-    assert data["params"] == {
-        "start_date": params.start_date.isoformat(),
-        "end_date": params.end_date.isoformat(),
-        "preset": params.preset,
-        "skip_existing": params.skip_existing,
-        "resume": params.resume,
-    }
+    params_block = data["params"]
+    assert params_block["start_date"] == params.start_date.isoformat()
+    assert params_block["end_date"] == params.end_date.isoformat()
+    assert params_block["preset"] == params.preset
+    assert params_block["skip_existing"] == params.skip_existing
+    assert params_block["resume"] == params.resume
+    assert params_block["dry_run"] is False
+    assert params_block["out_root"] == str(tmp_path)
     assert "garminconnect_version" in data["env"]
-    assert data["totals"] == {
-        "days_done": 0,
-        "endpoints": {"written": 0, "success": 0, "error": 0, "skipped": 0},
-        "bytes_payload": 0,
-        "duration_s": 0,
-    }
+    totals = data["totals"]
+    assert totals["days_scheduled"] == 3
+    assert totals["days_done"] == 0
+    assert totals["bytes_payload"] == 0
+    assert totals["duration_s"] == 0
+    assert totals["endpoints"] == {"success": 0, "skipped": 0, "error": 0, "written": 0}
     assert data["progress"] == {}
+    assert data["aborted"] is None
+    assert data["notes"] == []
 
 
 def test_creates_manifest_with_supplied_garmin_version(tmp_path: Path) -> None:
     run_id = "run-version"
     writer = new_writer(tmp_path, run_id, garmin_version="1.2.3")
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     data = load_json(manifest_path(tmp_path, run_id))
     assert data["env"]["garminconnect_version"] == "1.2.3"
@@ -119,7 +126,7 @@ def test_creates_manifest_with_resolved_garmin_version(monkeypatch: pytest.Monke
 
     run_id = "run-version-auto"
     writer = new_writer(tmp_path, run_id, garmin_version="unknown")
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     data = load_json(manifest_path(tmp_path, run_id))
     assert data["env"]["garminconnect_version"] == "9.9.9"
@@ -133,7 +140,7 @@ def test_start_run_uses_configured_timezone_offset(monkeypatch: pytest.MonkeyPat
     run_id = "run-timezone"
     fixed_now = datetime(2025, 10, 27, 15, 5, 2, 559616)
     writer = new_writer(tmp_path, run_id, clock=FakeClock(fixed_now))
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     data = load_json(manifest_path(tmp_path, run_id))
     assert data["started_at"].endswith("+02:00")
@@ -155,7 +162,7 @@ def test_falls_back_to_local_timezone_when_zoneinfo_missing(
     run_id = "run-fallback"
     fixed_now = datetime(2025, 1, 3, 8, 0, 0, 0)
     writer = new_writer(tmp_path, run_id, clock=FakeClock(fixed_now))
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     data = load_json(manifest_path(tmp_path, run_id))
     assert data["started_at"].endswith("+01:00")
@@ -165,7 +172,7 @@ def test_updates_progress_and_totals_per_day(tmp_path: Path) -> None:
     """Per-day progress & totals: append entries, accumulate counts."""
     run_id = "run-456"
     writer = new_writer(tmp_path, run_id)
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     writer.start_day(date(2025, 10, 25))
     writer.end_day(date(2025, 10, 25), status="done", stats=sample_stats(success=4, error=1, skipped=2, bytes_payload=5000, duration_s=120))
@@ -173,19 +180,24 @@ def test_updates_progress_and_totals_per_day(tmp_path: Path) -> None:
     writer.end_day(date(2025, 10, 26), status="done", stats=sample_stats(success=3, error=0, skipped=1, bytes_payload=3000, duration_s=90))
 
     data = load_json(manifest_path(tmp_path, run_id))
+    assert data["totals"]["days_scheduled"] == 3
     assert data["totals"]["days_done"] == 2
     assert data["totals"]["endpoints"] == {"written": 8, "success": 7, "error": 1, "skipped": 3}
     assert data["totals"]["bytes_payload"] == 8000
     assert data["totals"]["duration_s"] == 210
     assert data["progress"]["2025-10-25"]["status"] == "done"
     assert data["progress"]["2025-10-26"]["status"] == "done"
+    day_25 = data["progress"]["2025-10-25"]
+    assert day_25["endpoints_ok"] == 4
+    assert day_25["endpoints_fail"] == 1
+    assert day_25["endpoints_skipped"] == 2
 
 
 def test_records_partial_day_and_abort(tmp_path: Path) -> None:
     """Partial day & abort: record partial status and immutable aborted block on failure."""
     run_id = "run-789"
     writer = new_writer(tmp_path, run_id)
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     writer.start_day(date(2025, 10, 25))
     writer.record_partial(
@@ -208,7 +220,7 @@ def test_finish_sets_ended_at_once(tmp_path: Path) -> None:
     run_id = "run-immutable"
     clock = FakeClock(datetime(2025, 10, 1, 8, tzinfo=timezone.utc))
     writer = new_writer(tmp_path, run_id, clock=clock)
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
     writer.finish()
 
     data_before = load_json(manifest_path(tmp_path, run_id))
@@ -223,7 +235,7 @@ def test_atomic_idempotent_writes(tmp_path: Path) -> None:
     """Atomic, idempotent persistence: identical updates keep totals stable."""
     run_id = "run-atomic"
     writer = new_writer(tmp_path, run_id)
-    writer.start_run(sample_params())
+    writer.start_run(sample_params(), vendor="garmin", out_root=tmp_path)
 
     payload = sample_stats(success=2, error=1, skipped=0, bytes_payload=4000, duration_s=60)
     writer.start_day(date(2025, 10, 25))

@@ -10,6 +10,7 @@ from tests.withings_l0._utils import (
     load_json,
     manifest_path,
     new_fetcher,
+    sidecar_path,
     unix_measure_group,
 )
 
@@ -30,17 +31,18 @@ def test_writes_empty_payload_when_no_measures(tmp_path: Path) -> None:
     day_dir = day_folder(tmp_path, "2025-10-25")
     json_path = next(day_dir.glob("measures-*.json"))
     assert json_path.name == "measures-20251025.json"
-    meta_path = json_path.with_suffix(".meta.json")
-
     payload = load_json(json_path)
     assert payload == []
 
-    meta = load_json(meta_path)
+    meta = load_json(sidecar_path(json_path))
     assert_meta_common(meta, date="2025-10-25", status="success")
-    assert meta["withings"]["measures_count"] == 0
+    assert meta["items"] == 0
+    assert meta["payload"]["exists"] is True
+    assert meta["payload"]["size_bytes"] > 0
 
     manifest = load_json(manifest_path(tmp_path, "test-run-123"))
-    assert manifest["progress"]["2025-10-25"]["endpoints_ok"] == 1
+    entry = manifest["progress"]["2025-10-25"]
+    assert entry["endpoints_ok"] == 1
     assert manifest["totals"]["endpoints"]["success"] == 1
 
 
@@ -68,5 +70,5 @@ def test_routes_unix_timestamp_measure_groups(tmp_path: Path) -> None:
     payload = load_json(json_path)
     assert payload and payload[0]["date"] == int(measurement_time.timestamp())
 
-    meta = load_json(json_path.with_suffix(".meta.json"))
+    meta = load_json(sidecar_path(json_path))
     assert_meta_common(meta, date="2025-10-25", status="success")

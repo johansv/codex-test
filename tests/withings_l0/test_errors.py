@@ -7,11 +7,12 @@ import pytest
 
 from tests.withings_l0._utils import (
     FakeTransport,
+    NetworkError,
     assert_meta_common,
     day_folder,
     load_json,
-    NetworkError,
     new_fetcher,
+    sidecar_path,
 )
 
 
@@ -35,7 +36,7 @@ def test_error_artifacts_on_failure(tmp_path: Path) -> None:
     assert day_dir.exists()
 
     error_json = day_dir / "measures.error.json"
-    error_meta = day_dir / "measures.error.meta.json"
+    error_meta = sidecar_path(error_json)
 
     assert error_json.exists()
     assert error_meta.exists()
@@ -43,4 +44,4 @@ def test_error_artifacts_on_failure(tmp_path: Path) -> None:
     meta = load_json(error_meta)
     assert_meta_common(meta, date="2025-10-25", status="error")
     assert "error" in meta
-    assert meta["error"]["msg"]
+    assert meta["error"]["message"]

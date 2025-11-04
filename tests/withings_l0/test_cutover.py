@@ -10,11 +10,12 @@ from tests.withings_l0._utils import (
     load_json,
     new_fetcher,
     sample_measures,
+    sidecar_path,
 )
 
 
-def test_cutover_0400_routes_measurements_correctly(tmp_path: Path) -> None:
-    """Acceptance Criterion 2) routes <04:00 local to previous day and ≥04:00 to same day."""
+def test_strict_calendar_routing_without_cutover(tmp_path: Path) -> None:
+    """Measurements before 04:00 stay on the same calendar day (no artificial cutover)."""
 
     transport = FakeTransport(
         responses=[
@@ -29,26 +30,21 @@ def test_cutover_0400_routes_measurements_correctly(tmp_path: Path) -> None:
     fetcher.fetch_date_range(
         out_root=tmp_path,
         start_date=date(2025, 10, 25),
-        end_date=date(2025, 10, 26),
+        end_date=date(2025, 10, 25),
         skip_existing=False,
         dry_run=True,
         resume=False,
     )
 
-    early_day = day_folder(tmp_path, "2025-10-24")
-    late_day = day_folder(tmp_path, "2025-10-25")
+    previous_day = day_folder(tmp_path, "2025-10-24")
+    target_day = day_folder(tmp_path, "2025-10-25")
 
-    assert early_day.exists(), "02:30 measurement must land in previous day folder"
-    assert late_day.exists(), "07:10 measurement must stay on same calendar day"
+    assert not previous_day.exists(), "Strict calendar routing must not emit a previous-day folder"
+    assert target_day.exists(), "Expected measures to land on the same calendar day"
 
-    early_file = next(early_day.glob("measures-*.json"))
-    late_file = next(late_day.glob("measures-*.json"))
-
-    assert early_file.name == "measures-20251024.json"
-    assert late_file.name == "measures-20251025.json"
-
-    early_meta = load_json(early_file.with_suffix(".meta.json"))
-    late_meta = load_json(late_file.with_suffix(".meta.json"))
-
-    assert_meta_common(early_meta, date="2025-10-24", status="success")
-    assert_meta_common(late_meta, date="2025-10-25", status="success")
+    data_files = [p for p in sorted(target_day.glob("measures-*.json")) if not p.name.endswith(".meta.json")]
+    assert data_files, "Expected at least one payload file for the target day"
+    for payload_file in data_files:
+        assert payload_file.name.startswith("measures-20251025")
+        meta = load_json(sidecar_path(payload_file))
+        assert_meta_common(meta, date="2025-10-25", status="success")

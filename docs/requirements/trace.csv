@@ -1,0 +1,19 @@
+requirement_id,artifact_path,artifact_type,note
+REQ-F-20251027T182817-WL,docs/runmeta/SCHEMA.md,doc,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251027T182817-WL,tests/withings_l0/test_runmeta.py,test,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251027T182817-WL,src/agentlab/withings/fetcher.py,code,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251027T182817-WL,src/agentlab/cli/withings_fetch.py,code,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251023T161530-JM,docs/runmeta/SCHEMA.md,doc,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251023T161530-JM,tests/garmin_l0/test_runmeta.py,test,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251023T161530-JM,build/lib/agentlab/cli/garmin_fetch.py,code,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251023T161530-JM,build/lib/agentlab/runners/garmin_fetcher.py,code,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251014T120121-GR,tests/garmin_l0/test_runmeta.py,test,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20251014T120121-GR,build/lib/agentlab/cli/garmin_fetch.py,code,Amended AC: unified runmeta + CLI prints + resume
+REQ-F-20241124T152700-MS,docs/runmeta/SCHEMA.md,doc,Meta schema v1.0 reference
+REQ-F-20241124T152700-MS,tests/garmin_l0/test_meta_schema.py,test,Validates RunMeta sidecars Garmin
+REQ-F-20241124T152700-MS,tests/withings_l0/test_meta_schema.py,test,Validates RunMeta sidecars Withings
+REQ-F-20241124T152700-MS,src/agentlab/utils/storage.py,code,Unified meta schema serialization
+REQ-F-20241124T152700-MS,src/agentlab/withings/fetcher.py,code,Withings meta emission + timezone
+REQ-F-20241124T152700-MS,src/agentlab/cli/garmin_fetch.py,code,CLI prints manifest/totals and exit codes
+REQ-F-20241124T152700-MS,src/agentlab/metadata.py,code,Run manifest schema_version vendor and scheduling
+REQ-F-20241124T152700-MS,tests/agentlab/utils/test_storage.py,test,Unit coverage for storage meta schema

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import logging
+import json
 import os
 import sys
 from datetime import date
@@ -13,8 +13,6 @@ from typing import Sequence
 from agentlab.metadata import RunMetaReader
 from agentlab.utils.withings_tokens import WithingsTokenStore
 from agentlab.withings import WithingsFetcher, WithingsTransport
-
-logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -140,22 +138,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     manifest_path = fetcher.last_manifest_path
-    if manifest_path:
-        logger.info("Run manifest: %s", manifest_path)
-        if fetcher.last_manifest is not None:
-            totals = fetcher.last_manifest.get("totals", {})
-        else:
-            run_id = fetcher.last_run_id
-            if run_id:
+    manifest = fetcher.last_manifest
+    if manifest_path is None or manifest is None:
+        run_id = fetcher.last_run_id
+        if run_id:
+            try:
                 reader = RunMetaReader(args.out_root, run_id)
-                totals = reader.load().get("totals", {})
-            else:
-                totals = {}
-        logger.info("Run totals: %s", totals)
-    else:
-        logger.warning("Manifest not found after run.")
+                manifest = reader.load()
+                manifest_path = reader._path  # type: ignore[attr-defined]
+            except FileNotFoundError:
+                manifest = manifest or {}
+        else:
+            manifest = manifest or {}
 
-    return 0
+    totals = (manifest or {}).get("totals", {})
+    aborted = bool((manifest or {}).get("aborted"))
+
+    manifest_display = str(Path(manifest_path).resolve()) if manifest_path else ""
+    print(f"Run manifest: {manifest_display}")
+    print(f"Run totals: {json.dumps(totals, sort_keys=True)}")
+
+    return 1 if aborted else 0
 
 
 if __name__ == "__main__":  # pragma: no cover
