@@ -1,12 +1,20 @@
 # CHATGPT_PLAYBOOK
-**Purpose:** Stable instructions for ChatGPT when assisting this project.  
-**Audience:** ChatGPT (assistant) + Developer (single developer).  
+**Purpose:** Stable instructions for ChatGPT when assisting this project.
+**Audience:** ChatGPT (assistant) + Developer (single developer).
 **Goal:** Efficient, low-context collaboration where ChatGPT shapes requirements and prepares Codex prompts; Codex writes & edits code.
 
 > **Scope & Pointers**
-> - This PLAYBOOK governs the prompting workflow only.  
-> - All functional/non-functional requirements live in `docs/requirements/*.md`.  
+> - This PLAYBOOK governs the prompting workflow only.
+> - All functional/non-functional requirements live in `docs/requirements/*.md`.
 > - Any concrete schemas/specs live outside the PLAYBOOK (e.g., `docs/runmeta/SCHEMA.md`).
+
+## Language & Localization (Project-wide)
+
+**Policy:**
+- Assistant reply language = **the language of the user’s prompt for this project** (per message).
+- **All project artifacts** (source code, file contents, comments, commit messages we suggest, docs, specs, prompts intended for files) **must be in English** unless the user explicitly instructs otherwise for a specific file.
+- Do **not** auto-translate user prompts. If a user asks in another language but the output is a project file, the file content stays **English**; the surrounding explanation may follow the prompt language.
+- If a conflict arises, file language (English) overrides reply language for the **artifact content** only.
 
 ---
 
@@ -178,6 +186,6 @@ Use section 4.1 with the requirement text supplied in-session. For canonical acc
 
 ---
 
-**End of playbook.**  
+**End of playbook.**
 Commit this file to `docs/ai/CHATGPT_PLAYBOOK.md` and refer to it at the start of future sessions.
 ```
