@@ -24,6 +24,17 @@
 
 ---
 
+## 0.5) Artifact packaging & delivery (zip-only rule)
+**Non‑negotiable policy for code and documentation outputs:**
+1. When the user asks for code or documentation changes, **deliver a ZIP** that can be unpacked **in the repository root**.
+2. The ZIP **must only contain files that were created or edited** in the change (delta ZIP). Do not include unrelated files.
+3. **Merge‑aware edits:** If a target file already exists in the project, **edit it in place** (preserving existing content/structure) rather than replacing it wholesale.
+4. **No blind overwrites:** If the assistant lacks access to the latest version of any file that needs editing, **ask the user for the current file(s)** before proceeding.
+5. Keep outputs deterministic: stable file names/paths and consistent formatting.
+6. Clearly summarize changes alongside the ZIP (list of files, rationale).
+
+---
+
 ## 1) Ways of working (contract)
 1. **Requirements first, then tests, then code (via Codex).**
 2. ChatGPT's job:
@@ -140,7 +151,7 @@ Inputs:
 Steps:
 1) Set Status: done; update "Updated" to WHEN.
 2) In "Trace", append: Finished: WHEN; Tests: TESTS; Commits: COMMITS.
-3) Update STATUS SUMMARY (todo -> todo-1, doing++).
+3) Update STATUS SUMMARY (doing-1, done++).
 4) Append docs/requirements/log.md: WHEN - Finished REQ_ID [done].
 ```
 
@@ -188,4 +199,3 @@ Use section 4.1 with the requirement text supplied in-session. For canonical acc
 
 **End of playbook.**
 Commit this file to `docs/ai/CHATGPT_PLAYBOOK.md` and refer to it at the start of future sessions.
-```
