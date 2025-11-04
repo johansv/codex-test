@@ -1,15 +1,40 @@
+# Python bytecode / caches
 __pycache__/
 *.py[cod]
+
+# Packaging / distribution
 *.egg-info/
 *.egg
 build/
 dist/
+
+# Virtual environments
 .venv/
+.python-version
+
+# Test & coverage artifacts
 .pytest_cache/
-.ruff_cache/
 .coverage
 .coverage.*
 coverage.xml
-.python-version
+
+# Reports & outputs
 out/
 reports/
+
+# Tool caches
+.ruff_cache/
+
+# OS-specific
+.DS_Store
+
+# IDE / Editor
+.idea/
+.vscode/
+
+# Project secrets
+.env
+secrets/
+tokens/
+withings_tokens.json
+garmin_tokens.json

@@ -1,0 +1,30 @@
+# BEGIN EOL-PACK
+# Normalize text files to LF in the repo
+*                text=auto eol=lf
+
+# Windows-specific scripts that typically require CRLF
+*.bat            text eol=crlf
+
+# Keep LF for POSIX shells and most source files
+*.sh             text eol=lf
+*.ps1            text eol=lf
+*.py             text eol=lf
+*.md             text eol=lf
+*.txt            text eol=lf
+*.json           text eol=lf
+*.jsonl          text eol=lf
+*.csv            text eol=lf
+*.yaml           text eol=lf
+*.yml            text eol=lf
+*.toml           text eol=lf
+
+# Never convert line endings for binary files
+*.png            binary
+*.jpg            binary
+*.jpeg           binary
+*.gif            binary
+*.pdf            binary
+*.zip            binary
+*.parquet        binary
+*.pkl            binary
+# END EOL-PACK
