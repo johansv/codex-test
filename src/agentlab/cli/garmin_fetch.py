@@ -8,7 +8,6 @@ import logging
 import os
 import sys
 import time
-import uuid
 from datetime import date
 from pathlib import Path
 from typing import Any, Sequence
@@ -444,7 +443,7 @@ def main(argv: list[str] | None = None) -> int:
     output_root = Path(args.output_dir)
     scheduled_days = max(1, (end - start).days + 1)
 
-    run_id = uuid.uuid4().hex
+    run_id = f"garmin-{int(time.time())}"
     storage = GarminStorageWriter(output_root, run_id=run_id)
     writer = RunMetaWriter(
         out_root=output_root,

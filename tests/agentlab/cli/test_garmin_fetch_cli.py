@@ -161,6 +161,14 @@ def test_main_reports_success_summary(tmp_path, monkeypatch, capsys, caplog):
     manifest_path, totals = _parse_cli_output(captured.out)
     assert manifest_path
     assert Path(manifest_path).exists()
+    manifest_payload = json.loads(Path(manifest_path).read_text(encoding="utf-8"))
+    run_id_value = manifest_payload.get("run_id")
+    assert isinstance(run_id_value, str)
+    assert run_id_value.startswith("garmin-")
+    numeric_suffix = run_id_value.removeprefix("garmin-")
+    assert numeric_suffix.isdigit(), f"Expected numeric suffix in run_id, got {run_id_value}"
+    assert manifest_path.endswith(f"{run_id_value}.meta.json")
+
     assert totals.get("days_done") == 1
     endpoints = totals.get("endpoints", {})
     assert endpoints.get("success") == 1
