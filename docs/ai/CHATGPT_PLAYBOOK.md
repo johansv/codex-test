@@ -1,6 +1,6 @@
-# CHATGPT_PLAYBOOK.md
+# CHATGPT_PLAYBOOK
 **Purpose:** Stable instructions for ChatGPT when assisting this project.  
-**Audience:** ChatGPT (assistant) + Johan (single developer).  
+**Audience:** ChatGPT (assistant) + Developer (single developer).  
 **Goal:** Efficient, low-context collaboration where ChatGPT shapes requirements and prepares Codex prompts; Codex writes & edits code.
 
 > **Scope & Pointers**
@@ -66,7 +66,7 @@ Edit only docs/requirements/functional.md and docs/requirements/log.md.
 Insert a new functional requirement titled:
 "<TITLE>"
 
-Status: todo | Owner: johan | Priority: high | Reason: <one line>.
+Status: todo | Owner: codex | Priority: high | Reason: <one line>.
 
 Use the content provided in this message verbatim for:
 - Narrative
@@ -180,3 +180,4 @@ Use section 4.1 with the requirement text supplied in-session. For canonical acc
 
 **End of playbook.**  
 Commit this file to `docs/ai/CHATGPT_PLAYBOOK.md` and refer to it at the start of future sessions.
+```
