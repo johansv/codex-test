@@ -1,7 +1,7 @@
 # Functional Requirements
 
 <!-- STATUS-SUMMARY:START -->
-Todo: 2 (backlog=1, doing=1); Done: 37 (done=37); Retired: 0
+Todo: 1 (backlog=1); Done: 38 (done=38); Retired: 0
 <!-- STATUS-SUMMARY:END -->
 
 Maintain Codex-sourced functional requirements in this catalog.
@@ -46,6 +46,8 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
 - Trace: prompts R16, tests none, commits none
 ---
 
+## Done Requirements
+
 ### REQ-F-20241124T152700-MS: Vendor-neutral L0 meta sidecars
 - Owner: johan
 - Narrative: As an L0 operator I need Garmin and Withings per-day sidecar .meta.json files to share a strict schema so auditing, resume logic, and privacy checks stay consistent.
@@ -58,12 +60,10 @@ Move rejected or replaced requirements to **Retired Requirements** so history is
   * Backward compatibility: data JSON filenames and locations stay unchanged; only the sidecar schema updates.
   * Tests: add Garmin/Withings meta schema tests covering success/error/skipped cases, required keys, payload rules, day context, and PII scans.
 - Priority: high
-- Status: doing
-- Reason: Approved Priority #1 scope
-- Trace: prompts prompt, tests planned, commits none
+- Status: done
+- Reason: User confirmed implementation meets acceptance criteria.
+- Trace: prompts prompt, tests not-run (pytest unavailable in environment), commits none
 ---
-
-## Done Requirements
 
 ### REQ-F-20251027T182817-WL: Withings L0 ingest for body metrics (daily raw JSON + metadata) - aligned with Garmin L0
 - Owner: johan
